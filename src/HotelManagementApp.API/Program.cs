@@ -1,4 +1,6 @@
 
+using HotelManagementApp.API.ExtensionMethods;
+
 namespace HotelManagementApp.API
 {
     public class Program
@@ -7,30 +9,37 @@ namespace HotelManagementApp.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
-            builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            ConfigureServices(builder);
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            ConfigureMiddleware(app);
+
+            app.MapControllers();
+            app.Run();
+        }
+
+        public static void ConfigureServices(WebApplicationBuilder builder)
+        {
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+            builder.Services.AddRepositories();
+            builder.Services.AddServices();
+            builder.Services.AddJwtBearer(builder.Configuration);
+            builder.Services.AddIdentityDbContext(builder.Configuration);
+        }
+
+        public static void ConfigureMiddleware(WebApplication app)
+        {
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
-
-            app.MapControllers();
-
-            app.Run();
         }
     }
+
 }
