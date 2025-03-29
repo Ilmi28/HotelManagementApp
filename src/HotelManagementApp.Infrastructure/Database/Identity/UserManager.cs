@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.Core.Dtos;
-using HotelManagementApp.Core.Interfaces;
+using HotelManagementApp.Core.Interfaces.Identity;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -42,6 +42,11 @@ namespace HotelManagementApp.Infrastructure.Database.Identity
                 Email = user.Email,
             };
             var result = await _userManager.CreateAsync(newUser, password);
+            if (result.Succeeded)
+            {
+                foreach (string role in user.Roles)
+                    await _userManager.AddToRoleAsync(newUser, role);
+            }
             return result.Succeeded;
         }
 
@@ -59,11 +64,13 @@ namespace HotelManagementApp.Infrastructure.Database.Identity
             var dbUser = await _userManager.FindByEmailAsync(email);
             if (dbUser == null)
                 return null;
+            var roles = await _userManager.GetRolesAsync(dbUser);
             var userDto = new UserDto
             {
                 Id = dbUser.Id,
                 UserName = dbUser.UserName!,
                 Email = dbUser.Email!,
+                Roles = roles.ToList()
             };
             return userDto;
         }
@@ -73,11 +80,13 @@ namespace HotelManagementApp.Infrastructure.Database.Identity
             var dbUser = await _userManager.FindByIdAsync(userId);
             if (dbUser == null)
                 return null;
+            var roles = await _userManager.GetRolesAsync(dbUser);
             var userDto = new UserDto
             {
                 Id = dbUser.Id,
                 UserName = dbUser.UserName!,
                 Email = dbUser.Email!,
+                Roles = roles.ToList()
             };
             return userDto;
         }
@@ -87,11 +96,13 @@ namespace HotelManagementApp.Infrastructure.Database.Identity
             var dbUser = await _userManager.FindByNameAsync(userName);
             if (dbUser == null)
                 return null;
+            var roles = await _userManager.GetRolesAsync(dbUser);
             var userDto = new UserDto
             {
                 Id = dbUser.Id,
                 UserName = dbUser.UserName!,
                 Email = dbUser.Email!,
+                Roles = roles.ToList()
             };
             return userDto;
         }
