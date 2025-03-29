@@ -1,5 +1,14 @@
-﻿using HotelManagementApp.Infrastructure.Database;
+﻿using HotelManagementApp.Application.Services;
+using HotelManagementApp.Core.Dtos;
+using HotelManagementApp.Core.Interfaces.Identity;
+using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Infrastructure.Database.Context;
 using HotelManagementApp.Infrastructure.Database.Identity;
+using HotelManagementApp.Infrastructure.Loggers;
+using HotelManagementApp.Infrastructure.Repositories;
+using HotelManagementApp.Infrastructure.TokenManagers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +21,17 @@ namespace HotelManagementApp.API.ExtensionMethods
     {
         public static void AddRepositories(this IServiceCollection services)
         {
-            // Add repositories here
+            services.AddTransient<ITokenRepository, TokenRepository>();
         }
 
         public static void AddServices(this IServiceCollection services)
         {
-            // Add services here
+            services.AddTransient<IAuthService, AuthService>();
+        }
+
+        public static void AddTokens(this IServiceCollection services)
+        {
+            services.AddTransient<ITokenManager, JwtTokenManager>();
         }
 
         public static void AddJwtBearer(this IServiceCollection services, IConfiguration configuration)
@@ -44,11 +58,23 @@ namespace HotelManagementApp.API.ExtensionMethods
             });
         }
 
-        public static void AddIdentityDbContext(this IServiceCollection services, IConfiguration configuration)
+        public static void AddDbContext(this IServiceCollection services, IConfiguration configuration)
         {
-            var connString = configuration.GetConnectionString("DefaultConnection");
-            services.AddDbContext<HotelManagementAppDbContext>(options => options.UseSqlServer(connString));
-            services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<HotelManagementAppDbContext>();
+            var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "HotelManagementApp.Infrastructure", "Database", "Sqlite", "hotel.db");
+            var fullPath = Path.GetFullPath(dbPath);
+            services.AddDbContext<HotelManagementAppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
         }
+
+        public static void AddIdentity(this IServiceCollection services)
+        {
+            services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<HotelManagementAppDbContext>();
+            services.AddTransient<IUserManager, UserManager>();
+        }
+
+        public static void AddLoggers(this IServiceCollection services)
+        {
+            services.AddTransient<IDbLogger<UserDto>, AuthDbLogger>();
+        }
+
     }
 }

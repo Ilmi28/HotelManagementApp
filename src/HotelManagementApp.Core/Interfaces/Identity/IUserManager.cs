@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Interfaces
+namespace HotelManagementApp.Core.Interfaces.Identity
 {
     public interface IUserManager
     {
