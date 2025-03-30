@@ -1,5 +1,6 @@
 ﻿using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
+using MediatR.NotificationPublishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -16,7 +17,7 @@ namespace HotelManagementApp.Infrastructure.TokenManagers
         {
             _config = config;
         }
-        public string GenerateAccessToken(UserDto user)
+        public string GenerateIdentityToken(UserDto user)
         {
             var tokenConfig = _config.GetSection("TokenConfiguration");
             string issuer = "https://localhost:7101";
@@ -29,12 +30,14 @@ namespace HotelManagementApp.Infrastructure.TokenManagers
             var symmKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(symmKey, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             };
+            foreach (var role in user.Roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
 
             var token = new JwtSecurityToken(
                 issuer: issuer,

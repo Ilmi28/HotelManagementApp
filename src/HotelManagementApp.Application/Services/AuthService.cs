@@ -45,7 +45,7 @@ namespace HotelManagementApp.Application.Services
                 var result = await _userManager.CheckPasswordAsync(user, password);
                 if (!result)
                     throw new UnauthorizedAccessException();
-                string identityToken = _tokenManager.GenerateAccessToken(user);
+                string identityToken = _tokenManager.GenerateIdentityToken(user);
                 string refreshToken = _tokenManager.GenerateRefreshToken();
                 string hashRefreshToken = _tokenManager.GetHashRefreshToken(refreshToken)
                     ?? throw new UnauthorizedAccessException();
@@ -78,7 +78,7 @@ namespace HotelManagementApp.Application.Services
                 if (userByName != null)
                     throw new UserWithUserNameAlreadyExistsException();
                 await _userManager.CreateAsync(user, password);
-                string identityToken = _tokenManager.GenerateAccessToken(user);
+                string identityToken = _tokenManager.GenerateIdentityToken(user);
                 string refreshToken = _tokenManager.GenerateRefreshToken();
                 string hashRefreshToken = _tokenManager.GetHashRefreshToken(refreshToken)
                     ?? throw new DatabaseErrorException();
@@ -101,7 +101,7 @@ namespace HotelManagementApp.Application.Services
                                                         ?? throw new UnauthorizedAccessException();
                 var user = await _userManager.FindByIdAsync(token.UserId)
                                                         ?? throw new UnauthorizedAccessException();
-                var identityToken = _tokenManager.GenerateAccessToken(user);
+                var identityToken = _tokenManager.GenerateIdentityToken(user);
                 return identityToken;
             }
             catch (UnauthorizedAccessException)
