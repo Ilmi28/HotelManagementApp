@@ -13,6 +13,6 @@ namespace HotelManagementApp.Core.Dtos
         public required string Id { get; set; }
         public required string UserName { get; set; }
         public required string Email { get; set; }
-        public required IList<string> Roles { get; set; } = new List<string> { "User" };
+        public required IList<string> Roles { get; set; }
     }
 }

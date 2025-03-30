@@ -9,7 +9,7 @@ namespace HotelManagementApp.Core.Interfaces.Identity
 {
     public interface ITokenManager
     {
-        string GenerateAccessToken(UserDto user);
+        string GenerateIdentityToken(UserDto user);
         int GetRefreshTokenExpirationDays();
         string? GetHashRefreshToken(string refreshToken);
         string GenerateRefreshToken();

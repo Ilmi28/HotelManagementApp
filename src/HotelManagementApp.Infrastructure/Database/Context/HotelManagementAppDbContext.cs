@@ -34,6 +34,11 @@ namespace HotelManagementApp.Infrastructure.Database.Context
                 new IdentityRole { Id = "2", Name = "Admin", NormalizedName = "ADMIN" },
                 new IdentityRole { Id = "3", Name = "Manager", NormalizedName = "MANAGER" },
                 new IdentityRole { Id = "4", Name = "Worker", NormalizedName = "WORKER"});
+
+            modelBuilder.Ignore<IdentityUserClaim<Guid>>();
+            modelBuilder.Ignore<IdentityUserLogin<Guid>>(); 
+            modelBuilder.Ignore<IdentityUserToken<Guid>>();
+            modelBuilder.Ignore<IdentityRoleClaim<Guid>>();
         }
 
     }

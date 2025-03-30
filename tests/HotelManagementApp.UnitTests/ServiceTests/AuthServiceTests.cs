@@ -48,7 +48,7 @@ namespace HotelManagementApp.UnitTests.ServiceTests
 
             _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(userDto);
             _mockUserManager.Setup(x => x.CheckPasswordAsync(It.IsAny<UserDto>(), It.IsAny<string>())).ReturnsAsync(true);
-            _mockTokenManager.Setup(x => x.GenerateAccessToken(It.IsAny<UserDto>())).Returns("identityToken");
+            _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
             _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
             _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashRefreshToken");
             _mockTokenManager.Setup(x => x.GetRefreshTokenExpirationDays()).Returns(30);
@@ -124,7 +124,7 @@ namespace HotelManagementApp.UnitTests.ServiceTests
             _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
             _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashRefreshToken");
             _mockTokenManager.Setup(x => x.GetRefreshTokenExpirationDays()).Returns(30);
-            _mockTokenManager.Setup(x => x.GenerateAccessToken(It.IsAny<UserDto>())).Returns("identityToken");
+            _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
             _mockTokenRepository.Setup(x => x.AddToken(It.IsAny<Token>())).ReturnsAsync(true);
 
             var roles = new List<string> { "User" };
@@ -217,7 +217,7 @@ namespace HotelManagementApp.UnitTests.ServiceTests
             _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashRefreshToken");
             _mockTokenRepository.Setup(x => x.GetToken(It.IsAny<string>())).ReturnsAsync(token);
             _mockUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync(userDto);
-            _mockTokenManager.Setup(x => x.GenerateAccessToken(It.IsAny<UserDto>())).Returns("identityToken");
+            _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
 
             var response = await _authService.RefreshToken("refreshToken");
 
