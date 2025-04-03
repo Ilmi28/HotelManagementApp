@@ -22,7 +22,10 @@ namespace HotelManagementApp.Infrastructure.Database.Context
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<UserLog>().Property(x => x.Operation).HasConversion<string>();
+            modelBuilder.Ignore<IdentityUserClaim<Guid>>();
+            modelBuilder.Ignore<IdentityUserLogin<Guid>>();
+            modelBuilder.Ignore<IdentityUserToken<Guid>>();
+            modelBuilder.Ignore<IdentityRoleClaim<Guid>>();
 
             SeedData(modelBuilder);
         }
@@ -30,15 +33,19 @@ namespace HotelManagementApp.Infrastructure.Database.Context
         protected virtual void SeedData(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<IdentityRole>().HasData(
-                new IdentityRole { Id = "1", Name = "User", NormalizedName = "USER" },
+                new IdentityRole { Id = "1", Name = "Client", NormalizedName = "CLIENT" },
                 new IdentityRole { Id = "2", Name = "Admin", NormalizedName = "ADMIN" },
                 new IdentityRole { Id = "3", Name = "Manager", NormalizedName = "MANAGER" },
                 new IdentityRole { Id = "4", Name = "Worker", NormalizedName = "WORKER"});
 
-            modelBuilder.Ignore<IdentityUserClaim<Guid>>();
-            modelBuilder.Ignore<IdentityUserLogin<Guid>>(); 
-            modelBuilder.Ignore<IdentityUserToken<Guid>>();
-            modelBuilder.Ignore<IdentityRoleClaim<Guid>>();
+            modelBuilder.Entity<Operation>().HasData(
+                new Operation { Id = 1, Name = "REGISTER" },
+                new Operation { Id = 2, Name = "LOGIN" },
+                new Operation { Id = 3, Name = "CREATE" },
+                new Operation { Id = 4, Name = "UPDATE" },
+                new Operation { Id = 5, Name = "DELETE" },
+                new Operation { Id = 6, Name = "PASSWORD CHANGE" });
+
         }
 
     }

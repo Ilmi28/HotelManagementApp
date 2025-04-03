@@ -17,6 +17,53 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.14");
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.Operation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Operation");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "REGISTER"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "LOGIN"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "CREATE"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "UPDATE"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "DELETE"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "PASSWORD CHANGE"
+                        });
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.Token", b =>
                 {
                     b.Property<int>("Id")
@@ -51,9 +98,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Operation")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Operation")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -157,8 +203,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         new
                         {
                             Id = "1",
-                            Name = "User",
-                            NormalizedName = "USER"
+                            Name = "Client",
+                            NormalizedName = "CLIENT"
                         },
                         new
                         {

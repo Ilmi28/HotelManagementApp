@@ -7,8 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\Logs\**" />
+    <Compile Remove="Models\Users\**" />
     <Compile Remove="UserDto\**" />
+    <EmbeddedResource Remove="Models\Logs\**" />
+    <EmbeddedResource Remove="Models\Users\**" />
     <EmbeddedResource Remove="UserDto\**" />
+    <None Remove="Models\Logs\**" />
+    <None Remove="Models\Users\**" />
     <None Remove="UserDto\**" />
   </ItemGroup>
 

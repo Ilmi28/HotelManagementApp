@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Exceptions.UserExceptions
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests
 {
-    public class UserAlreadyExistsException : Exception
+    class GetAccountsInRoleQueryHandlerTests
     {
     }
 }

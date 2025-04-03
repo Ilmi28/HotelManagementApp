@@ -13,7 +13,7 @@ namespace HotelManagementApp.Infrastructure.Loggers
         {
             _context = context;
         }
-        public async Task Log(Operation operation, UserDto loggedObject)
+        public async Task Log(OperationEnum operation, UserDto loggedObject)
         {
             var userLog = new UserLog
             {

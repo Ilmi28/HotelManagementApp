@@ -4,11 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Enums
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests
 {
-    public enum Operation 
+    public class UpdateAccountCommandHandlerTests
     {
-        Register,
-        Login
     }
 }

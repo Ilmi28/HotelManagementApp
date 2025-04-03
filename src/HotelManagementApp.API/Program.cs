@@ -3,7 +3,10 @@ using HotelManagementApp.API.ExtensionMethods;
 using HotelManagementApp.API.Middleware;
 using HotelManagementApp.Application.CQRS.Auth.LoginUser;
 using HotelManagementApp.Infrastructure.Database;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace HotelManagementApp.API
 {
@@ -19,7 +22,6 @@ namespace HotelManagementApp.API
 
             ConfigureMiddleware(app);
 
-            app.MapControllers();
             app.Run();
         }
 
@@ -27,15 +29,16 @@ namespace HotelManagementApp.API
         {
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGenWithAuthorizationHeader();
             builder.Services.AddRepositories();
-            builder.Services.AddServices();
-            builder.Services.AddJwtBearer(builder.Configuration);
+            builder.Services.AddAuthenticationWithJwt(builder.Configuration);
+            builder.Services.AddAuthorization();
             builder.Services.AddDbContext(builder.Configuration);
             builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(typeof(LoginUserCommand).Assembly));
             builder.Services.AddTokens();
             builder.Services.AddIdentity();
             builder.Services.AddLoggers();
+            builder.Services.AddAuthorization();
         }
 
         public static void ConfigureMiddleware(WebApplication app)
@@ -47,7 +50,9 @@ namespace HotelManagementApp.API
                 app.UseSwaggerUI();
             }
             app.UseHttpsRedirection();
+            app.UseAuthentication();
             app.UseAuthorization();
+            app.MapControllers();
         }
     }
 
