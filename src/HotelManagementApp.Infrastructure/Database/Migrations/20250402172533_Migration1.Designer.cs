@@ -3,6 +3,7 @@ using System;
 using HotelManagementApp.Infrastructure.Database.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HotelManagementApp.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(HotelManagementAppDbContext))]
-    partial class HotelManagementAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250402172533_Migration1")]
+    partial class Migration1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.14");
@@ -62,73 +65,6 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("UserLogs");
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Users.Admin", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Admins");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            UserId = "e3aff133-baa0-4931-a0af-0f67911cd6c3"
-                        });
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Users.Client", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Clients");
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Users.Manager", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Managers");
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Users.Worker", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Workers");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Infrastructure.Database.Identity.User", b =>

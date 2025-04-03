@@ -1,5 +1,4 @@
-﻿using HotelManagementApp.Application.Services;
-using HotelManagementApp.Core.Dtos;
+﻿using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
@@ -23,12 +22,6 @@ namespace HotelManagementApp.API.ExtensionMethods
         {
             services.AddTransient<ITokenRepository, TokenRepository>();
         }
-
-        public static void AddServices(this IServiceCollection services)
-        {
-            services.AddTransient<IAuthService, AuthService>();
-        }
-
         public static void AddTokens(this IServiceCollection services)
         {
             services.AddTransient<ITokenManager, JwtTokenManager>();

@@ -1,20 +1,34 @@
-﻿using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
+﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
+using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
+using HotelManagementApp.Core.Dtos;
+using HotelManagementApp.Core.Exceptions;
+using HotelManagementApp.Core.Interfaces.Identity;
+using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Responses;
+using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Responses.AuthResponses;
 using MediatR;
 using Moq;
+using System.ComponentModel.DataAnnotations;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class RegisterUserCommandHandlerTests
     {
-        private Mock<IAuthService> _mockAuthService;
+        private Mock<ITokenManager> _mockTokenManager;
+        private Mock<ITokenRepository> _mockTokenRepository;
+        private Mock<IUserManager> _mockUserManager;
+        private Mock<IDbLogger<UserDto>> _mockLogger;
         private IRequestHandler<RegisterUserCommand, LoginRegisterResponse> _handler;
-
         public RegisterUserCommandHandlerTests()
         {
-            _mockAuthService = new Mock<IAuthService>();
-            _handler = new RegisterUserCommandHandler(_mockAuthService.Object);
+            _mockTokenManager = new Mock<ITokenManager>();
+            _mockTokenRepository = new Mock<ITokenRepository>();
+            _mockUserManager = new Mock<IUserManager>();
+            _mockLogger = new Mock<IDbLogger<UserDto>>();
+            _handler = new RegisterUserCommandHandler(_mockUserManager.Object, _mockTokenManager.Object, 
+                                                        _mockTokenRepository.Object, _mockLogger.Object);
         }
 
         [Fact]
@@ -22,15 +36,19 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
         {
             var cmd = new RegisterUserCommand
             {
+                Email = "test@mail.com",
                 UserName = "test",
-                Email = "test@gmail.com",
                 Password = "Password123@"
             };
 
-            _mockAuthService.Setup(x => x.RegisterUser(It.IsAny<string>(), 
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<List<string>>())).ReturnsAsync(("identityToken", "refreshToken"));
+            _mockUserManager.Setup(x => x.FindByEmailAsync("test@mail.com")).ReturnsAsync((UserDto?)null);
+            _mockUserManager.Setup(x => x.FindByNameAsync("test")).ReturnsAsync((UserDto?)null);
+            _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<UserDto>(), cmd.Password)).ReturnsAsync(true);
+            _mockTokenManager.Setup(x => x.GetRefreshTokenExpirationDays()).Returns(30);
+            _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
+            _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
+            _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
+            _mockTokenRepository.Setup(x => x.AddToken(It.IsAny<Token>())).ReturnsAsync(true);
 
             var response = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -38,14 +56,41 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
             Assert.Equal("refreshToken", response.RefreshToken);
         }
 
-        [Fact]
-        public async Task NullCommand_ThrowsArgumentNullException()
+        [InlineData("test@mail.com", "test1")]
+        [InlineData("test1@mail.com", "test")]
+        [Theory]
+        public async Task UserExists_ThrowsUserAlreadyExistsException(string? email, string? username)
         {
-            RegisterUserCommand cmd = null!;
+            var cmd = new RegisterUserCommand
+            {
+                Email = email!,
+                UserName = username!,
+                Password = "Password123@"
+            };
+            var userDto = new UserDto
+            {
+                Id = "1",
+                Email = email!,
+                UserName = username!,
+                Roles = new List<string> { "Client" }
+            };
+
+            _mockUserManager.Setup(x => x.FindByEmailAsync("test@mail.com")).ReturnsAsync(userDto);
+            _mockUserManager.Setup(x => x.FindByEmailAsync("test1@mail.com")).ReturnsAsync((UserDto?)null);
+            _mockUserManager.Setup(x => x.FindByNameAsync("test")).ReturnsAsync(userDto);
+            _mockUserManager.Setup(x => x.FindByNameAsync("test1")).ReturnsAsync((UserDto?)null);
 
             var func = async () => await _handler.Handle(cmd, CancellationToken.None);
 
+            await Assert.ThrowsAsync<UserAlreadyExistsException>(func);
+        }
+
+        [Fact]
+        public async Task NullArg_ThrowsArgumentNullException()
+        {
+            var func = async () => await _handler.Handle(null!, CancellationToken.None);
             await Assert.ThrowsAsync<ArgumentNullException>(func);
         }
+
     }
 }

@@ -29,7 +29,6 @@ namespace HotelManagementApp.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddRepositories();
-            builder.Services.AddServices();
             builder.Services.AddJwtBearer(builder.Configuration);
             builder.Services.AddDbContext(builder.Configuration);
             builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(typeof(LoginUserCommand).Assembly));
@@ -47,6 +46,7 @@ namespace HotelManagementApp.API
                 app.UseSwaggerUI();
             }
             app.UseHttpsRedirection();
+            app.UseAuthorization();
             app.UseAuthorization();
         }
     }

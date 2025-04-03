@@ -117,5 +117,24 @@ namespace HotelManagementApp.Infrastructure.Database.Identity
             var result = await _userManager.UpdateAsync(dbUser);
             return result.Succeeded;
         }
+
+        public async Task<ICollection<UserDto>> GetUsersInRoleAsync(string role)
+        {
+            var userDtos = new List<UserDto>();
+            var users = await _userManager.GetUsersInRoleAsync(role);
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                var userDto = new UserDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName!,
+                    Email = user.Email!,
+                    Roles = roles.ToList()
+                };
+                userDtos.Add(userDto);
+            }
+            return userDtos;
+        }
     }
 }

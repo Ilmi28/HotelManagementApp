@@ -9,6 +9,9 @@ namespace HotelManagementApp.Core.Enums
     public enum Operation 
     {
         Register,
-        Login
+        Login,
+        Create,
+        Update,
+        Delete
     }
 }

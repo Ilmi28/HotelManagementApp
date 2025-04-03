@@ -74,10 +74,7 @@ namespace HotelManagementApp.Infrastructure.TokenManagers
                     return Convert.ToBase64String(hash);
                 }
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; };
         }
     }
 }

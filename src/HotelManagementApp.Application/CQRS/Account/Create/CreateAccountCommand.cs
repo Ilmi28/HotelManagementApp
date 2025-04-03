@@ -1,5 +1,4 @@
-﻿using HotelManagementApp.Core.Responses.AuthResponses;
-using MediatR;
+﻿using MediatR;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -7,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser
+namespace HotelManagementApp.Application.CQRS.Account.Create
 {
-    public class RegisterUserCommand : IRequest<LoginRegisterResponse>
+    public class CreateAccountCommand : IRequest
     {
         [Required]
         [MinLength(3)]
@@ -22,5 +21,6 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser
         [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$",
         ErrorMessage = "Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character.")]
         public required string Password { get; set; }
+        public List<string> Roles { get; set; } = new List<string>();
     }
 }
