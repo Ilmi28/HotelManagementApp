@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 namespace HotelManagementApp.API.ExtensionMethods
@@ -27,14 +29,9 @@ namespace HotelManagementApp.API.ExtensionMethods
             services.AddTransient<ITokenManager, JwtTokenManager>();
         }
 
-        public static void AddJwtBearer(this IServiceCollection services, IConfiguration configuration)
+        public static void AddAuthenticationWithJwt(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            services.AddAuthentication().AddJwtBearer(options =>
             {
                 var tokenConfiguration = configuration!.GetSection("TokenConfiguration");
                 string secretKey = tokenConfiguration.GetValue<string>("SecretKey") ?? string.Empty;
@@ -48,6 +45,29 @@ namespace HotelManagementApp.API.ExtensionMethods
                     ValidAudience = tokenConfiguration.GetValue<string>("Audience"),
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
                 };
+            });
+        }
+
+        public static void AddSwaggerGenWithAuthorizationHeader(this IServiceCollection services)
+        {
+            services.AddSwaggerGen(x =>
+            {
+                var security = new OpenApiSecurityScheme
+                {
+                    Name = HeaderNames.Authorization,
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Description = "JWT Authorization header",
+                    Reference = new OpenApiReference
+                    {
+                        Id = JwtBearerDefaults.AuthenticationScheme,
+                        Type = ReferenceType.SecurityScheme
+                    }
+                };
+
+                x.AddSecurityDefinition(security.Reference.Id, security);
+                x.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {{security, Array.Empty<string>()}});
             });
         }
 

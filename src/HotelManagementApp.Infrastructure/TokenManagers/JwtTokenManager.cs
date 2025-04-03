@@ -20,8 +20,8 @@ namespace HotelManagementApp.Infrastructure.TokenManagers
         public string GenerateIdentityToken(UserDto user)
         {
             var tokenConfig = _config.GetSection("TokenConfiguration");
-            string issuer = "https://localhost:7101";
-            string audience = "https://localhost:7101";
+            string issuer = tokenConfig.GetValue<string>("Issuer") ?? string.Empty;
+            string audience = tokenConfig.GetValue<string>("Audience") ?? string.Empty; ;
             string secretKey = Environment.GetEnvironmentVariable("SecretJwtKey")
                 ?? tokenConfig.GetValue<string>("SecretKey")
                 ?? String.Empty;

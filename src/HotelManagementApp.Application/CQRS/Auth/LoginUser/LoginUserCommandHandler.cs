@@ -57,7 +57,7 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser
                 result = await CreateRefreshTokenInDb(hashRefreshToken, user);
                 if (!result)
                     throw new Exception("Refresh token creation failed");
-                await _logger.Log(Operation.Login, user);
+                await _logger.Log(OperationEnum.Login, user);
                 return new LoginRegisterResponse { IdentityToken = identityToken, RefreshToken = refreshToken };
             }
             catch (UnauthorizedAccessException) { throw; }

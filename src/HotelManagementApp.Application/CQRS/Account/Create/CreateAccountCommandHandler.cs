@@ -39,7 +39,7 @@ namespace HotelManagementApp.Application.CQRS.Account.Create
                 var result = await _userManager.CreateAsync(user, request.Password);
                 if (!result)
                     throw new Exception("User creation failed");
-                await _logger.Log(Operation.Create, user);
+                await _logger.Log(OperationEnum.Create, user);
             }
             catch(Exception ex) { throw new Exception("Unexpected error occured", ex); }
         }

@@ -64,7 +64,7 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser
                 string hashRefreshToken = _tokenManager.GetHashRefreshToken(refreshToken)
                     ?? throw new Exception("Refresh token creation failed");
                 await CreateRefreshTokenInDb(hashRefreshToken, user);
-                await _logger.Log(Operation.Register, user);
+                await _logger.Log(OperationEnum.Register, user);
                 return new LoginRegisterResponse { IdentityToken = identityToken, RefreshToken = refreshToken };
             }
             catch (Exception ex) { throw new Exception("Unexpected error occured", ex); }

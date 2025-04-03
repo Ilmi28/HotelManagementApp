@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Models.Users
+namespace HotelManagementApp.Core.Models
 {
-    public class Client
+    public class Operation
     {
         public int Id { get; set; }
-        public required string UserId { get; set; }
+        public required string Name { get; set; }
     }
 }

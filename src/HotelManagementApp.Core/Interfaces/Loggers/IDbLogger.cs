@@ -9,6 +9,6 @@ namespace HotelManagementApp.Core.Interfaces.Loggers
 {
     public interface IDbLogger<T>
     {
-        Task Log(Operation operation, T loggedObject);
+        Task Log(OperationEnum operation, T loggedObject);
     }
 }
