@@ -39,6 +39,10 @@ namespace HotelManagementApp.API.Middleware
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync(ex.Message);
                     return;
+                case Exception:
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteAsync(ex.Message);
+                    return;
             }
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("An error occurred. Please try again later.");

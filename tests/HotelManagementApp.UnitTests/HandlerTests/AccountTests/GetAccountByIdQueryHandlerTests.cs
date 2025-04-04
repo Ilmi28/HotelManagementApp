@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests
 {
-    class GetAccountByIdCommandHandlerTests
+    class GetAccountByIdQueryHandlerTests
     {
     }
 }
