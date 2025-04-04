@@ -41,7 +41,7 @@ namespace HotelManagementApp.Application.CQRS.Account.Create
                     throw new Exception("User creation failed");
                 await _logger.Log(OperationEnum.Create, user);
             }
-            catch(Exception ex) { throw new Exception("Unexpected error occured", ex); }
+            catch(Exception ex) { throw new Exception("Unexpected error occured or invalid role.", ex); }
         }
     }
 }

@@ -18,6 +18,9 @@ namespace HotelManagementApp.Infrastructure.Database.Context
         public HotelManagementAppDbContext(DbContextOptions options) : base(options) { }
         public DbSet<Token> Tokens { get; set; }
         public DbSet<UserLog> UserLogs { get; set; }
+        public DbSet<BlacklistedUsers> BlackListedUsers { get; set; }
+        public DbSet<Operation> Operations { get; set; }
+        public DbSet<VIPUsers> VIPUsers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

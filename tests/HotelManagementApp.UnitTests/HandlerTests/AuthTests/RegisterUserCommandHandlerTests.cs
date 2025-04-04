@@ -48,7 +48,6 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
             _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
             _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
             _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
-            _mockTokenRepository.Setup(x => x.AddToken(It.IsAny<Token>())).ReturnsAsync(true);
 
             var response = await _handler.Handle(cmd, CancellationToken.None);
 

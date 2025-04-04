@@ -18,17 +18,22 @@ namespace HotelManagementApp.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<bool> AddToken(Token token)
+        public async Task AddToken(Token token)
         {
-            var user = await _context.Users.FindAsync(token.UserId);
-            if (user == null)
-                return false;
-            var lastToken = _context.Tokens.FirstOrDefault(x => x.UserId == token.UserId && !x.IsRevoked);
-            if (lastToken != null)
-                lastToken.IsRevoked = true;
             await _context.Tokens.AddAsync(token);
             await _context.SaveChangesAsync();
-            return true;
+        }
+
+        public async Task RevokeToken(Token token)
+        {
+            token.IsRevoked = true;
+            _context.Tokens.Update(token);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<Token?> GetLastValidToken(string userId)
+        {
+            return await _context.Tokens.FirstOrDefaultAsync(x => x.UserId == userId && x.ExpirationDate > DateTime.Now && !x.IsRevoked);
         }
 
         public async Task<Token?> GetToken(string refreshToken)

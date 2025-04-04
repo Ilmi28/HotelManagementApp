@@ -28,15 +28,22 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser
             _logger = logger;
         }
 
-        private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto user)
+        private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto userDto)
         {
             var token = new Token
             {
-                UserId = user.Id,
+                UserId = userDto.Id,
                 RefreshTokenHash = hashRefreshToken,
                 ExpirationDate = DateTime.Now.AddDays(_tokenManager.GetRefreshTokenExpirationDays())
             };
-            return await _tokenRepository.AddToken(token);
+            var user = await _userManager.FindByIdAsync(userDto.Id);
+            if (userDto == null)
+                return false;
+            var lastToken = await _tokenRepository.GetLastValidToken(userDto.Id);
+            if (lastToken != null)
+                await _tokenRepository.RevokeToken(lastToken);
+            await _tokenRepository.AddToken(token);
+            return true;
         }
 
         public async Task<LoginRegisterResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
