@@ -7,6 +7,7 @@ using HotelManagementApp.Infrastructure.Database.Context;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
 using HotelManagementApp.Infrastructure.Repositories;
+using HotelManagementApp.Infrastructure.Services;
 using HotelManagementApp.Infrastructure.TokenManagers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -22,11 +23,14 @@ namespace HotelManagementApp.API.ExtensionMethods
     {
         public static void AddRepositories(this IServiceCollection services)
         {
-            services.AddTransient<ITokenRepository, TokenRepository>();
+            services.AddTransient<ITokenRepository, RefreshTokenRepository>();
+            services.AddTransient<IVIPUserRepository, VIPUserRepository>();
+            services.AddTransient<IBlacklistedUserRepository, BlacklistedUserRepository>();
         }
-        public static void AddTokens(this IServiceCollection services)
+        public static void AddServices(this IServiceCollection services)
         {
-            services.AddTransient<ITokenManager, JwtTokenManager>();
+            services.AddTransient<ITokenService, JwtTokenService>();
+            services.AddTransient<IAuthenticationService, AuthenticationService>();
         }
 
         public static void AddAuthenticationWithJwt(this IServiceCollection services, IConfiguration configuration)
@@ -82,6 +86,7 @@ namespace HotelManagementApp.API.ExtensionMethods
         {
             services.AddIdentity<User, IdentityRole>().AddEntityFrameworkStores<HotelManagementAppDbContext>();
             services.AddTransient<IUserManager, UserManager>();
+            services.AddTransient<IRoleManager, RoleManager>();
         }
 
         public static void AddLoggers(this IServiceCollection services)

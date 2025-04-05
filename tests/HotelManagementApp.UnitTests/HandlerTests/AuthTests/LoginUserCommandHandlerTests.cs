@@ -22,14 +22,14 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class LoginUserCommandHandlerTests
     {
-        private Mock<ITokenManager> _mockTokenManager;
+        private Mock<ITokenService> _mockTokenManager;
         private Mock<ITokenRepository> _mockTokenRepository;
         private Mock<IUserManager> _mockUserManager;
         private Mock<IDbLogger<UserDto>> _mockLogger;
         private IRequestHandler<LoginUserCommand, LoginRegisterResponse> _handler;
         public LoginUserCommandHandlerTests()
         {
-            _mockTokenManager = new Mock<ITokenManager>();
+            _mockTokenManager = new Mock<ITokenService>();
             _mockTokenRepository = new Mock<ITokenRepository>();
             _mockUserManager = new Mock<IUserManager>();
             _mockLogger = new Mock<IDbLogger<UserDto>>();

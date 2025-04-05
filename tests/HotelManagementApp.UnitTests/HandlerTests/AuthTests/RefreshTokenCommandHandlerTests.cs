@@ -17,14 +17,14 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class RefreshTokenCommandHandlerTests
     {
-        private Mock<ITokenManager> _mockTokenManager;
+        private Mock<ITokenService> _mockTokenManager;
         private Mock<ITokenRepository> _mockTokenRepository;
         private Mock<IUserManager> _mockUserManager;
         private IRequestHandler<RefreshTokenCommand, RefreshTokenResponse> _handler;
 
         public RefreshTokenCommandHandlerTests()
         {
-            _mockTokenManager = new Mock<ITokenManager>();
+            _mockTokenManager = new Mock<ITokenService>();
             _mockTokenRepository = new Mock<ITokenRepository>();
             _mockUserManager = new Mock<IUserManager>();
             _handler = new RefreshTokenCommandHandler(_mockTokenManager.Object, _mockTokenRepository.Object, 
@@ -42,7 +42,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
                 Roles = new List<string> { "Client" }
             };
             var cmd = new RefreshTokenCommand { RefreshToken = "refreshToken" };
-            var token = new Token
+            var token = new RefreshToken
             {
                 UserId = userDto.Id,
                 RefreshTokenHash = "hashedRefreshToken",

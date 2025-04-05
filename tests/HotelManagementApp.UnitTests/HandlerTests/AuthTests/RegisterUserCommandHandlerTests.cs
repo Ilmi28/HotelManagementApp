@@ -16,14 +16,14 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class RegisterUserCommandHandlerTests
     {
-        private Mock<ITokenManager> _mockTokenManager;
+        private Mock<ITokenService> _mockTokenManager;
         private Mock<ITokenRepository> _mockTokenRepository;
         private Mock<IUserManager> _mockUserManager;
         private Mock<IDbLogger<UserDto>> _mockLogger;
         private IRequestHandler<RegisterUserCommand, LoginRegisterResponse> _handler;
         public RegisterUserCommandHandlerTests()
         {
-            _mockTokenManager = new Mock<ITokenManager>();
+            _mockTokenManager = new Mock<ITokenService>();
             _mockTokenRepository = new Mock<ITokenRepository>();
             _mockUserManager = new Mock<IUserManager>();
             _mockLogger = new Mock<IDbLogger<UserDto>>();

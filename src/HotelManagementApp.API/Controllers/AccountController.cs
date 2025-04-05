@@ -3,6 +3,7 @@ using HotelManagementApp.Application.CQRS.Account.Delete;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
 using HotelManagementApp.Application.CQRS.Account.GetAccountsInRole;
 using HotelManagementApp.Application.CQRS.Account.Update;
+using HotelManagementApp.Application.CQRS.MyAccount.ChangePassword;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -63,6 +64,15 @@ namespace HotelManagementApp.API.Controllers
         {
             var account = await _mediator.Send(new GetAccountsInRoleQuery { RoleName = role });
             return Ok(account);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand cmd)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            cmd.UserId = userId;
+            await _mediator.Send(cmd);
+            return Ok();
         }
     }
 }

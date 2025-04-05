@@ -14,10 +14,10 @@ namespace HotelManagementApp.Application.CQRS.Auth.RefreshToken
 {
     public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, RefreshTokenResponse>
     {
-        private ITokenManager _tokenManager;
+        private ITokenService _tokenManager;
         private ITokenRepository _tokenRepository;
         private IUserManager _userManager;
-        public RefreshTokenCommandHandler(ITokenManager tokenManager,
+        public RefreshTokenCommandHandler(ITokenService tokenManager,
                                             ITokenRepository tokenRepository,
                                             IUserManager userManager)
         {

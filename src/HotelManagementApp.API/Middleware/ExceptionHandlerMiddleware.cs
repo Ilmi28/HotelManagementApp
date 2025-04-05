@@ -29,13 +29,21 @@ namespace HotelManagementApp.API.Middleware
             {
                 case UnauthorizedAccessException:
                     context.Response.StatusCode = 401;
-                    await context.Response.WriteAsync("Unauthorized access.");
+                    await context.Response.WriteAsync(ex.Message);
                     return;
                 case ArgumentNullException:
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync("Invalid input.");
                     return;
                 case UserAlreadyExistsException:
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync(ex.Message);
+                    return;
+                case VIPException:
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync(ex.Message);
+                    return;
+                case BlacklistException:
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync(ex.Message);
                     return;

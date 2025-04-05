@@ -26,10 +26,18 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="CQRS\MyAccount\Create\" />
+    <Folder Include="CQRS\MyAccount\Delete\" />
+    <Folder Include="CQRS\MyAccount\Get\" />
+    <Folder Include="CQRS\MyAccount\Update\" />
   </ItemGroup>
 
 </Project>

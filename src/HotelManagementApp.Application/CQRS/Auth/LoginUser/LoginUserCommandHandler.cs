@@ -13,11 +13,11 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser
 {
     public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
     {
-        private ITokenManager _tokenManager;
+        private ITokenService _tokenManager;
         private ITokenRepository _tokenRepository;
         private IUserManager _userManager;
         private IDbLogger<UserDto> _logger;
-        public LoginUserCommandHandler(ITokenManager tokenManager, 
+        public LoginUserCommandHandler(ITokenService tokenManager, 
                                         ITokenRepository tokenRepository,
                                         IUserManager userManager,
                                         IDbLogger<UserDto> logger)
@@ -30,7 +30,7 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser
 
         private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto userDto)
         {
-            var token = new Token
+            var token = new Core.Models.RefreshToken
             {
                 UserId = userDto.Id,
                 RefreshTokenHash = hashRefreshToken,
