@@ -13,8 +13,10 @@ namespace HotelManagementApp.Application.CQRS.Account.Update
         public required string UserId { get; set; }
         [MinLength(3)]
         [MaxLength(50)]
-        public string? UserName { get; set; }
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        public string? Email { get; set; }
+        [Required]
+        public required string UserName { get; set; }
+        [Required]
+        [EmailAddress]
+        public required string Email { get; set; }
     }
 }

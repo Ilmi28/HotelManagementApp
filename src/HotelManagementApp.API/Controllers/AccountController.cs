@@ -15,21 +15,21 @@ namespace HotelManagementApp.API.Controllers
     [Route("api/account")]
     public class AccountController(IMediator mediator) : ControllerBase
     {
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountCommand cmd)
         {
             await mediator.Send(cmd);
             return Created();
         }
 
-        [HttpPut]
+        [HttpPut("update")]
         public async Task<IActionResult> UpdateAccount([FromBody] UpdateAccountCommand cmd)
         {
             await mediator.Send(cmd);
             return NoContent();
         }
 
-        [HttpDelete]
+        [HttpPost("delete")]
         public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountCommand cmd)
         {
             await mediator.Send(cmd);

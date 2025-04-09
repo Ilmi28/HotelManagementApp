@@ -17,6 +17,8 @@ namespace HotelManagementApp.API.Controllers
     public class MyAccountController(IMediator mediator) : ControllerBase
     {
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetMyAccount()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
@@ -25,6 +27,9 @@ namespace HotelManagementApp.API.Controllers
         }
 
         [HttpPatch("change-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
@@ -56,6 +61,9 @@ namespace HotelManagementApp.API.Controllers
         }
 
         [HttpDelete]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeleteAccount([FromBody] MyAccountDeleteRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
@@ -65,7 +73,7 @@ namespace HotelManagementApp.API.Controllers
                 Password = request.Password
             };
             await mediator.Send(cmd);
-            return Ok();
+            return NoContent();
         }
     }
 }

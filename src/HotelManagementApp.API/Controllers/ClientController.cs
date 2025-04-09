@@ -9,34 +9,51 @@ namespace HotelManagementApp.API.Controllers
 {
     [Authorize]
     [ApiController]
+    [Route("api/clients")]
     public class ClientController(IMediator mediator) : ControllerBase
     {
-        [HttpPost("api/clients/add-to-blacklist")]
+        [HttpPost("/blacklist/add")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> AddToBlacklist([FromBody] AddToBlacklistCommand command)
         {
             await mediator.Send(command);
-            return Ok();
+            return Created();
         }
 
-        [HttpPost("api/clients/remove-from-blacklist")]
+        [HttpPost("blacklist/remove")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RemoveFromBlacklist([FromBody] RemoveFromBlacklistCommand command)
         {
             await mediator.Send(command);
-            return Ok();
+            return NoContent();
         }
 
-        [HttpPost("api/clients/add-to-vip")]
+        [HttpPost("vip/add")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> AddToVIP([FromBody] AddToVIPCommand command)
         {
             await mediator.Send(command);
-            return Ok();
+            return Created();
         }
 
-        [HttpPost("api/clients/remove-from-vip")]
+        [HttpPost("vip/remove")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RemoveFromVIP([FromBody] RemoveFromBlacklistCommand command)
         {
             await mediator.Send(command);
-            return Ok();
+            return NoContent();
         }
     }
 }
