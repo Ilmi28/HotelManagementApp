@@ -1,5 +1,4 @@
-﻿using HotelManagementApp.API.ExtensionMethods;
-using HotelManagementApp.Core.Exceptions.BaseExceptions;
+﻿using HotelManagementApp.Core.Exceptions.BaseExceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,7 +32,6 @@ namespace HotelManagementApp.API
                 });
             });
 
-            app.UseAppExceptionHandler();
             app.UseStatusCodePages();
             if (app.Environment.IsDevelopment())
             {
