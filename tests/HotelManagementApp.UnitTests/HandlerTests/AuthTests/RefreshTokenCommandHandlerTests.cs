@@ -42,6 +42,8 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
             {
                 UserId = userDto.Id,
                 RefreshTokenHash = "hashedRefreshToken",
+                ExpirationDate = DateTime.Now.AddDays(30),
+                IsRevoked = false
             };
 
             _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");

@@ -32,7 +32,7 @@ namespace HotelManagementApp.Infrastructure.Repositories
 
         public async Task<RefreshToken?> GetToken(string refreshToken)
         {
-            return await context.RefreshTokens.FirstOrDefaultAsync(x => x.RefreshTokenHash == refreshToken && x.ExpirationDate > DateTime.Now && !x.IsRevoked);
+            return await context.RefreshTokens.FirstOrDefaultAsync(x => x.RefreshTokenHash == refreshToken);
         }
     }
 }
