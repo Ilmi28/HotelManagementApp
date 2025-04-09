@@ -11,30 +11,25 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.Infrastructure.Repositories
 {
-    public class BlacklistedUserRepository : IBlacklistedUserRepository
+    public class BlacklistedUserRepository(HotelManagementAppDbContext context) : IBlacklistedUserRepository
     {
-        private HotelManagementAppDbContext _context;
-        public BlacklistedUserRepository(HotelManagementAppDbContext context)
-        {
-            _context = context;
-        }
         public async Task AddUserToBlacklist(string userId)
         {
-            await _context.BlackListedUsers.AddAsync(new BlacklistedUser
+            await context.BlackListedUsers.AddAsync(new BlacklistedUser
             {
                 UserId = userId
             });
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         public async Task<List<BlacklistedUser>> GetBlackList()
         {
-            return await _context.BlackListedUsers.ToListAsync();
+            return await context.BlackListedUsers.ToListAsync();
         }
 
         public async Task<bool> IsUserBlacklisted(string userId)
         {
-            var user = await _context.BlackListedUsers.FirstOrDefaultAsync(x => x.UserId == userId);
+            var user = await context.BlackListedUsers.FirstOrDefaultAsync(x => x.UserId == userId);
             if (user == null)
                 return true;
             return false;
@@ -42,11 +37,11 @@ namespace HotelManagementApp.Infrastructure.Repositories
 
         public async Task RemoveUserFromBlacklist(string userId)
         {
-           var user = _context.BlackListedUsers.FirstOrDefault(x => x.UserId == userId);
+           var user = context.BlackListedUsers.FirstOrDefault(x => x.UserId == userId);
             if (user != null)
             {
-                _context.BlackListedUsers.Remove(user);
-                await _context.SaveChangesAsync();
+                context.BlackListedUsers.Remove(user);
+                await context.SaveChangesAsync();
             }
         }
     }

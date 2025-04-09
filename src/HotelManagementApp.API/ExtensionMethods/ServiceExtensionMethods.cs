@@ -8,7 +8,6 @@ using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
 using HotelManagementApp.Infrastructure.Repositories;
 using HotelManagementApp.Infrastructure.Services;
-using HotelManagementApp.Infrastructure.TokenManagers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +36,7 @@ namespace HotelManagementApp.API.ExtensionMethods
         {
             services.AddAuthentication().AddJwtBearer(options =>
             {
-                var tokenConfiguration = configuration!.GetSection("TokenConfiguration");
+                var tokenConfiguration = configuration!.GetSection("JwtTokenConfiguration");
                 string secretKey = tokenConfiguration.GetValue<string>("SecretKey") ?? string.Empty;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {

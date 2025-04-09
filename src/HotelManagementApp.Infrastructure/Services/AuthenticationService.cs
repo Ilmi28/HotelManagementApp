@@ -11,22 +11,12 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.Infrastructure.Services
 {
-    public class AuthenticationService : IAuthenticationService
+    public class AuthenticationService(IHttpContextAccessor httpContextAccessor, IUserManager userManager) : IAuthenticationService
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IUserManager _userManager;
-        private readonly IRoleManager _roleManager;
-        public AuthenticationService(IHttpContextAccessor httpContextAccessor, IUserManager userManager, IRoleManager roleManager)
-        {
-            _httpContextAccessor = httpContextAccessor;
-            _userManager = userManager;
-            _roleManager = roleManager;
-        }
-
         public async Task<UserDto?> GetLoggedInUserAsync()
         {
-            string userId = _httpContextAccessor.HttpContext?.User.FindFirstValue("Id")!;
-            var user = await _userManager.FindByIdAsync(userId);
+            string userId = httpContextAccessor.HttpContext?.User.FindFirstValue("Id")!;
+            var user = await userManager.FindByIdAsync(userId);
             if (user == null)
                 return null;
             var userDto = new UserDto
@@ -34,14 +24,14 @@ namespace HotelManagementApp.Infrastructure.Services
                 Id = user.Id,
                 Email = user.Email,
                 UserName = user.UserName,
-                Roles = await _roleManager.GetUserRolesAsync(userId),
+                Roles = await userManager.GetUserRolesAsync(userId),
             };
             return userDto;
         }
 
         public bool IsUserAuthenticatedAsync()
         {
-            string userId = _httpContextAccessor.HttpContext?.User.FindFirstValue("Id")!;
+            string userId = httpContextAccessor.HttpContext?.User.FindFirstValue("Id")!;
             return userId != null;
 
         }

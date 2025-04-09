@@ -9,39 +9,33 @@ namespace HotelManagementApp.API.Controllers
 {
     [Authorize]
     [ApiController]
-    public class ClientController : ControllerBase
+    public class ClientController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
-        public ClientController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
-
         [HttpPost("api/clients/add-to-blacklist")]
         public async Task<IActionResult> AddToBlacklist([FromBody] AddToBlacklistCommand command)
         {
-            await _mediator.Send(command);
+            await mediator.Send(command);
             return Ok();
         }
 
         [HttpPost("api/clients/remove-from-blacklist")]
         public async Task<IActionResult> RemoveFromBlacklist([FromBody] RemoveFromBlacklistCommand command)
         {
-            await _mediator.Send(command);
+            await mediator.Send(command);
             return Ok();
         }
 
         [HttpPost("api/clients/add-to-vip")]
         public async Task<IActionResult> AddToVIP([FromBody] AddToVIPCommand command)
         {
-            await _mediator.Send(command);
+            await mediator.Send(command);
             return Ok();
         }
 
         [HttpPost("api/clients/remove-from-vip")]
         public async Task<IActionResult> RemoveFromVIP([FromBody] RemoveFromBlacklistCommand command)
         {
-            await _mediator.Send(command);
+            await mediator.Send(command);
             return Ok();
         }
     }

@@ -10,16 +10,19 @@
     <Compile Remove="CQRS\Account\PasswordReset\**" />
     <Compile Remove="CQRS\Admin\**" />
     <Compile Remove="CQRS\Manager\**" />
+    <Compile Remove="CQRS\MyAccount\**" />
     <Compile Remove="CQRS\Worker\**" />
     <Compile Remove="Services\**" />
     <EmbeddedResource Remove="CQRS\Account\PasswordReset\**" />
     <EmbeddedResource Remove="CQRS\Admin\**" />
     <EmbeddedResource Remove="CQRS\Manager\**" />
+    <EmbeddedResource Remove="CQRS\MyAccount\**" />
     <EmbeddedResource Remove="CQRS\Worker\**" />
     <EmbeddedResource Remove="Services\**" />
     <None Remove="CQRS\Account\PasswordReset\**" />
     <None Remove="CQRS\Admin\**" />
     <None Remove="CQRS\Manager\**" />
+    <None Remove="CQRS\MyAccount\**" />
     <None Remove="CQRS\Worker\**" />
     <None Remove="Services\**" />
   </ItemGroup>
@@ -31,13 +34,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="CQRS\MyAccount\Create\" />
-    <Folder Include="CQRS\MyAccount\Delete\" />
-    <Folder Include="CQRS\MyAccount\Get\" />
-    <Folder Include="CQRS\MyAccount\Update\" />
   </ItemGroup>
 
 </Project>

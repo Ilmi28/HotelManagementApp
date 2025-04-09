@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Application.CQRS.MyAccount.UpdateProfilePicture
+namespace HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture
 {
     public class UpdateProfilePictureCommand
     {

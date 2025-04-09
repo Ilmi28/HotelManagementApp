@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Application.CQRS.MyAccount.ResetPassword
+namespace HotelManagementApp.Application.CQRS.Account.ResetPassword
 {
     public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand>
     {

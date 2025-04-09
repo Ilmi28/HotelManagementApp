@@ -8,7 +8,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace HotelManagementApp.Infrastructure.TokenManagers
+namespace HotelManagementApp.Infrastructure.Services
 {
     public class JwtTokenService : ITokenService
     {
@@ -24,7 +24,7 @@ namespace HotelManagementApp.Infrastructure.TokenManagers
             string audience = tokenConfig.GetValue<string>("Audience") ?? string.Empty; ;
             string secretKey = Environment.GetEnvironmentVariable("SecretJwtKey")
                 ?? tokenConfig.GetValue<string>("SecretKey")
-                ?? String.Empty;
+                ?? string.Empty;
             int jwtExpireMinutes = tokenConfig.GetValue<int>("AccessTokenExpirationMinutes");
             DateTime jwtExpireDate = DateTime.Now.AddMinutes(jwtExpireMinutes);
             var symmKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));

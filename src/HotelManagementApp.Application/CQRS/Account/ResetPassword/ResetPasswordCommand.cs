@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace HotelManagementApp.Application.CQRS.MyAccount.ResetPassword
+namespace HotelManagementApp.Application.CQRS.Account.ResetPassword
 {
     public class ResetPasswordCommand : IRequest
     {

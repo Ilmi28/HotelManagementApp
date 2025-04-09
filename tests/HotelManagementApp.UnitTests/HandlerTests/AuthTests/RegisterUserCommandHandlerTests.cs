@@ -1,26 +1,23 @@
-﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
-using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
+﻿using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
+using HotelManagementApp.Application.Responses.AuthResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Exceptions;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
-using HotelManagementApp.Core.Responses.AuthResponses;
 using MediatR;
 using Moq;
-using System.ComponentModel.DataAnnotations;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class RegisterUserCommandHandlerTests
     {
-        private Mock<ITokenService> _mockTokenManager;
-        private Mock<ITokenRepository> _mockTokenRepository;
-        private Mock<IUserManager> _mockUserManager;
-        private Mock<IDbLogger<UserDto>> _mockLogger;
-        private IRequestHandler<RegisterUserCommand, LoginRegisterResponse> _handler;
+        private readonly Mock<ITokenService> _mockTokenManager;
+        private readonly Mock<ITokenRepository> _mockTokenRepository;
+        private readonly Mock<IUserManager> _mockUserManager;
+        private readonly Mock<IDbLogger<UserDto>> _mockLogger;
+        private readonly IRequestHandler<RegisterUserCommand, LoginRegisterResponse> _handler;
         public RegisterUserCommandHandlerTests()
         {
             _mockTokenManager = new Mock<ITokenService>();
@@ -81,7 +78,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 
             var func = async () => await _handler.Handle(cmd, CancellationToken.None);
 
-            await Assert.ThrowsAsync<UserAlreadyExistsException>(func);
+            await Assert.ThrowsAsync<UserExistsException>(func);
         }
 
         [Fact]

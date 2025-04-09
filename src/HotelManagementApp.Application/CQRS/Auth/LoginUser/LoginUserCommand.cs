@@ -1,4 +1,4 @@
-﻿using HotelManagementApp.Core.Responses.AuthResponses;
+﻿using HotelManagementApp.Application.Responses.AuthResponses;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.LoginUser

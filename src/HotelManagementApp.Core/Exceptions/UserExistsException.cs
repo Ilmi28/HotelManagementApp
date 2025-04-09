@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.Core.Exceptions
 {
-    public class UserAlreadyExistsException : Exception
+    public class UserExistsException : Exception
     {
-        public UserAlreadyExistsException(string message) : base(message)
+        public UserExistsException(string message) : base(message)
         {
         }
     }

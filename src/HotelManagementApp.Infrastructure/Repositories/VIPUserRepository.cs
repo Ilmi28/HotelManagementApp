@@ -10,39 +10,34 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.Infrastructure.Repositories
 {
-    public class VIPUserRepository : IVIPUserRepository
+    public class VIPUserRepository(HotelManagementAppDbContext context) : IVIPUserRepository
     {
-        private readonly HotelManagementAppDbContext _context;
-        public VIPUserRepository(HotelManagementAppDbContext context)
-        {
-            _context = context;
-        }
         public async Task AddUserToVIP(string userId)
         {
-            await _context.VIPUsers.AddAsync(new VIPUser
+            await context.VIPUsers.AddAsync(new VIPUser
             {
                 UserId = userId
             });
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
         public async Task<List<VIPUser>> GetVIPUsers()
         {
-            return await _context.VIPUsers.ToListAsync();
+            return await context.VIPUsers.ToListAsync();
         }
         public async Task<bool> IsUserVIP(string userId)
         {
-            var user = await _context.VIPUsers.FirstOrDefaultAsync(x => x.UserId == userId);
+            var user = await context.VIPUsers.FirstOrDefaultAsync(x => x.UserId == userId);
             if (user == null)
                 return false;
             return true;
         }
         public async Task RemoveUserFromVIP(string userId)
         {
-            var user = _context.VIPUsers.FirstOrDefault(x => x.UserId == userId);
+            var user = context.VIPUsers.FirstOrDefault(x => x.UserId == userId);
             if (user != null)
             {
-                _context.VIPUsers.Remove(user);
-                await _context.SaveChangesAsync();
+                context.VIPUsers.Remove(user);
+                await context.SaveChangesAsync();
             }
         }
     }

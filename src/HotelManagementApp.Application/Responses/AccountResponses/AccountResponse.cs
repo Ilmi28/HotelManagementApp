@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Responses.AccountResponses
+namespace HotelManagementApp.Application.Responses.AccountResponses
 {
     public class AccountResponse
     {

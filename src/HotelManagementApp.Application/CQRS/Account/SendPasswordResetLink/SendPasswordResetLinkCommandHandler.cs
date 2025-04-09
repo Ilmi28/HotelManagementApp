@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Application.CQRS.MyAccount.SendPasswordResetLink
+namespace HotelManagementApp.Application.CQRS.Account.SendPasswordResetLink
 {
     public class SendPasswordResetLinkCommandHandler : IRequestHandler<SendPasswordResetLinkCommand>
     {

@@ -35,7 +35,11 @@ namespace HotelManagementApp.API.Middleware
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync("Invalid input.");
                     return;
-                case UserAlreadyExistsException:
+                case InvalidOperationException:
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync(ex.Message);
+                    return;
+                case UserExistsException:
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync(ex.Message);
                     return;

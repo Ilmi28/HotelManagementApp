@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HotelManagementApp.Core.Responses.AuthResponses
+namespace HotelManagementApp.Application.Responses.AuthResponses
 {
     public class RefreshTokenResponse
     {
