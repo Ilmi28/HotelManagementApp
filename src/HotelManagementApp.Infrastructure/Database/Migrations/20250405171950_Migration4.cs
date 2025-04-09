@@ -2,43 +2,42 @@
 
 #nullable disable
 
-namespace HotelManagementApp.Infrastructure.Database.Migrations
+namespace HotelManagementApp.Infrastructure.Database.Migrations;
+
+/// <inheritdoc />
+public partial class Migration4 : Migration
 {
     /// <inheritdoc />
-    public partial class Migration4 : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_Tokens",
-                table: "Tokens");
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_Tokens",
+            table: "Tokens");
 
-            migrationBuilder.RenameTable(
-                name: "Tokens",
-                newName: "RefreshTokens");
+        migrationBuilder.RenameTable(
+            name: "Tokens",
+            newName: "RefreshTokens");
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_RefreshTokens",
-                table: "RefreshTokens",
-                column: "Id");
-        }
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_RefreshTokens",
+            table: "RefreshTokens",
+            column: "Id");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_RefreshTokens",
-                table: "RefreshTokens");
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_RefreshTokens",
+            table: "RefreshTokens");
 
-            migrationBuilder.RenameTable(
-                name: "RefreshTokens",
-                newName: "Tokens");
+        migrationBuilder.RenameTable(
+            name: "RefreshTokens",
+            newName: "Tokens");
 
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_Tokens",
-                table: "Tokens",
-                column: "Id");
-        }
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_Tokens",
+            table: "Tokens",
+            column: "Id");
     }
 }

@@ -2,43 +2,37 @@
 using HotelManagementApp.Core.Models;
 using HotelManagementApp.Infrastructure.Database.Context;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace HotelManagementApp.Infrastructure.Repositories
+namespace HotelManagementApp.Infrastructure.Repositories;
+
+public class VIPUserRepository(HotelManagementAppDbContext context) : IVIPUserRepository
 {
-    public class VIPUserRepository(HotelManagementAppDbContext context) : IVIPUserRepository
+    public async Task AddUserToVIP(string userId)
     {
-        public async Task AddUserToVIP(string userId)
+        await context.VIPUsers.AddAsync(new VIPUser
         {
-            await context.VIPUsers.AddAsync(new VIPUser
-            {
-                UserId = userId
-            });
+            UserId = userId
+        });
+        await context.SaveChangesAsync();
+    }
+    public async Task<List<VIPUser>> GetVIPUsers()
+    {
+        return await context.VIPUsers.ToListAsync();
+    }
+    public async Task<bool> IsUserVIP(string userId)
+    {
+        var user = await context.VIPUsers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (user == null)
+            return false;
+        return true;
+    }
+    public async Task RemoveUserFromVIP(string userId)
+    {
+        var user = context.VIPUsers.FirstOrDefault(x => x.UserId == userId);
+        if (user != null)
+        {
+            context.VIPUsers.Remove(user);
             await context.SaveChangesAsync();
-        }
-        public async Task<List<VIPUser>> GetVIPUsers()
-        {
-            return await context.VIPUsers.ToListAsync();
-        }
-        public async Task<bool> IsUserVIP(string userId)
-        {
-            var user = await context.VIPUsers.FirstOrDefaultAsync(x => x.UserId == userId);
-            if (user == null)
-                return false;
-            return true;
-        }
-        public async Task RemoveUserFromVIP(string userId)
-        {
-            var user = context.VIPUsers.FirstOrDefault(x => x.UserId == userId);
-            if (user != null)
-            {
-                context.VIPUsers.Remove(user);
-                await context.SaveChangesAsync();
-            }
         }
     }
 }
