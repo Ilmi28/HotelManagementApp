@@ -11,34 +11,16 @@ using System.Threading.Tasks;
 
 namespace HotelManagementApp.Application.CQRS.Account.ChangePassword
 {
-    public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordCommand>
+    public class ChangePasswordCommandHandler(IUserManager userManager, IDbLogger<UserDto> logger) : IRequestHandler<ChangePasswordCommand>
     {
-
-        private readonly IUserManager _userManager;
-        private readonly IDbLogger<UserDto> _logger;
-        public ChangePasswordCommandHandler(IUserManager userManager, IDbLogger<UserDto> logger)
-        {
-            _userManager = userManager;
-            _logger = logger;
-        }
         public async Task Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
         {
-            _ = request ?? throw new ArgumentNullException();
-            try
-            {
-                var user = await _userManager.FindByIdAsync(request.UserId);
-                if (user == null)
-                    throw new UnauthorizedAccessException();
-                var result = await _userManager.ChangePasswordAsync(user, request.OldPassword, request.NewPassword);
-                if (!result)
-                    throw new UnauthorizedAccessException();
-                await _logger.Log(OperationEnum.PasswordChange, user);
-            }
-            catch (UnauthorizedAccessException) { throw; }
-            catch (Exception ex)
-            {
-                throw new Exception("Unexpected error occurred", ex);
-            }
+            ArgumentNullException.ThrowIfNull(request);
+            var user = await userManager.FindByIdAsync(request.UserId) ?? throw new UnauthorizedAccessException();
+            var result = await userManager.ChangePasswordAsync(user, request.OldPassword, request.NewPassword);
+            if (!result)
+                throw new UnauthorizedAccessException();
+            await logger.Log(OperationEnum.PasswordChange, user);
         }
     }
 }

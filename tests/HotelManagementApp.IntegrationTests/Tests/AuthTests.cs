@@ -1,6 +1,5 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
 using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
-using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Models;
 using HotelManagementApp.Infrastructure.Database.Context;
 using HotelManagementApp.Infrastructure.Database.Identity;
@@ -16,6 +15,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
+using HotelManagementApp.Core.Interfaces.Services;
 
 namespace HotelManagementApp.IntegrationTests.Tests
 {
@@ -24,14 +24,14 @@ namespace HotelManagementApp.IntegrationTests.Tests
         private readonly HttpClient _client;
         private readonly HotelManagementAppDbContext _context;
         private readonly UserManager<User> _manager;
-        private readonly ITokenManager _tokenManager;
+        private readonly ITokenService _tokenManager;
         public AuthTests(AuthWebApplicationFactory factory)
         {
             _client = factory.CreateClient();
             var scope = factory.Services.CreateScope();
             _context = scope.ServiceProvider.GetRequiredService<HotelManagementAppDbContext>();
             _manager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-            _tokenManager = scope.ServiceProvider.GetRequiredService<ITokenManager>();
+            _tokenManager = scope.ServiceProvider.GetRequiredService<ITokenService>();
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
             SeedData();
@@ -46,21 +46,21 @@ namespace HotelManagementApp.IntegrationTests.Tests
                 Email = "test@gmail.com"
             };
 
-            var token = new Token
+            var token = new RefreshToken
             {
                 Id = 1,
                 RefreshTokenHash = _tokenManager.GetHashRefreshToken("Xj4z8x+7Q0A=")!,
                 ExpirationDate = DateTime.Now.AddDays(1),
                 UserId = user.Id
             };
-            var token1 = new Token
+            var token1 = new RefreshToken
             {
                 Id = 2,
                 RefreshTokenHash = _tokenManager.GetHashRefreshToken("K3N5TzFhMkM=")!,
                 ExpirationDate = DateTime.Now.AddDays(-1),
                 UserId = user.Id
             };
-            var token2 = new Token
+            var token2 = new RefreshToken
             {
                 Id = 3,
                 RefreshTokenHash = _tokenManager.GetHashRefreshToken("T1hKQ1VmcDg=")!,
@@ -69,9 +69,9 @@ namespace HotelManagementApp.IntegrationTests.Tests
                 IsRevoked = true
             };
             _manager.CreateAsync(user, "Password123@").Wait();
-            _context.Tokens.Add(token);
-            _context.Tokens.Add(token1);
-            _context.Tokens.Add(token2);
+            _context.RefreshTokens.Add(token);
+            _context.RefreshTokens.Add(token1);
+            _context.RefreshTokens.Add(token2);
             _context.SaveChanges();
         }
 
@@ -93,7 +93,7 @@ namespace HotelManagementApp.IntegrationTests.Tests
             string? accessToken = json.RootElement.GetProperty("identityToken").GetString();
             string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
             int userCount = _context.Users.Count();
-            int tokenCount = _context.Tokens.Count();
+            int tokenCount = _context.RefreshTokens.Count();
             int userLogsCount = _context.UserLogs.Count();
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -166,8 +166,8 @@ namespace HotelManagementApp.IntegrationTests.Tests
             var json = JsonDocument.Parse(content);
             string? accessToken = json.RootElement.GetProperty("identityToken").GetString();
             string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
-            int tokenCount = _context.Tokens.Count();
-            int revokedTokenCount = _context.Tokens.Where(x => x.IsRevoked).Count();
+            int tokenCount = _context.RefreshTokens.Count();
+            int revokedTokenCount = _context.RefreshTokens.Where(x => x.IsRevoked).Count();
             int userLogsCount = _context.UserLogs.Count();
 
 

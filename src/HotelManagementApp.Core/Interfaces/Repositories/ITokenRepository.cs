@@ -9,9 +9,9 @@ namespace HotelManagementApp.Core.Interfaces.Repositories
 {
     public interface ITokenRepository
     {
-        Task AddToken(Token token);
-        Task<Token?> GetToken(string refreshToken);
-        Task<Token?> GetLastValidToken(string userId);
-        Task RevokeToken(Token token);
+        Task AddToken(RefreshToken token);
+        Task<RefreshToken?> GetToken(string refreshToken);
+        Task<RefreshToken?> GetLastValidToken(string userId);
+        Task RevokeToken(RefreshToken token);
     }
 }

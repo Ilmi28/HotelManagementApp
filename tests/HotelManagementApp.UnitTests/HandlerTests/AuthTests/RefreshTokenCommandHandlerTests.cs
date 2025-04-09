@@ -1,30 +1,26 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
+using HotelManagementApp.Application.Responses.AuthResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models;
-using HotelManagementApp.Core.Responses.AuthResponses;
 using MediatR;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
 {
     public class RefreshTokenCommandHandlerTests
     {
-        private Mock<ITokenManager> _mockTokenManager;
-        private Mock<ITokenRepository> _mockTokenRepository;
-        private Mock<IUserManager> _mockUserManager;
-        private IRequestHandler<RefreshTokenCommand, RefreshTokenResponse> _handler;
+        private readonly Mock<ITokenService> _mockTokenManager;
+        private readonly Mock<ITokenRepository> _mockTokenRepository;
+        private readonly Mock<IUserManager> _mockUserManager;
+        private readonly IRequestHandler<RefreshTokenCommand, RefreshTokenResponse> _handler;
 
         public RefreshTokenCommandHandlerTests()
         {
-            _mockTokenManager = new Mock<ITokenManager>();
+            _mockTokenManager = new Mock<ITokenService>();
             _mockTokenRepository = new Mock<ITokenRepository>();
             _mockUserManager = new Mock<IUserManager>();
             _handler = new RefreshTokenCommandHandler(_mockTokenManager.Object, _mockTokenRepository.Object, 
@@ -42,7 +38,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests
                 Roles = new List<string> { "Client" }
             };
             var cmd = new RefreshTokenCommand { RefreshToken = "refreshToken" };
-            var token = new Token
+            var token = new RefreshToken
             {
                 UserId = userDto.Id,
                 RefreshTokenHash = "hashedRefreshToken",

@@ -1,10 +1,5 @@
-﻿using HotelManagementApp.Core.Responses.AuthResponses;
+﻿using HotelManagementApp.Application.Responses.AuthResponses;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HotelManagementApp.Application.CQRS.Auth.RefreshToken
 {

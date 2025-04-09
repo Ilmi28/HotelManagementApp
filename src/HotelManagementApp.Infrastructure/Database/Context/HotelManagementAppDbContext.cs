@@ -16,11 +16,13 @@ namespace HotelManagementApp.Infrastructure.Database.Context
     public class HotelManagementAppDbContext : IdentityDbContext<User>
     {
         public HotelManagementAppDbContext(DbContextOptions options) : base(options) { }
-        public DbSet<Token> Tokens { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<UserLog> UserLogs { get; set; }
-        public DbSet<BlacklistedUsers> BlackListedUsers { get; set; }
+        public DbSet<BlacklistedUser> BlackListedUsers { get; set; }
         public DbSet<Operation> Operations { get; set; }
-        public DbSet<VIPUsers> VIPUsers { get; set; }
+        public DbSet<VIPUser> VIPUsers { get; set; }
+        public DbSet<ResetPasswordToken> ResetPasswordTokens { get; set; }
+        public DbSet<ConfirmEmailToken> ConfirmEmailTokens { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

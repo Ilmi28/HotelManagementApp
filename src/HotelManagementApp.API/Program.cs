@@ -35,10 +35,11 @@ namespace HotelManagementApp.API
             builder.Services.AddAuthorization();
             builder.Services.AddDbContext(builder.Configuration);
             builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(typeof(LoginUserCommand).Assembly));
-            builder.Services.AddTokens();
+            builder.Services.AddServices();
             builder.Services.AddIdentity();
             builder.Services.AddLoggers();
             builder.Services.AddAuthorization();
+            builder.Services.AddHttpContextAccessor();
         }
 
         public static void ConfigureMiddleware(WebApplication app)
