@@ -1,12 +1,5 @@
-
 using HotelManagementApp.API.ExtensionMethods;
-using HotelManagementApp.API.Middleware;
 using HotelManagementApp.Application.CQRS.Auth.LoginUser;
-using HotelManagementApp.Infrastructure.Database;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace HotelManagementApp.API
 {
@@ -40,11 +33,13 @@ namespace HotelManagementApp.API
             builder.Services.AddLoggers();
             builder.Services.AddAuthorization();
             builder.Services.AddHttpContextAccessor();
+            builder.Services.AddProblemDetails();
         }
 
         public static void ConfigureMiddleware(WebApplication app)
         {
-            app.UseMiddleware<ExceptionHandlerMiddleware>();
+            app.UseAppExceptionHandler();
+            app.UseStatusCodePages();
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

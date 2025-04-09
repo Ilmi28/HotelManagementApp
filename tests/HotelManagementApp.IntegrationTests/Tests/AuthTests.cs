@@ -119,7 +119,7 @@ namespace HotelManagementApp.IntegrationTests.Tests
             var response = await _client.PostAsJsonAsync("/api/auth/register", cmd);
             var errorMessages = await response.Content.ReadAsStringAsync();
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
             Assert.Contains(errorMessage, errorMessages);
         }
 

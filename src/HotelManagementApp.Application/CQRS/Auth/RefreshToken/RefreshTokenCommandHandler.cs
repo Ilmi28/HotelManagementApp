@@ -17,6 +17,8 @@ namespace HotelManagementApp.Application.CQRS.Auth.RefreshToken
                                                         ?? throw new UnauthorizedAccessException();
             var token = await tokenRepository.GetToken(hash)
                                                     ?? throw new UnauthorizedAccessException();
+            if (token.ExpirationDate < DateTime.Now || token.IsRevoked)
+                throw new UnauthorizedAccessException();
             var user = await userManager.FindByIdAsync(token.UserId)
                                                     ?? throw new UnauthorizedAccessException();
             var identityToken = tokenManager.GenerateIdentityToken(user);
