@@ -28,6 +28,6 @@ public class CreateAccountCommandHandler(IUserManager userManager, IDbLogger<Use
         var result = await userManager.CreateAsync(user, request.Password);
         if (!result)
             throw new Exception("Invalid role");
-        await logger.Log(OperationEnum.Create, user);
+        await logger.Log(AccountOperationEnum.Create, user);
     }
 }

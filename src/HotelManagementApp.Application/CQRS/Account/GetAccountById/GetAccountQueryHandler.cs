@@ -1,4 +1,5 @@
 ﻿using HotelManagementApp.Application.Responses.AccountResponses;
+using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using MediatR;
 
@@ -8,7 +9,8 @@ public class GetAccountQueryHandler(IUserManager userManager) : IRequestHandler<
 {
     public async Task<AccountResponse> Handle(GetAccountQuery request, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByIdAsync(request.UserId) ?? throw new UnauthorizedAccessException();
+        var user = await userManager.FindByIdAsync(request.UserId) 
+            ?? throw new UserNotFoundException($"User with id {request.UserId} not found");
         return new AccountResponse
         {
             Id = user.Id,

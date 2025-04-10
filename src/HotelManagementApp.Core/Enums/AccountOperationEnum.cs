@@ -2,7 +2,7 @@
 
 // DONT CHANGE THE ORDER OF THIS ENUM !!!
 // ADD THINGS ONLY AT THE END
-public enum OperationEnum
+public enum AccountOperationEnum
 {
     Register = 1,
     Login = 2,

@@ -16,50 +16,49 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-namespace HotelManagementApp.Infrastructure
+namespace HotelManagementApp.Infrastructure;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IHostApplicationBuilder AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        public static IHostApplicationBuilder AddInfrastructureServices(this IHostApplicationBuilder builder)
+        var configuration = builder.Configuration;
+
+        var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "HotelManagementApp.Infrastructure", "Database", "Sqlite", "hotel.db");
+        var fullPath = Path.GetFullPath(dbPath);
+        builder.Services.AddDbContext<HotelManagementAppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
+
+        builder.Services.AddIdentity<User, IdentityRole>()
+            .AddEntityFrameworkStores<HotelManagementAppDbContext>();
+
+        builder.Services.AddTransient<IUserManager, UserManager>();
+        builder.Services.AddTransient<IRoleManager, RoleManager>();
+
+        builder.Services.AddTransient<IDbLogger<UserDto>, AuthDbLogger>();
+
+        builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
-            var configuration = builder.Configuration;
-
-            var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "HotelManagementApp.Infrastructure", "Database", "Sqlite", "hotel.db");
-            var fullPath = Path.GetFullPath(dbPath);
-            builder.Services.AddDbContext<HotelManagementAppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
-
-            builder.Services.AddIdentity<User, IdentityRole>()
-                .AddEntityFrameworkStores<HotelManagementAppDbContext>();
-
-            builder.Services.AddTransient<IUserManager, UserManager>();
-            builder.Services.AddTransient<IRoleManager, RoleManager>();
-
-            builder.Services.AddTransient<IDbLogger<UserDto>, AuthDbLogger>();
-
-            builder.Services.AddAuthentication().AddJwtBearer(options =>
+            var tokenConfiguration = configuration!.GetSection("JwtTokenConfiguration");
+            string secretKey = tokenConfiguration.GetValue<string>("SecretKey") ?? string.Empty;
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                var tokenConfiguration = configuration!.GetSection("JwtTokenConfiguration");
-                string secretKey = tokenConfiguration.GetValue<string>("SecretKey") ?? string.Empty;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = tokenConfiguration.GetValue<string>("Issuer"),
-                    ValidAudience = tokenConfiguration.GetValue<string>("Audience"),
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
-                };
-            });
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = tokenConfiguration.GetValue<string>("Issuer"),
+                ValidAudience = tokenConfiguration.GetValue<string>("Audience"),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+            };
+        });
 
-            builder.Services.AddTransient<ITokenRepository, RefreshTokenRepository>();
-            builder.Services.AddTransient<IVIPUserRepository, VIPUserRepository>();
-            builder.Services.AddTransient<IBlacklistedUserRepository, BlacklistedUserRepository>();
+        builder.Services.AddTransient<ITokenRepository, RefreshTokenRepository>();
+        builder.Services.AddTransient<IVIPUserRepository, VIPUserRepository>();
+        builder.Services.AddTransient<IBlacklistedUserRepository, BlacklistedUserRepository>();
 
-            builder.Services.AddTransient<ITokenService, JwtTokenService>();
-            builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
+        builder.Services.AddTransient<ITokenService, JwtTokenService>();
+        builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
 
-            return builder;
-        }
+        return builder;
     }
 }

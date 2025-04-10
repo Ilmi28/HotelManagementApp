@@ -48,7 +48,7 @@ public class RegisterUserCommandHandler(IUserManager userManager,
         string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
         await CreateRefreshTokenInDb(hashRefreshToken, user);
-        await logger.Log(OperationEnum.Register, user);
+        await logger.Log(AccountOperationEnum.Register, user);
         return new LoginRegisterResponse { IdentityToken = identityToken, RefreshToken = refreshToken };
     }
 }

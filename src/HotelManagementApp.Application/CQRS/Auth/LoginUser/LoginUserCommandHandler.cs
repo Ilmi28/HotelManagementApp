@@ -48,7 +48,7 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
         result = await CreateRefreshTokenInDb(hashRefreshToken, user);
         if (!result)
             throw new Exception("Refresh token creation failed");
-        await logger.Log(OperationEnum.Login, user);
+        await logger.Log(AccountOperationEnum.Login, user);
         return new LoginRegisterResponse { IdentityToken = identityToken, RefreshToken = refreshToken };
     }
 }

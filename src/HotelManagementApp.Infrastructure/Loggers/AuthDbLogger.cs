@@ -10,7 +10,7 @@ public class AuthDbLogger(HotelManagementAppDbContext context) : IDbLogger<UserD
 {
     private readonly HotelManagementAppDbContext _context = context;
 
-    public async Task Log(OperationEnum operation, UserDto loggedObject)
+    public async Task Log(AccountOperationEnum operation, UserDto loggedObject)
     {
         var userLog = new UserLog
         {

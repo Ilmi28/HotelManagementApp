@@ -29,7 +29,7 @@ public class UpdateAccountCommandHandler(IUserManager userManager, IDbLogger<Use
         var result = await userManager.UpdateAsync(user);
         if (!result)
             throw new Exception("User update failed");
-        await logger.Log(OperationEnum.Update, user);
+        await logger.Log(AccountOperationEnum.Update, user);
 
     }
 }
