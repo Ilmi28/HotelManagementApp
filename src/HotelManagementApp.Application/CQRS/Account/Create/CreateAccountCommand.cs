@@ -16,5 +16,5 @@ public class CreateAccountCommand : IRequest
     [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$",
     ErrorMessage = "Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character.")]
     public required string Password { get; set; }
-    public List<string> Roles { get; set; } = [];
+    public List<string> Roles { get; set; } = new List<string>();
 }

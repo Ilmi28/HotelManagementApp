@@ -17,7 +17,7 @@ public class RegisterUserCommandHandlerTests
     private readonly Mock<ITokenRepository> _mockTokenRepository;
     private readonly Mock<IUserManager> _mockUserManager;
     private readonly Mock<IDbLogger<UserDto>> _mockLogger;
-    private readonly IRequestHandler<RegisterUserCommand, LoginRegisterResponse> _handler;
+    private readonly RegisterUserCommandHandler _handler;
     public RegisterUserCommandHandlerTests()
     {
         _mockTokenManager = new Mock<ITokenService>();

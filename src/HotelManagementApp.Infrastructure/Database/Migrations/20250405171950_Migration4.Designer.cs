@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace HotelManagementApp.Infrastructure.Database.Migrations;
 
-[DbContext(typeof(HotelManagementAppDbContext))]
+[DbContext(typeof(AppDbContext))]
 [Migration("20250405171950_Migration4")]
 partial class Migration4
 {

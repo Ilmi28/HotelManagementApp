@@ -7,12 +7,12 @@ namespace HotelManagementApp.IntegrationTests.Tests;
 public class AccountTests : IClassFixture<AccountWebApplicationFactory>
 {
     private readonly HttpClient _client;
-    private readonly HotelManagementAppDbContext _context;
+    private readonly AppDbContext _context;
     public AccountTests(AccountWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
         var scope = factory.Services.CreateScope();
-        _context = scope.ServiceProvider.GetRequiredService<HotelManagementAppDbContext>();
+        _context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _context.Database.EnsureDeleted();
         _context.Database.EnsureCreated();
         SeedData();

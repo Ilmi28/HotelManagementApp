@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace HotelManagementApp.Infrastructure.Database.Identity;
 
-public class UserManager(UserManager<User> userManager) : IUserManager
+public class UserManager(UserManager<User> userManager) : IUserManager, IUserRolesManager
 {
     public async Task<bool> ChangePasswordAsync(UserDto user, string currentPassword, string newPassword)
     {
@@ -135,12 +135,30 @@ public class UserManager(UserManager<User> userManager) : IUserManager
         return await userManager.IsInRoleAsync(user, roleName);
     }
 
-    public async Task<IList<string>> GetUserRolesAsync(string userId)
+    public async Task<ICollection<string>> GetUserRolesAsync(string userId)
     {
         var user = await userManager.FindByIdAsync(userId);
         if (user is null)
             return [];
         var result = await userManager.GetRolesAsync(user);
         return result.ToList();
+    }
+
+    public async Task<bool> AddToRoleAsync(UserDto user, string role)
+    {
+        var dbUser = await userManager.FindByIdAsync(user.Id);
+        if (dbUser == null)
+            return false;
+        var result = await userManager.AddToRoleAsync(dbUser, role);
+        return result.Succeeded;
+    }
+
+    public async Task<bool> RemoveFromRoleAsync(UserDto user, string role)
+    {
+        var dbUser = await userManager.FindByIdAsync(user.Id);
+        if (dbUser == null)
+            return false;
+        var result = await userManager.RemoveFromRoleAsync(dbUser, role);
+        return result.Succeeded;
     }
 }

@@ -17,14 +17,14 @@ namespace HotelManagementApp.IntegrationTests.Tests;
 public class AuthTests : IClassFixture<AuthWebApplicationFactory>
 {
     private readonly HttpClient _client;
-    private readonly HotelManagementAppDbContext _context;
+    private readonly AppDbContext _context;
     private readonly UserManager<User> _manager;
     private readonly ITokenService _tokenManager;
     public AuthTests(AuthWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
         var scope = factory.Services.CreateScope();
-        _context = scope.ServiceProvider.GetRequiredService<HotelManagementAppDbContext>();
+        _context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _manager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
         _tokenManager = scope.ServiceProvider.GetRequiredService<ITokenService>();
         _context.Database.EnsureDeleted();
@@ -89,7 +89,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
         int userCount = _context.Users.Count();
         int tokenCount = _context.RefreshTokens.Count();
-        int userLogsCount = _context.UserLogs.Count();
+        int userLogsCount = _context.AccountLogs.Count();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(string.IsNullOrEmpty(accessToken));
@@ -163,7 +163,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
         int tokenCount = _context.RefreshTokens.Count();
         int revokedTokenCount = _context.RefreshTokens.Where(x => x.IsRevoked).Count();
-        int userLogsCount = _context.UserLogs.Count();
+        int userLogsCount = _context.AccountLogs.Count();
 
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

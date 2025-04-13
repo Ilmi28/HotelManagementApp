@@ -12,7 +12,4 @@ public interface IUserManager
     Task<bool> DeleteAsync(UserDto user);
     Task<bool> UpdateAsync(UserDto user);
     Task<bool> ChangePasswordAsync(UserDto user, string currentPassword, string newPassword);
-    Task<ICollection<UserDto>> GetUsersInRoleAsync(string role);
-    Task<bool> IsUserInRoleAsync(string userId, string roleName);
-    Task<IList<string>> GetUserRolesAsync(string userId);
 }

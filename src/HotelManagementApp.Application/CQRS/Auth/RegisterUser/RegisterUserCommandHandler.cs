@@ -40,7 +40,7 @@ public class RegisterUserCommandHandler(IUserManager userManager,
             Id = Guid.NewGuid().ToString(),
             UserName = request.UserName,
             Email = request.Email,
-            Roles = ["Client"]
+            Roles = ["Guest"]
         };
         await userManager.CreateAsync(user, request.Password);
         string identityToken = tokenManager.GenerateIdentityToken(user);

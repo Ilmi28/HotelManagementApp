@@ -6,9 +6,9 @@ using HotelManagementApp.Infrastructure.Database.Context;
 
 namespace HotelManagementApp.Infrastructure.Loggers;
 
-public class AuthDbLogger(HotelManagementAppDbContext context) : IDbLogger<UserDto>
+public class AuthDbLogger(AppDbContext context) : IDbLogger<UserDto>
 {
-    private readonly HotelManagementAppDbContext _context = context;
+    private readonly AppDbContext _context = context;
 
     public async Task Log(AccountOperationEnum operation, UserDto loggedObject)
     {
@@ -19,7 +19,7 @@ public class AuthDbLogger(HotelManagementAppDbContext context) : IDbLogger<UserD
             Date = DateTime.Now
         };
 
-        _context.UserLogs.Add(userLog);
+        _context.AccountLogs.Add(userLog);
         await _context.SaveChangesAsync();
     }
 }

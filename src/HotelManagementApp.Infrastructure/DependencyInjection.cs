@@ -24,12 +24,12 @@ public static class DependencyInjection
     {
         var configuration = builder.Configuration;
 
-        var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "HotelManagementApp.Infrastructure", "Database", "Sqlite", "hotel.db");
+        var dbPath = Path.Combine(Directory.GetCurrentDirectory(), configuration.GetValue<string>("SQLiteDbPath") ?? String.Empty);
         var fullPath = Path.GetFullPath(dbPath);
-        builder.Services.AddDbContext<HotelManagementAppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
+        builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
 
         builder.Services.AddIdentity<User, IdentityRole>()
-            .AddEntityFrameworkStores<HotelManagementAppDbContext>();
+            .AddEntityFrameworkStores<AppDbContext>();
 
         builder.Services.AddTransient<IUserManager, UserManager>();
         builder.Services.AddTransient<IRoleManager, RoleManager>();
@@ -47,15 +47,15 @@ public static class DependencyInjection
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = tokenConfiguration.GetValue<string>("Issuer"),
-                ValidAudience = tokenConfiguration.GetValue<string>("Audience"),
+                ValidAudiences = tokenConfiguration.GetSection("Audience").Get<string[]>(),
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
             };
         });
 
         builder.Services.AddTransient<ITokenRepository, RefreshTokenRepository>();
-        builder.Services.AddTransient<IVIPUserRepository, VIPUserRepository>();
-        builder.Services.AddTransient<IBlacklistedUserRepository, BlacklistedUserRepository>();
-
+        builder.Services.AddTransient<IVIPRepository, VIPRepository>();
+        builder.Services.AddTransient<IBlacklistRepository, BlacklistRepository>();
+        builder.Services.AddTransient<IUserRolesManager, UserManager>();
         builder.Services.AddTransient<ITokenService, JwtTokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
 

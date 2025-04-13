@@ -16,13 +16,13 @@ public class AuthWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<DbContextOptions<HotelManagementAppDbContext>>();
-            services.RemoveAll<HotelManagementAppDbContext>();
+            services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.RemoveAll<AppDbContext>();
 
-            services.AddDbContext<HotelManagementAppDbContext>(options =>
+            services.AddDbContext<AppDbContext>(options =>
                                options.UseInMemoryDatabase("AuthTestDb"));
 
-            services.AddScoped<HotelManagementAppDbContext, TestDbContext>();
+            services.AddScoped<AppDbContext, TestDbContext>();
         });
     }
 }

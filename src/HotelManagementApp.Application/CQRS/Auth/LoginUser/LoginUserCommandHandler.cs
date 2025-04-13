@@ -22,7 +22,7 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
             RefreshTokenHash = hashRefreshToken,
             ExpirationDate = DateTime.Now.AddDays(tokenManager.GetRefreshTokenExpirationDays())
         };
-        var user = await userManager.FindByIdAsync(userDto.Id);
+        _ = await userManager.FindByIdAsync(userDto.Id);
         if (userDto == null)
             return false;
         var lastToken = await tokenRepository.GetLastValidToken(userDto.Id);
@@ -34,10 +34,8 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
 
     public async Task<LoginRegisterResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
     {
-        _ = request ?? throw new ArgumentNullException();
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user == null)
-            throw new UnauthorizedAccessException();
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
+        var user = await userManager.FindByEmailAsync(request.Email) ?? throw new UnauthorizedAccessException();
         var result = await userManager.CheckPasswordAsync(user, request.Password);
         if (!result)
             throw new UnauthorizedAccessException();

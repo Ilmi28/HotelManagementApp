@@ -22,6 +22,7 @@ public static class MiddlewareConfig
                     ConflictException => new ConflictProblemDetails(exception.Message),
                     NotFoundException => new NotFoundProblemDetails(exception.Message),
                     UnauthorizedAccessException => new UnauthorizedProblemDetail(exception.Message),
+                    ForbiddenException => new ForbiddenProblemDetail(exception.Message),
                     _ => new InternalServerErrorProblemDetails(exception!.Message)
                 };
                 context.Response.StatusCode = problemDetails.Status!.Value;

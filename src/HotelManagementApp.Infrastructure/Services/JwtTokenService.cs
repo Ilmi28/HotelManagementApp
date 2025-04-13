@@ -11,13 +11,11 @@ namespace HotelManagementApp.Infrastructure.Services;
 
 public class JwtTokenService(IConfiguration config) : ITokenService
 {
-    private readonly IConfiguration _config = config;
-
     public string GenerateIdentityToken(UserDto user)
     {
-        var tokenConfig = _config.GetSection("JwtTokenConfiguration");
+        var tokenConfig = config.GetSection("JwtTokenConfiguration");
         string issuer = tokenConfig.GetValue<string>("Issuer") ?? string.Empty;
-        string audience = tokenConfig.GetValue<string>("Audience") ?? string.Empty; ;
+        string[] audience = tokenConfig.GetSection("Audience").Get<string[]>() ?? [];
         string secretKey = Environment.GetEnvironmentVariable("SecretJwtKey")
             ?? tokenConfig.GetValue<string>("SecretKey")
             ?? string.Empty;
@@ -34,10 +32,11 @@ public class JwtTokenService(IConfiguration config) : ITokenService
         };
         foreach (var role in user.Roles)
             claims.Add(new Claim(ClaimTypes.Role, role));
+        foreach (var aud in audience)
+            claims.Add(new Claim("aud", aud));
 
         var token = new JwtSecurityToken(
             issuer: issuer,
-            audience: audience,
             claims: claims,
             expires: jwtExpireDate,
             signingCredentials: credentials);
@@ -57,7 +56,7 @@ public class JwtTokenService(IConfiguration config) : ITokenService
 
     public string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
-    public int GetRefreshTokenExpirationDays() => _config.GetValue<int>("TokenConfiguration:RefreshTokenExpirationDays");
+    public int GetRefreshTokenExpirationDays() => config.GetValue<int>("TokenConfiguration:RefreshTokenExpirationDays");
 
     public string? GetHashRefreshToken(string refreshToken)
     {

@@ -1,9 +1,8 @@
-﻿using HotelManagementApp.Core.Dtos;
+﻿using System.Security.Claims;
 
 namespace HotelManagementApp.Core.Interfaces.Services;
 
 public interface IAuthenticationService
 {
-    Task<UserDto?> GetLoggedInUserAsync();
-    bool IsUserAuthenticatedAsync();
+    ClaimsPrincipal? GetLoggedInUser();
 }

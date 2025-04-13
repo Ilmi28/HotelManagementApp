@@ -8,19 +8,16 @@
 
   <ItemGroup>
     <Compile Remove="CQRS\Account\PasswordReset\**" />
-    <Compile Remove="CQRS\Admin\**" />
     <Compile Remove="CQRS\Manager\**" />
     <Compile Remove="CQRS\MyAccount\**" />
     <Compile Remove="CQRS\Worker\**" />
     <Compile Remove="Services\**" />
     <EmbeddedResource Remove="CQRS\Account\PasswordReset\**" />
-    <EmbeddedResource Remove="CQRS\Admin\**" />
     <EmbeddedResource Remove="CQRS\Manager\**" />
     <EmbeddedResource Remove="CQRS\MyAccount\**" />
     <EmbeddedResource Remove="CQRS\Worker\**" />
     <EmbeddedResource Remove="Services\**" />
     <None Remove="CQRS\Account\PasswordReset\**" />
-    <None Remove="CQRS\Admin\**" />
     <None Remove="CQRS\Manager\**" />
     <None Remove="CQRS\MyAccount\**" />
     <None Remove="CQRS\Worker\**" />
@@ -29,6 +26,7 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.15" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
   </ItemGroup>
