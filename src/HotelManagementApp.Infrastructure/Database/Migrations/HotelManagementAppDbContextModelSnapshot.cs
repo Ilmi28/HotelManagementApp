@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace HotelManagementApp.Infrastructure.Database.Migrations
 {
-    [DbContext(typeof(HotelManagementAppDbContext))]
+    [DbContext(typeof(AppDbContext))]
     partial class HotelManagementAppDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -17,7 +17,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.14");
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Operation", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.AccountOperation", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -29,7 +29,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Operation");
+                    b.ToTable("Operations");
 
                     b.HasData(
                         new
@@ -64,7 +64,50 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.Token", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.BlacklistedGuest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("BlacklistedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BlackListedGuests");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.ConfirmEmailToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfirmEmailTokenHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConfirmEmailTokens");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -86,7 +129,32 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tokens");
+                    b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.ResetPasswordToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResetPasswordTokenHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ResetPasswordTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.UserLog", b =>
@@ -107,7 +175,25 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserLogs");
+                    b.ToTable("AccountLogs");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.VIPGuest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("VIPDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VIPGuests");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Infrastructure.Database.Identity.User", b =>
@@ -203,8 +289,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         new
                         {
                             Id = "1",
-                            Name = "Client",
-                            NormalizedName = "CLIENT"
+                            Name = "Guest",
+                            NormalizedName = "GUEST"
                         },
                         new
                         {
@@ -221,8 +307,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         new
                         {
                             Id = "4",
-                            Name = "Worker",
-                            NormalizedName = "WORKER"
+                            Name = "Staff",
+                            NormalizedName = "STAFF"
                         });
                 });
 

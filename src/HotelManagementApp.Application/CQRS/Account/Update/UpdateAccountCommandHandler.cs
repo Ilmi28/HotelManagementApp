@@ -1,40 +1,46 @@
-﻿using HotelManagementApp.Core.Dtos;
+﻿using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
+using HotelManagementApp.Core.Exceptions.Conflict;
+using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 
-namespace HotelManagementApp.Application.CQRS.Account.Update
+namespace HotelManagementApp.Application.CQRS.Account.Update;
+
+public class UpdateAccountCommandHandler(
+    IUserManager userManager, 
+    IDbLogger<UserDto> logger,
+    IAuthenticationService authenticationService,
+    IAuthorizationService authorizationService) : IRequestHandler<UpdateAccountCommand>
 {
-    public class UpdateAccountCommandHandler : IRequestHandler<UpdateAccountCommand>
+    public async Task Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
-        private IUserManager _userManager;
-        private IDbLogger<UserDto> _logger;
-        public UpdateAccountCommandHandler(IUserManager userManager, IDbLogger<UserDto> logger)
-        {
-            _userManager = userManager;
-            _logger = logger;
-        }
-        public async Task Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
-        {
-            _ = request ?? throw new ArgumentNullException();
-            try
-            {
-                var user = await _userManager.FindByIdAsync(request.UserId);
-                if (user == null)
-                    throw new UnauthorizedAccessException();
-                user.UserName = request.UserName;
-                var result = await _userManager.UpdateAsync(user);
-                if (!result)
-                    throw new Exception("User update failed");
-                await _logger.Log(OperationEnum.Update, user);
-            }
-            catch (UnauthorizedAccessException) { throw; }
-            catch (Exception ex)
-            {
-                throw new Exception("Unexpected error occured", ex);
-            }
+        ArgumentNullException.ThrowIfNull(request);
+        var user = await userManager.FindByIdAsync(request.UserId) 
+            ?? throw new UnauthorizedAccessException();
+        var loggedInUser = authenticationService.GetLoggedInUser()
+            ?? throw new UnauthorizedAccessException();
+        var authorizationResult = await authorizationService.AuthorizeAsync(loggedInUser, user, new RoleHierarchyRequirement());
+        if (!authorizationResult.Succeeded)
+            throw new RoleForbiddenException("You do not have permission to update this user.");
+        var userByUserName = await userManager.FindByNameAsync(request.UserName);
+        if (userByUserName != null && userByUserName.Id != request.UserId)
+            throw new UserExistsException("User with this username already exists.");
+        user.UserName = request.UserName;
 
-        }
+        var userByEmail = await userManager.FindByEmailAsync(request.Email);
+        if (userByEmail != null && userByEmail.Id != request.UserId)
+            throw new UserExistsException("User with this email already exists.");
+        user.Email = request.Email;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result)
+            throw new Exception("User update failed");
+        await logger.Log(AccountOperationEnum.Update, user);
+
     }
 }

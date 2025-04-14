@@ -8,22 +8,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace HotelManagementApp.IntegrationTests.WebApplicationFactories
+namespace HotelManagementApp.IntegrationTests.WebApplicationFactories;
+
+public class AccountWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public class AccountWebApplicationFactory : WebApplicationFactory<Program>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        builder.ConfigureTestServices(services =>
         {
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<DbContextOptions<HotelManagementAppDbContext>>();
-                services.RemoveAll<HotelManagementAppDbContext>();
+            services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.RemoveAll<AppDbContext>();
 
-                services.AddDbContext<HotelManagementAppDbContext>(options =>
-                                   options.UseInMemoryDatabase("AccountTestDb"));
+            services.AddDbContext<AppDbContext>(options =>
+                               options.UseInMemoryDatabase("AccountTestDb"));
 
-                services.AddScoped<HotelManagementAppDbContext, TestDbContext>();
-            });
-        }
+            services.AddScoped<AppDbContext, TestDbContext>();
+        });
     }
 }

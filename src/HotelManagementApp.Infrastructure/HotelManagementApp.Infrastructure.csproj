@@ -7,14 +7,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Database\Identity\AuthorizationPolicies\**" />
+    <EmbeddedResource Remove="Database\Identity\AuthorizationPolicies\**" />
+    <None Remove="Database\Identity\AuthorizationPolicies\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.14">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.14" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.3" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.14" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.14" />
+	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +33,7 @@
 
   <ItemGroup>
     <Folder Include="Database\Sqlite\" />
+    <Folder Include="wwwroot\images\" />
   </ItemGroup>
 
 </Project>

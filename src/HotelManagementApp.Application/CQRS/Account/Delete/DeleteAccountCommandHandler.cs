@@ -1,40 +1,38 @@
-﻿using HotelManagementApp.Core.Dtos;
+﻿using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
+using HotelManagementApp.Core.Exceptions.Forbidden;
+using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 
-namespace HotelManagementApp.Application.CQRS.Account.Delete
+namespace HotelManagementApp.Application.CQRS.Account.Delete;
+
+public class DeleteAccountCommandHandler(
+    IUserManager userManager, 
+    IDbLogger<UserDto> logger,
+    IAuthenticationService authenticationService,
+    IAuthorizationService authorizationService) : IRequestHandler<DeleteAccountCommand>
 {
-    public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand>
+    public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
-        private readonly IUserManager _userManager;
-        private readonly IDbLogger<UserDto> _logger; 
-        public DeleteAccountCommandHandler(IUserManager userManager, IDbLogger<UserDto> logger)
-        {
-            _userManager = userManager;
-            _logger = logger;
-        }
-        public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
-        {
-            _ = request ?? throw new ArgumentNullException();
-            try
-            {
-                var user = await _userManager.FindByIdAsync(request.UserId)
-                ?? throw new UnauthorizedAccessException();
-                var result = await _userManager.CheckPasswordAsync(user, request.Password);
-                if (!result)
-                    throw new UnauthorizedAccessException();
-                result = await _userManager.DeleteAsync(user);
-                if (!result)
-                    throw new Exception("User deletion failed");
-                await _logger.Log(OperationEnum.Delete, user);
-            }
-            catch (UnauthorizedAccessException) { throw; }
-            catch (Exception ex)
-            {
-                throw new Exception("Unexpected error occured", ex);
-            }
-        }
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
+        var user = await userManager.FindByIdAsync(request.UserId)
+            ?? throw new UserNotFoundException($"User with id {request.UserId} not found");
+        var loggedInUser = authenticationService.GetLoggedInUser()
+            ?? throw new UnauthorizedAccessException();
+        var authResult = await authorizationService.AuthorizeAsync(loggedInUser, user, new RoleHierarchyRequirement());
+        if (!authResult.Succeeded)
+            throw new RoleForbiddenException("You don't have permission to delete this account");
+        var result = await userManager.CheckPasswordAsync(user, request.Password);
+        if (!result)
+            throw new UnauthorizedAccessException("Invalid password");
+        result = await userManager.DeleteAsync(user);
+        if (!result)
+            throw new Exception("User deletion failed");
+        await logger.Log(AccountOperationEnum.Delete, user);
     }
 }
