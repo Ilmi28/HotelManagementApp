@@ -1,4 +1,5 @@
-﻿using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,6 +14,7 @@ public static class DependencyInjection
         builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
         builder.Services.AddSingleton<IAuthorizationHandler, RoleHierarchyHandler>();
+        builder.Services.AddSingleton<IAuthorizationHandler, AccountOwnerHandler>();
 
         return builder;
     }

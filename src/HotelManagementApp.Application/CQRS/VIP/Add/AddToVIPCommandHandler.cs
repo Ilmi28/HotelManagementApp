@@ -16,7 +16,7 @@ public class AddToVIPCommandHandler(IVIPRepository vipUserRepository,
         _ = await userManager.FindByIdAsync(request.UserId) ?? throw new UnauthorizedAccessException("User not found");
         var isGuest = await userRolesManager.IsUserInRoleAsync(request.UserId, "Guest");
         if (!isGuest)
-            throw new RoleForbiddenException("User is not a guest");
+            throw new PolicyForbiddenException("User is not a guest");
         var isUserVIP = await vipUserRepository.IsUserVIP(request.UserId);
         if (isUserVIP)
             throw new VIPConflictException("User is already a VIP");

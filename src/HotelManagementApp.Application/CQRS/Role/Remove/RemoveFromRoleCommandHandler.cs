@@ -15,7 +15,7 @@ public class RemoveFromRoleCommandHandler(IUserManager userManager, IUserRolesMa
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new UserNotFoundException("User not found.");
         if (request.Role == "Guest")
-            throw new RoleForbiddenException("Guest role cannot be removed.");
+            throw new PolicyForbiddenException("Guest role cannot be removed.");
         var isInRole = await userRolesManager.IsUserInRoleAsync(request.UserId, request.Role);
         if (!isInRole)
             throw new RoleConflictException("User does not have this role.");

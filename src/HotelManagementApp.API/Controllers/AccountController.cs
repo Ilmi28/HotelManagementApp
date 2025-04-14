@@ -1,5 +1,7 @@
 ﻿using HotelManagementApp.API.Requests;
+using HotelManagementApp.Application.CQRS.Account.ChangePassword;
 using HotelManagementApp.Application.CQRS.Account.Delete;
+using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
 using HotelManagementApp.Application.CQRS.Account.Update;
 using MediatR;
@@ -15,6 +17,7 @@ namespace HotelManagementApp.API.Controllers;
 public class AccountController(IMediator mediator) : ControllerBase
 {
     [HttpPost("create")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -57,5 +60,28 @@ public class AccountController(IMediator mediator) : ControllerBase
     {
         var account = await mediator.Send(new GetAccountQuery { UserId = id });
         return Ok(account);
+    }
+
+    [HttpDelete("delete-without-password/{userId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> DeleteAccountWithoutPassword(string userId)
+    {
+        await mediator.Send(new DeleteWithoutPasswordCommand { UserId = userId });
+        return NoContent();
+    }
+
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand cmd)
+    {
+        await mediator.Send(cmd);
+        return NoContent();
     }
 }
