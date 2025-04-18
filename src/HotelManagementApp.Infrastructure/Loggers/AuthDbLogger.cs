@@ -20,13 +20,13 @@ public class AuthDbLogger(AppDbContext context) : IDbLogger<UserDto, AccountOper
             Date = DateTime.Now
         };
 
-        _context.AccountLogs.Add(userLog);
+        _context.AccountHistory.Add(userLog);
         await _context.SaveChangesAsync();
     }
 
     public async Task<ICollection<UserLog>> GetLogs(UserDto user)
     {
-        return await _context.AccountLogs
+        return await _context.AccountHistory
             .Where(x => x.UserId == user.Id)
             .ToListAsync();
     }

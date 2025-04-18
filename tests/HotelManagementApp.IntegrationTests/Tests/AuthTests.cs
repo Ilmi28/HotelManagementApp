@@ -89,7 +89,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
         int userCount = _context.Users.Count();
         int tokenCount = _context.RefreshTokens.Count();
-        int userLogsCount = _context.AccountLogs.Count();
+        int userLogsCount = _context.AccountHistory.Count();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(string.IsNullOrEmpty(accessToken));
@@ -163,7 +163,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
         int tokenCount = _context.RefreshTokens.Count();
         int revokedTokenCount = _context.RefreshTokens.Where(x => x.IsRevoked).Count();
-        int userLogsCount = _context.AccountLogs.Count();
+        int userLogsCount = _context.AccountHistory.Count();
 
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
