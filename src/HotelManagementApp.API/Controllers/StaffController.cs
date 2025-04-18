@@ -21,14 +21,14 @@ public class StaffController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> AddToStaff(string userId)
+    public async Task<IActionResult> AddToStaff(string userId, CancellationToken ct)
     {
         var cmd = new AddToRoleCommand
         {
             UserId = userId,
             Role = "Staff"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 
@@ -39,14 +39,14 @@ public class StaffController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> RemoveFromStaff(string userId)
+    public async Task<IActionResult> RemoveFromStaff(string userId, CancellationToken ct)
     {
         var cmd = new RemoveFromRoleCommand
         {
             UserId = userId,
             Role = "Staff"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 
@@ -54,13 +54,13 @@ public class StaffController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAllStaff()
+    public async Task<IActionResult> GetAllStaff(CancellationToken ct)
     {
         var query = new GetAccountsInRoleQuery
         {
             RoleName = "Staff"
         };
-        var result = await mediator.Send(query);
+        var result = await mediator.Send(query, ct);
         return Ok(result);
     }
 }

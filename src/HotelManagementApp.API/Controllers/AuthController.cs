@@ -14,27 +14,27 @@ public class AuthController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserCommand cmd)
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserCommand cmd, CancellationToken ct)
     {
-        var response = await mediator.Send(cmd);
+        var response = await mediator.Send(cmd, ct);
         return Ok(response);
     }
 
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> LoginUser([FromBody] LoginUserCommand cmd)
+    public async Task<IActionResult> LoginUser([FromBody] LoginUserCommand cmd, CancellationToken ct)
     {
-        var response = await mediator.Send(cmd);
+        var response = await mediator.Send(cmd, ct);
         return Ok(response);
     }
 
     [HttpPost("refresh")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand cmd)
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand cmd, CancellationToken ct)
     {
-        var response = await mediator.Send(cmd);
+        var response = await mediator.Send(cmd, ct);
         return Ok(response);
     }
 }

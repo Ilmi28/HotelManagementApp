@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HotelManagementApp.Application.CQRS.Account.Create;
 
-public class CreateAccountCommand : IRequest
+public class CreateAccountCommand : IRequest<string>
 {
     [Required(ErrorMessage = "Username field is required")]
     [MinLength(3)]

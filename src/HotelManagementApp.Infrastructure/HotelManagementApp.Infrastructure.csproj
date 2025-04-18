@@ -7,9 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Database\Context\**" />
     <Compile Remove="Database\Identity\AuthorizationPolicies\**" />
+    <Compile Remove="Database\Images\**" />
+    <EmbeddedResource Remove="Database\Context\**" />
     <EmbeddedResource Remove="Database\Identity\AuthorizationPolicies\**" />
+    <EmbeddedResource Remove="Database\Images\**" />
+    <None Remove="Database\Context\**" />
     <None Remove="Database\Identity\AuthorizationPolicies\**" />
+    <None Remove="Database\Images\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,11 +35,6 @@
   <ItemGroup>
     <ProjectReference Include="..\HotelManagementApp.Application\HotelManagementApp.Application.csproj" />
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Database\Sqlite\" />
-    <Folder Include="wwwroot\images\" />
   </ItemGroup>
 
 </Project>

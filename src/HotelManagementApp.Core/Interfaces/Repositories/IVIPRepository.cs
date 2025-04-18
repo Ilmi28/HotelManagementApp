@@ -4,8 +4,8 @@ namespace HotelManagementApp.Core.Interfaces.Repositories;
 
 public interface IVIPRepository
 {
-    Task AddUserToVIP(string userId);
-    Task RemoveUserFromVIP(string userId);
-    Task<bool> IsUserVIP(string userId);
-    Task<List<VIPGuest>> GetVIPUsers();
+    Task AddUserToVIP(string userId, CancellationToken ct = default);
+    Task RemoveUserFromVIP(string userId, CancellationToken ct = default);
+    Task<bool> IsUserVIP(string userId, CancellationToken ct = default);
+    Task<List<VIPGuest>> GetVIPUsers(CancellationToken ct = default);
 }

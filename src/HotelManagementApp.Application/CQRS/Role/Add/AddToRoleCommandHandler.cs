@@ -1,4 +1,5 @@
-﻿using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -11,14 +12,21 @@ namespace HotelManagementApp.Application.CQRS.Role.Add;
 
 public class AddToRoleCommandHandler(
     IUserManager userManager, 
-    IUserRolesManager userRolesManager) 
-    : IRequestHandler<AddToRoleCommand>
+    IUserRolesManager userRolesManager,
+    IAuthenticationService authenticationService,
+    IAuthorizationService authorizationService) : IRequestHandler<AddToRoleCommand>
 {
     public async Task Handle(AddToRoleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new UserNotFoundException("User not found.");
+        var loggedInUser = authenticationService.GetLoggedInUser()
+            ?? throw new UnauthorizedAccessException();
+        var hierarchyPolicy = await authorizationService.AuthorizeAsync(loggedInUser, user, new RoleHierarchyRequirement());
+        var ownerPolicy = await authorizationService.AuthorizeAsync(loggedInUser, user, new AccountOwnerRequirement());
+        if (!hierarchyPolicy.Succeeded && !ownerPolicy.Succeeded)
+            throw new PolicyForbiddenException("You don't have permission to assign this role.");
         var userRoles = await userRolesManager.GetUserRolesAsync(request.UserId);
         var forbiddenRolesForGuest = new[] { "Staff", "Manager", "Admin" };
         if (CheckForGuestRole(request.Role, userRoles) || CheckForPersonnelRole(request.Role, userRoles))

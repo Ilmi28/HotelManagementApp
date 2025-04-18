@@ -15,7 +15,7 @@ public class RefreshTokenCommandHandler(ITokenService tokenManager,
         ArgumentNullException.ThrowIfNull(request);
         string hash = tokenManager.GetHashRefreshToken(request.RefreshToken)
                                                     ?? throw new UnauthorizedAccessException();
-        var token = await tokenRepository.GetToken(hash)
+        var token = await tokenRepository.GetToken(hash, cancellationToken)
                                                 ?? throw new UnauthorizedAccessException();
         if (token.ExpirationDate < DateTime.Now || token.IsRevoked)
             throw new UnauthorizedAccessException();

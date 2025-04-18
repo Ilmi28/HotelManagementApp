@@ -1,4 +1,4 @@
-﻿using HotelManagementApp.Infrastructure.Database.Context;
+﻿using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.IntegrationTests.WebApplicationFactories;
 using Microsoft.Extensions.DependencyInjection;
 

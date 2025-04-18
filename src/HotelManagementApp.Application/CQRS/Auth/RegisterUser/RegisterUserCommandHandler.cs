@@ -6,6 +6,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
@@ -13,9 +14,10 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 public class RegisterUserCommandHandler(IUserManager userManager,
                                     ITokenService tokenManager,
                                     ITokenRepository tokenRepository,
-                                    IDbLogger<UserDto> logger) : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
+                                    IDbLogger<UserDto, AccountOperationEnum, UserLog> logger) 
+    : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
 {
-    private async Task CreateRefreshTokenInDb(string hashRefreshToken, UserDto user)
+    private async Task CreateRefreshTokenInDb(string hashRefreshToken, UserDto user, CancellationToken ct)
     {
         var token = new Core.Models.RefreshToken
         {
@@ -23,7 +25,7 @@ public class RegisterUserCommandHandler(IUserManager userManager,
             RefreshTokenHash = hashRefreshToken,
             ExpirationDate = DateTime.Now.AddDays(tokenManager.GetRefreshTokenExpirationDays())
         };
-        await tokenRepository.AddToken(token);
+        await tokenRepository.AddToken(token, ct);
     }
 
     public async Task<LoginRegisterResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -47,7 +49,7 @@ public class RegisterUserCommandHandler(IUserManager userManager,
         string refreshToken = tokenManager.GenerateRefreshToken();
         string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
-        await CreateRefreshTokenInDb(hashRefreshToken, user);
+        await CreateRefreshTokenInDb(hashRefreshToken, user, cancellationToken);
         await logger.Log(AccountOperationEnum.Register, user);
         return new LoginRegisterResponse { IdentityToken = identityToken, RefreshToken = refreshToken };
     }

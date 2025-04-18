@@ -1,11 +1,9 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
-using HotelManagementApp.Application.Responses.AuthResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models;
-using MediatR;
 using Moq;
 
 
@@ -48,7 +46,7 @@ public class RefreshTokenCommandHandlerTests
 
         _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
         _mockTokenManager.Setup(x => x.GenerateIdentityToken(userDto)).Returns("identityToken");
-        _mockTokenRepository.Setup(x => x.GetToken(It.IsAny<string>())).ReturnsAsync(token);
+        _mockTokenRepository.Setup(x => x.GetToken(It.IsAny<string>(), CancellationToken.None)).ReturnsAsync(token);
         _mockUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync(userDto);
 
         var response = await _handler.Handle(cmd, CancellationToken.None);

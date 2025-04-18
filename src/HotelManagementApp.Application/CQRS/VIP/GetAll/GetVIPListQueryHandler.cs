@@ -10,7 +10,7 @@ public class GetVIPListQueryHandler(IVIPRepository vipRepository, IUserManager u
 {
     public async Task<ICollection<UserDto>> Handle(GetVIPListQuery request, CancellationToken cancellationToken)
     {
-        var vipList = await vipRepository.GetVIPUsers();
+        var vipList = await vipRepository.GetVIPUsers(cancellationToken);
         var users = new List<UserDto>();
         foreach (var vip in vipList)
         {

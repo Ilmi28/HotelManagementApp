@@ -1,10 +1,12 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
 using HotelManagementApp.Application.Responses.AuthResponses;
 using HotelManagementApp.Core.Dtos;
+using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models;
 using MediatR;
 using Moq;
 
@@ -15,14 +17,14 @@ public class LoginUserCommandHandlerTests
     private readonly Mock<ITokenService> _mockTokenManager;
     private readonly Mock<ITokenRepository> _mockTokenRepository;
     private readonly Mock<IUserManager> _mockUserManager;
-    private readonly Mock<IDbLogger<UserDto>> _mockLogger;
+    private readonly Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>> _mockLogger;
     private readonly LoginUserCommandHandler _handler;
     public LoginUserCommandHandlerTests()
     {
         _mockTokenManager = new Mock<ITokenService>();
         _mockTokenRepository = new Mock<ITokenRepository>();
         _mockUserManager = new Mock<IUserManager>();
-        _mockLogger = new Mock<IDbLogger<UserDto>>();
+        _mockLogger = new Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>>();
         _handler = new LoginUserCommandHandler(_mockTokenManager.Object, _mockTokenRepository.Object,
                                                 _mockUserManager.Object, _mockLogger.Object);
     }

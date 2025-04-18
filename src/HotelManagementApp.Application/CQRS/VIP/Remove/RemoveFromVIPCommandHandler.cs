@@ -14,9 +14,9 @@ public class RemoveFromVIPCommandHandler(IVIPRepository vipUserRepository, IUser
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         _ = await _userManager.FindByIdAsync(request.UserId) ?? throw new UnauthorizedAccessException();
-        var isUserVIP = await _vipUserRepository.IsUserVIP(request.UserId);
+        var isUserVIP = await _vipUserRepository.IsUserVIP(request.UserId, cancellationToken);
         if (!isUserVIP)
             throw new VIPNotFoundException("User is not a VIP");
-        await _vipUserRepository.RemoveUserFromVIP(request.UserId);
+        await _vipUserRepository.RemoveUserFromVIP(request.UserId, cancellationToken);
     }
 }

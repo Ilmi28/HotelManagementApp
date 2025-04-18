@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace HotelManagementApp.Infrastructure.Database.Context;
+namespace HotelManagementApp.Infrastructure.Database;
 
 public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(options)
 {
@@ -15,6 +15,9 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<VIPGuest> VIPGuests { get; set; }
     public DbSet<ResetPasswordToken> ResetPasswordTokens { get; set; }
     public DbSet<ConfirmEmailToken> ConfirmEmailTokens { get; set; }
+    public DbSet<Hotel> Hotels { get; set; }
+    public DbSet<Room> Rooms { get; set; }
+    public DbSet<ProfilePicture> ProfilePictures { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

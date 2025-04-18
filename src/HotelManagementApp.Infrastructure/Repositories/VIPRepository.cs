@@ -1,38 +1,38 @@
 ﻿using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Models;
-using HotelManagementApp.Infrastructure.Database.Context;
+using HotelManagementApp.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
 namespace HotelManagementApp.Infrastructure.Repositories;
 
 public class VIPRepository(AppDbContext context) : IVIPRepository
 {
-    public async Task AddUserToVIP(string userId)
+    public async Task AddUserToVIP(string userId, CancellationToken ct)
     {
         await context.VIPGuests.AddAsync(new VIPGuest
         {
             UserId = userId
-        });
-        await context.SaveChangesAsync();
+        }, ct);
+        await context.SaveChangesAsync(ct);
     }
-    public async Task<List<VIPGuest>> GetVIPUsers()
+    public async Task<List<VIPGuest>> GetVIPUsers(CancellationToken ct)
     {
-        return await context.VIPGuests.ToListAsync();
+        return await context.VIPGuests.ToListAsync(ct);
     }
-    public async Task<bool> IsUserVIP(string userId)
+    public async Task<bool> IsUserVIP(string userId, CancellationToken ct)
     {
-        var user = await context.VIPGuests.FirstOrDefaultAsync(x => x.UserId == userId);
+        var user = await context.VIPGuests.FirstOrDefaultAsync(x => x.UserId == userId, ct);
         if (user == null)
             return false;
         return true;
     }
-    public async Task RemoveUserFromVIP(string userId)
+    public async Task RemoveUserFromVIP(string userId, CancellationToken ct)
     {
-        var user = context.VIPGuests.FirstOrDefault(x => x.UserId == userId);
+        var user = await context.VIPGuests.FirstOrDefaultAsync(x => x.UserId == userId, ct);
         if (user != null)
         {
             context.VIPGuests.Remove(user);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(ct);
         }
     }
 }

@@ -3,7 +3,7 @@ using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
 using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models;
-using HotelManagementApp.Infrastructure.Database.Context;
+using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.IntegrationTests.WebApplicationFactories;
 using Microsoft.AspNetCore.Identity;

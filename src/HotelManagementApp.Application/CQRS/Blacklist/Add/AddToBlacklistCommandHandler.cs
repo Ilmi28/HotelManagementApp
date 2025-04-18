@@ -20,9 +20,9 @@ public class AddToBlacklistCommandHandler(IBlacklistRepository blacklistedUserRe
         var isGuest = await userRolesManager.IsUserInRoleAsync(request.UserId, "Guest");
         if (!isGuest)
             throw new PolicyForbiddenException("User is not a guest");
-        var isUserBlacklisted = await _blacklistedUserRepository.IsUserBlacklisted(request.UserId);
+        var isUserBlacklisted = await _blacklistedUserRepository.IsUserBlacklisted(request.UserId, cancellationToken);
         if (isUserBlacklisted)
             throw new BlackListConflictException("User is already blacklisted");
-        await _blacklistedUserRepository.AddUserToBlacklist(request.UserId);
+        await _blacklistedUserRepository.AddUserToBlacklist(request.UserId, cancellationToken);
     }
 }

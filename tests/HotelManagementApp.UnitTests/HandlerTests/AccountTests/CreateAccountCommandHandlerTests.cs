@@ -6,19 +6,20 @@ using HotelManagementApp.Core.Interfaces.Loggers;
 using MediatR;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Enums;
+using HotelManagementApp.Core.Models;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 
 public class CreateAccountCommandHandlerTests
 {
     private Mock<IUserManager> _mockUserManager;
-    private Mock<IDbLogger<UserDto>> _mockLogger;
-    private IRequestHandler<CreateAccountCommand> _handler;
+    private Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>> _mockLogger;
+    private IRequestHandler<CreateAccountCommand, string> _handler;
 
     public CreateAccountCommandHandlerTests()
     {
         _mockUserManager = new Mock<IUserManager>();
-        _mockLogger = new Mock<IDbLogger<UserDto>>();
+        _mockLogger = new Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>>();
         _handler = new CreateAccountCommandHandler(_mockUserManager.Object, _mockLogger.Object);
     }
 
@@ -38,10 +39,12 @@ public class CreateAccountCommandHandlerTests
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<UserDto>(), "Password123@")).ReturnsAsync(true);
         _mockLogger.Setup(x => x.Log(AccountOperationEnum.Create, It.IsAny<UserDto>())).Returns(Task.CompletedTask);
 
-        await _handler.Handle(cmd, CancellationToken.None);
+        var userId = await _handler.Handle(cmd, CancellationToken.None);
 
         _mockUserManager.Verify(x => x.CreateAsync(It.IsAny<UserDto>(), "Password123@"), Times.Once);
         _mockLogger.Verify(x => x.Log(AccountOperationEnum.Create, It.IsAny<UserDto>()), Times.Once);
+        Assert.NotNull(userId);
+        Assert.NotEmpty(userId);
     }
     [Fact]
     public async Task InvalidCommand_ThrowsUnauthorizedException()

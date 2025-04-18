@@ -18,10 +18,10 @@ public class GuestController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAllGuests()
+    public async Task<IActionResult> GetAllGuests(CancellationToken ct)
     {
         var query = new GetAccountsInRoleQuery { RoleName = "Guest" };
-        var result = await mediator.Send(query);
+        var result = await mediator.Send(query, ct);
         return Ok(result);
     }
 
@@ -31,14 +31,14 @@ public class GuestController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> AddToRole(string userId)
+    public async Task<IActionResult> AddToRole(string userId, CancellationToken ct)
     {
         var cmd = new AddToRoleCommand
         {
             UserId = userId,
             Role = "Guest"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 
@@ -48,14 +48,14 @@ public class GuestController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> RemoveFromRole(string userId)
+    public async Task<IActionResult> RemoveFromRole(string userId, CancellationToken ct)
     {
         var cmd = new RemoveFromRoleCommand
         {
             UserId = userId,
             Role = "Guest"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 }

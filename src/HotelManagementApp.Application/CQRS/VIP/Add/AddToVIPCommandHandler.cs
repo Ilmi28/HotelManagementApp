@@ -17,9 +17,9 @@ public class AddToVIPCommandHandler(IVIPRepository vipUserRepository,
         var isGuest = await userRolesManager.IsUserInRoleAsync(request.UserId, "Guest");
         if (!isGuest)
             throw new PolicyForbiddenException("User is not a guest");
-        var isUserVIP = await vipUserRepository.IsUserVIP(request.UserId);
+        var isUserVIP = await vipUserRepository.IsUserVIP(request.UserId, cancellationToken);
         if (isUserVIP)
             throw new VIPConflictException("User is already a VIP");
-        await vipUserRepository.AddUserToVIP(request.UserId);
+        await vipUserRepository.AddUserToVIP(request.UserId, cancellationToken);
     }
 }

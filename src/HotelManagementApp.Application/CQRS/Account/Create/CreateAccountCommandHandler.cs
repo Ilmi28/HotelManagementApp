@@ -3,13 +3,14 @@ using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Models;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Account.Create;
 
-public class CreateAccountCommandHandler(IUserManager userManager, IDbLogger<UserDto> logger) : IRequestHandler<CreateAccountCommand>
+public class CreateAccountCommandHandler(IUserManager userManager, IDbLogger<UserDto, AccountOperationEnum, UserLog> logger) : IRequestHandler<CreateAccountCommand, string>
 {
-    public async Task Handle(CreateAccountCommand request, CancellationToken cancellationToken)
+    public async Task<string> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         var dbUser = await userManager.FindByEmailAsync(request.Email);
@@ -29,5 +30,6 @@ public class CreateAccountCommandHandler(IUserManager userManager, IDbLogger<Use
         if (!result)
             throw new Exception("Invalid role");
         await logger.Log(AccountOperationEnum.Create, user);
+        return user.Id;
     }
 }

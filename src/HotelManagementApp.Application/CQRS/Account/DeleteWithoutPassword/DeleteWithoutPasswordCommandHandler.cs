@@ -6,13 +6,14 @@ using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 
 namespace HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 
-public class DeleteWithoutPasswordCommandHandler(IUserManager userManager, 
-    IDbLogger<UserDto> logger,
+public class DeleteWithoutPasswordCommandHandler(IUserManager userManager,
+    IDbLogger<UserDto, AccountOperationEnum, UserLog> logger,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService) : IRequestHandler<DeleteWithoutPasswordCommand>
 {

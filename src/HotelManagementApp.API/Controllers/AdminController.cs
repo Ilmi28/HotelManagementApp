@@ -17,14 +17,14 @@ public class AdminController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RemoveFromRole(string userId)
+    public async Task<IActionResult> RemoveFromRole(string userId, CancellationToken ct)
     {
         var cmd = new RemoveFromRoleCommand
         {
             UserId = userId,
             Role = "Admin"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 
@@ -33,14 +33,14 @@ public class AdminController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddToRole(string userId)
+    public async Task<IActionResult> AddToRole(string userId, CancellationToken ct)
     {
         var cmd = new RemoveFromRoleCommand
         {
             UserId = userId,
             Role = "Admin"
         };
-        await mediator.Send(cmd);
+        await mediator.Send(cmd, ct);
         return NoContent();
     }
 }

@@ -20,9 +20,9 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> AddToBlacklist(string userId)
+    public async Task<IActionResult> AddToBlacklist(string userId, CancellationToken ct)
     {
-        await mediator.Send(new AddToBlacklistCommand { UserId = userId });
+        await mediator.Send(new AddToBlacklistCommand { UserId = userId }, ct);
         return NoContent();
     }
     [HttpPatch("remove/{userId}")]
@@ -31,9 +31,9 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> RemoveFromBlacklist(string userId)
+    public async Task<IActionResult> RemoveFromBlacklist(string userId, CancellationToken ct)
     {
-        await mediator.Send(new RemoveFromBlacklistCommand { UserId = userId });
+        await mediator.Send(new RemoveFromBlacklistCommand { UserId = userId }, ct);
         return NoContent();
     }
 
@@ -41,10 +41,10 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAllBlacklistedUsers()
+    public async Task<IActionResult> GetAllBlacklistedUsers(CancellationToken ct)
     {
         var query = new GetBlacklistQuery();
-        var result = await mediator.Send(query);
+        var result = await mediator.Send(query, ct);
         return Ok(result);
     }
 }

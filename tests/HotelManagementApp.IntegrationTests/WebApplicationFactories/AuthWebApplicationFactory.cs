@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.API;
-using HotelManagementApp.Infrastructure.Database.Context;
+using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.IntegrationTests.TestContext;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

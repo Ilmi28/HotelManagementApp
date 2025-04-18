@@ -5,6 +5,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.LoginUser;
@@ -12,9 +13,9 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser;
 public class LoginUserCommandHandler(ITokenService tokenManager,
                                 ITokenRepository tokenRepository,
                                 IUserManager userManager,
-                                IDbLogger<UserDto> logger) : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
+                                IDbLogger<UserDto, AccountOperationEnum, UserLog> logger) : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
 {
-    private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto userDto)
+    private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto userDto, CancellationToken ct)
     {
         var token = new Core.Models.RefreshToken
         {
@@ -25,10 +26,10 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
         _ = await userManager.FindByIdAsync(userDto.Id);
         if (userDto == null)
             return false;
-        var lastToken = await tokenRepository.GetLastValidToken(userDto.Id);
+        var lastToken = await tokenRepository.GetLastValidToken(userDto.Id, ct);
         if (lastToken != null)
-            await tokenRepository.RevokeToken(lastToken);
-        await tokenRepository.AddToken(token);
+            await tokenRepository.RevokeToken(lastToken, ct);
+        await tokenRepository.AddToken(token, ct);
         return true;
     }
 
@@ -43,7 +44,7 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
         string refreshToken = tokenManager.GenerateRefreshToken();
         string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
-        result = await CreateRefreshTokenInDb(hashRefreshToken, user);
+        result = await CreateRefreshTokenInDb(hashRefreshToken, user, cancellationToken);
         if (!result)
             throw new Exception("Refresh token creation failed");
         await logger.Log(AccountOperationEnum.Login, user);

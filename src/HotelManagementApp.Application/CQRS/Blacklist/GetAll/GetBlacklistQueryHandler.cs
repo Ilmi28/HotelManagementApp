@@ -9,7 +9,7 @@ public class GetBlacklistQueryHandler(IBlacklistRepository blacklistRepository, 
 {
     public async Task<ICollection<UserDto>> Handle(GetBlacklistQuery request, CancellationToken cancellationToken)
     {
-        var blacklist = await blacklistRepository.GetBlackList();
+        var blacklist = await blacklistRepository.GetBlackList(cancellationToken);
         var users = new List<UserDto>();
         foreach (var blacklistUser in blacklist)
         {

@@ -16,9 +16,9 @@ public class RemoveFromBlacklistCommandHandler(IBlacklistRepository blacklistedU
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         _ = await _userManager.FindByIdAsync(request.UserId)
             ?? throw new UnauthorizedAccessException("User not found");
-        var isUserBlacklisted = await _blacklistedUserRepository.IsUserBlacklisted(request.UserId);
+        var isUserBlacklisted = await _blacklistedUserRepository.IsUserBlacklisted(request.UserId, cancellationToken);
         if (!isUserBlacklisted)
             throw new BlacklistUserNotFound("User is not blacklisted");
-        await _blacklistedUserRepository.RemoveUserFromBlacklist(request.UserId);
+        await _blacklistedUserRepository.RemoveUserFromBlacklist(request.UserId, cancellationToken);
     }
 }

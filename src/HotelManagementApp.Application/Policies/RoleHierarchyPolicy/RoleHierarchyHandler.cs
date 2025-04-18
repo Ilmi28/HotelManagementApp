@@ -18,7 +18,7 @@ public class RoleHierarchyHandler : AuthorizationHandler<RoleHierarchyRequiremen
         var userRoleLevel = GetMaxRoleLevel(userRoles);
         var targetUserRoleLevel = GetMaxRoleLevel(targetUserRoles);
 
-        if (userRoleLevel > targetUserRoleLevel)
+        if (userRoleLevel > targetUserRoleLevel || userRoleLevel == 3)
             context.Succeed(requirement);
         return Task.CompletedTask;
     }
