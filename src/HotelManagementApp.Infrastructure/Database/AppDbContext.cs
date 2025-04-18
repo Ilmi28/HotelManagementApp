@@ -11,7 +11,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<UserLog> AccountLogs { get; set; }
     public DbSet<BlacklistedGuest> BlackListedGuests { get; set; }
-    public DbSet<AccountOperation> Operations { get; set; }
+    public DbSet<AccountOperation> AccountHistory { get; set; }
     public DbSet<VIPGuest> VIPGuests { get; set; }
     public DbSet<ResetPasswordToken> ResetPasswordTokens { get; set; }
     public DbSet<ConfirmEmailToken> ConfirmEmailTokens { get; set; }

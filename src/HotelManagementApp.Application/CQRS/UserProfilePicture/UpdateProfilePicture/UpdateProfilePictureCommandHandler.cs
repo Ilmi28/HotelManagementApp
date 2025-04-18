@@ -1,11 +1,13 @@
 ﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
 using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+using HotelManagementApp.Core.Exceptions.BadRequest;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Application.CQRS.UserProfilePicture.UpdateProfilePicture;
 
@@ -14,10 +16,15 @@ public class UpdateProfilePictureCommandHandler(
     IProfilePictureRepository profilePictureRepository,
     IUserManager userManager,
     IAuthenticationService authenticationService,
-    IAuthorizationService authorizationService) : IRequestHandler<UpdateProfilePictureCommand, string>
+    IAuthorizationService authorizationService,
+    IConfiguration config) : IRequestHandler<UpdateProfilePictureCommand, string>
 {
     public async Task<string> Handle(UpdateProfilePictureCommand request, CancellationToken cancellationToken)
-    {
+    {   
+        
+        var isValidExtension = IsValidExtension(request.File.FileName);
+        if (!isValidExtension)
+            throw new InvalidImageTypeException("Invalid file extension.");
         var isAuthorized = await IsAuthorized(request.UserId);
         if (!isAuthorized)
             throw new UnauthorizedAccessException();
@@ -52,5 +59,14 @@ public class UpdateProfilePictureCommandHandler(
         if (ownerPolicy.Succeeded || hierarchyPolicy.Succeeded)
             return true;
         return false;
+    }
+
+    private bool IsValidExtension(string fileName)
+    {
+        var fileExtension = Path.GetExtension(fileName).ToLower();
+        var allowedExtensions = config.GetSection("AllowedImageExtensions").Get<string[]>();
+        if (allowedExtensions == null)
+            allowedExtensions = Array.Empty<string>();
+        return allowedExtensions.Contains(fileExtension);
     }
 }

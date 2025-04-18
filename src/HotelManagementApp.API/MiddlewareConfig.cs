@@ -23,6 +23,7 @@ public static class MiddlewareConfig
                     NotFoundException => new NotFoundProblemDetails(exception.Message),
                     UnauthorizedAccessException => new UnauthorizedProblemDetail(exception.Message),
                     ForbiddenException => new ForbiddenProblemDetail(exception.Message),
+                    BadRequestException => new BadRequestProblemDetails(exception.Message),
                     _ => new InternalServerErrorProblemDetails(exception!.Message)
                 };
                 context.Response.StatusCode = problemDetails.Status!.Value;
