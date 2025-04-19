@@ -85,7 +85,7 @@ public class AccountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("change-password")]
+    [HttpPatch("change-password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -97,7 +97,7 @@ public class AccountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("history/{userId}")]
+    [HttpGet("history/{userId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetHistory(string userId, CancellationToken ct)
