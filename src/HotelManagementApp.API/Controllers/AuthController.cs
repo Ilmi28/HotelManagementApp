@@ -1,6 +1,7 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
 using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
 using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
+using HotelManagementApp.Application.Responses.AuthResponses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +11,11 @@ namespace HotelManagementApp.API.Controllers;
 [Route("api/auth")]
 public class AuthController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Returns JWT token and refresh token for the user if successful.
+    /// </summary>
     [HttpPost("register")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginRegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RegisterUser([FromBody] RegisterUserCommand cmd, CancellationToken ct)
@@ -20,8 +24,11 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Returns JWT token and refresh token for the user if successful.
+    /// </summary>
     [HttpPost("login")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginRegisterResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> LoginUser([FromBody] LoginUserCommand cmd, CancellationToken ct)
     {
@@ -29,8 +36,11 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Returns new JWT token.
+    /// </summary>
     [HttpPost("refresh")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RefreshTokenResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand cmd, CancellationToken ct)
     {

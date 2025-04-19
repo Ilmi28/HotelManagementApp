@@ -12,8 +12,15 @@ namespace HotelManagementApp.API.Controllers;
 [ApiController]
 public class ProfilePictureController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Uploads a profile picture for a user (higher in the hierarchy or owner).
+    /// </summary>
+    /// <param name="file"></param>
+    /// <param name="userId"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     [HttpPost("upload/profile-picture/{userId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UploadProfilePicture(IFormFile file, string userId, CancellationToken ct)
     {
@@ -26,8 +33,11 @@ public class ProfilePictureController(IMediator mediator) : ControllerBase
         return Ok(fileName);
     }
 
+    /// <summary>
+    /// Returns a profile picture for a user (higher in the hierarchy or owner).
+    /// </summary>
     [HttpGet("profile-picture/{userId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(File), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetProfilePicture(string userId, CancellationToken ct)
     {

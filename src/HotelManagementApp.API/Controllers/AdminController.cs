@@ -12,6 +12,9 @@ namespace HotelManagementApp.API.Controllers;
     Roles = "Admin")]
 public class AdminController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Removes a user from the Admin role (admin).
+    /// </summary>
     [HttpPatch("remove/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -28,6 +31,9 @@ public class AdminController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Adds a user to the Admin role (admin).
+    /// </summary>
     [HttpPatch("add/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

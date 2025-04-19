@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 namespace HotelManagementApp.API;
 
@@ -30,6 +31,9 @@ public static class DependencyInjection
             x.AddSecurityDefinition(security.Reference.Id, security);
             x.AddSecurityRequirement(new OpenApiSecurityRequirement
             {{security, Array.Empty<string>()}});
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            x.IncludeXmlComments(xmlPath);
         });
 
         return builder;

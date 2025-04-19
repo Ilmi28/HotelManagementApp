@@ -1,6 +1,7 @@
 ﻿using HotelManagementApp.Application.CQRS.Blacklist.Add;
 using HotelManagementApp.Application.CQRS.Blacklist.GetAll;
 using HotelManagementApp.Application.CQRS.Blacklist.Remove;
+using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,9 @@ namespace HotelManagementApp.API.Controllers;
     Roles = "Staff, Manager, Admin")]
 public class BlacklistController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Adds a guest to the blacklist (staff and above).
+    /// </summary>
     [HttpPatch("add/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -25,6 +29,10 @@ public class BlacklistController(IMediator mediator) : ControllerBase
         await mediator.Send(new AddToBlacklistCommand { UserId = userId }, ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Removes a guest from the blacklist (staff and above).
+    /// </summary>
     [HttpPatch("remove/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -37,8 +45,11 @@ public class BlacklistController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns all blacklisted users (staff and above).
+    /// </summary>
     [HttpGet("all")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ICollection<AccountResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAllBlacklistedUsers(CancellationToken ct)

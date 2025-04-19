@@ -1,22 +1,32 @@
-﻿using HotelManagementApp.Core.Dtos;
+﻿using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Blacklist.GetAll;
 
-public class GetBlacklistQueryHandler(IBlacklistRepository blacklistRepository, IUserManager userManager) : IRequestHandler<GetBlacklistQuery, ICollection<UserDto>>
+public class GetBlacklistQueryHandler(IBlacklistRepository blacklistRepository, IUserManager userManager) 
+    : IRequestHandler<GetBlacklistQuery, ICollection<AccountResponse>>
 {
-    public async Task<ICollection<UserDto>> Handle(GetBlacklistQuery request, CancellationToken cancellationToken)
+    public async Task<ICollection<AccountResponse>> Handle(GetBlacklistQuery request, CancellationToken cancellationToken)
     {
         var blacklist = await blacklistRepository.GetBlackList(cancellationToken);
-        var users = new List<UserDto>();
+        var accounts = new List<AccountResponse>();
         foreach (var blacklistUser in blacklist)
         {
             var user = await userManager.FindByIdAsync(blacklistUser.UserId);
             if (user != null)
-                users.Add(user);
+            {
+                var account = new AccountResponse
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    Roles = user.Roles
+                };
+                accounts.Add(account);
+            }
         }
-        return users;
+        return accounts;
     }
 }

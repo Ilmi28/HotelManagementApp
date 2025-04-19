@@ -1,7 +1,4 @@
-﻿using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Models;
-
-namespace HotelManagementApp.Application.Responses.AccountResponses;
+﻿namespace HotelManagementApp.Application.Responses.AccountResponses;
 
 public class AccountLogResponse
 {
