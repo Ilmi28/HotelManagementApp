@@ -1,4 +1,4 @@
-﻿using HotelManagementApp.Core.Models;
+﻿using HotelManagementApp.Core.Models.GuestModels;
 
 namespace HotelManagementApp.Core.Interfaces.Repositories;
 

@@ -1,10 +1,7 @@
-﻿using HotelManagementApp.Core.Dtos;
-using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Interfaces.Identity;
+﻿using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
@@ -35,8 +32,9 @@ public static class DependencyInjection
 
         builder.Services.AddTransient<IUserManager, UserManager>();
         builder.Services.AddTransient<IRoleManager, RoleManager>();
+        builder.Services.AddTransient<IUserRolesManager, UserManager>();
 
-        builder.Services.AddTransient<IDbLogger<UserDto, AccountOperationEnum, UserLog>, AuthDbLogger>();
+        builder.Services.AddTransient<IAccountDbLogger, AuthDbLogger>();
 
         builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
@@ -57,8 +55,9 @@ public static class DependencyInjection
         builder.Services.AddTransient<ITokenRepository, RefreshTokenRepository>();
         builder.Services.AddTransient<IVIPRepository, VIPRepository>();
         builder.Services.AddTransient<IBlacklistRepository, BlacklistRepository>();
-        builder.Services.AddTransient<IUserRolesManager, UserManager>();
         builder.Services.AddTransient<IProfilePictureRepository, ProfilePictureRepository>();
+        builder.Services.AddTransient<IHotelRepository, HotelRepository>();
+        builder.Services.AddTransient<IRoomRepository, RoomRepository>();
 
         builder.Services.AddTransient<ITokenService, JwtTokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();

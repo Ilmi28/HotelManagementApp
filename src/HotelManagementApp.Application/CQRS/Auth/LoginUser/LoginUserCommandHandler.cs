@@ -5,7 +5,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Models.TokenModels;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.LoginUser;
@@ -13,11 +13,11 @@ namespace HotelManagementApp.Application.CQRS.Auth.LoginUser;
 public class LoginUserCommandHandler(ITokenService tokenManager,
                                 ITokenRepository tokenRepository,
                                 IUserManager userManager,
-                                IDbLogger<UserDto, AccountOperationEnum, UserLog> logger) : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
+                                IAccountDbLogger logger) : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
 {
     private async Task<bool> CreateRefreshTokenInDb(string hashRefreshToken, UserDto userDto, CancellationToken ct)
     {
-        var token = new Core.Models.RefreshToken
+        var token = new RefreshToken
         {
             UserId = userDto.Id,
             RefreshTokenHash = hashRefreshToken,

@@ -6,20 +6,19 @@ using HotelManagementApp.Core.Interfaces.Loggers;
 using MediatR;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Models;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 
 public class CreateAccountCommandHandlerTests
 {
     private Mock<IUserManager> _mockUserManager;
-    private Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>> _mockLogger;
+    private Mock<IAccountDbLogger> _mockLogger;
     private IRequestHandler<CreateAccountCommand, string> _handler;
 
     public CreateAccountCommandHandlerTests()
     {
         _mockUserManager = new Mock<IUserManager>();
-        _mockLogger = new Mock<IDbLogger<UserDto, AccountOperationEnum, UserLog>>();
+        _mockLogger = new Mock<IAccountDbLogger>();
         _handler = new CreateAccountCommandHandler(_mockUserManager.Object, _mockLogger.Object);
     }
 

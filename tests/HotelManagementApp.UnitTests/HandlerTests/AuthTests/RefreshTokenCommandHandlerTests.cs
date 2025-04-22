@@ -1,9 +1,9 @@
-﻿using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
+﻿using HotelManagementApp.Application.CQRS.Auth.RefreshSession;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Models.TokenModels;
 using Moq;
 
 
@@ -14,14 +14,14 @@ public class RefreshTokenCommandHandlerTests
     private readonly Mock<ITokenService> _mockTokenManager;
     private readonly Mock<ITokenRepository> _mockTokenRepository;
     private readonly Mock<IUserManager> _mockUserManager;
-    private readonly RefreshTokenCommandHandler _handler;
+    private readonly RefreshSessionCommandHandler _handler;
 
     public RefreshTokenCommandHandlerTests()
     {
         _mockTokenManager = new Mock<ITokenService>();
         _mockTokenRepository = new Mock<ITokenRepository>();
         _mockUserManager = new Mock<IUserManager>();
-        _handler = new RefreshTokenCommandHandler(_mockTokenManager.Object, _mockTokenRepository.Object,
+        _handler = new RefreshSessionCommandHandler(_mockTokenManager.Object, _mockTokenRepository.Object,
                                                     _mockUserManager.Object);
     }
 
@@ -35,7 +35,7 @@ public class RefreshTokenCommandHandlerTests
             UserName = "test",
             Roles = ["Client"]
         };
-        var cmd = new RefreshTokenCommand { RefreshToken = "refreshToken" };
+        var cmd = new RefreshSessionCommand { RefreshToken = "refreshToken" };
         var token = new RefreshToken
         {
             UserId = userDto.Id,
@@ -59,7 +59,7 @@ public class RefreshTokenCommandHandlerTests
     [Theory]
     public async Task InvalidCommand_ThrowsUnauthorizedException(string? token)
     {
-        var cmd = new RefreshTokenCommand { RefreshToken = token! };
+        var cmd = new RefreshSessionCommand { RefreshToken = token! };
         _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns((string?)null);
 
         var func = async () => await _handler.Handle(cmd, CancellationToken.None);

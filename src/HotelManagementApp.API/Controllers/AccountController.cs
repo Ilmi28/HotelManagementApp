@@ -3,8 +3,10 @@ using HotelManagementApp.Application.CQRS.Account.ChangePassword;
 using HotelManagementApp.Application.CQRS.Account.Delete;
 using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
+using HotelManagementApp.Application.CQRS.Account.GetProfilePicture;
 using HotelManagementApp.Application.CQRS.Account.History;
 using HotelManagementApp.Application.CQRS.Account.Update;
+using HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -127,7 +129,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Returns account history (higher in the hierarchy or owner).
     /// </summary>
-    [HttpGet("history/{userId}")]
+    [HttpGet("{userId}/history")]
     [ProducesResponseType(typeof(ICollection<AccountLogResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetHistory(string userId, CancellationToken ct)
@@ -136,5 +138,29 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Ok(history);
     }
 
+    /// <summary>
+    /// Uploads a profile picture for a user (higher in the hierarchy or owner) and returns create file name.
+    /// </summary>
+    [HttpPost("profile-picture")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UploadProfilePicture(UpdateProfilePictureCommand cmd, CancellationToken ct)
+    {
+        var fileName = await mediator.Send(cmd, ct);
+        return Ok(fileName);
+    }
+
+    /// <summary>
+    /// Returns a profile picture for a user (higher in the hierarchy or owner).
+    /// </summary>
+    [HttpGet("{userId}/profile-picture")]
+    [ProducesResponseType(typeof(File), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetProfilePicture(string userId, CancellationToken ct)
+    {
+        var profilePicture = await mediator.Send(new GetProfilePictureQuery { UserId = userId }, ct);
+        return File(profilePicture, "image/jpeg");
+    }
 
 }

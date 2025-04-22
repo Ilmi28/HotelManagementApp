@@ -1,7 +1,6 @@
 ﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
 using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 using HotelManagementApp.Application.Responses.AccountResponses;
-using HotelManagementApp.Core.Exceptions.BaseExceptions;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;

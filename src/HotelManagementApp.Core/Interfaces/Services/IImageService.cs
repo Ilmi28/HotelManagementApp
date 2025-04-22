@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-
-namespace HotelManagementApp.Core.Interfaces.Services;
+﻿namespace HotelManagementApp.Core.Interfaces.Services;
 
 public interface IImageService
 {

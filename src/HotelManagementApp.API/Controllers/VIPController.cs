@@ -1,5 +1,6 @@
 ﻿using HotelManagementApp.Application.CQRS.VIP.Add;
 using HotelManagementApp.Application.CQRS.VIP.GetAll;
+using HotelManagementApp.Application.CQRS.VIP.IsGuestVIP;
 using HotelManagementApp.Application.CQRS.VIP.Remove;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
@@ -55,6 +56,19 @@ public class VIPController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetAllVIPUsers(CancellationToken ct)
     {
         var query = new GetVIPListQuery();
+        var result = await mediator.Send(query, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Checks if a user is a VIP (owner or higher in the hierarchy).
+    /// </summary>
+    [HttpGet("isVIP/{userId}")]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> IsGuestVIP(string userId, CancellationToken ct)
+    {
+        var query = new IsGuestVIPQuery { UserId = userId };
         var result = await mediator.Send(query, ct);
         return Ok(result);
     }

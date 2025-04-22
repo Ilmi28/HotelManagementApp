@@ -1,13 +1,10 @@
 ﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
 using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 using HotelManagementApp.Application.Responses.AccountResponses;
-using HotelManagementApp.Core.Dtos;
-using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 
@@ -15,7 +12,7 @@ namespace HotelManagementApp.Application.CQRS.Account.History;
 
 public class GetAccountHistoryQueryHandler(
     IUserManager userManager,
-    IDbLogger<UserDto, AccountOperationEnum, UserLog> logger,
+    IAccountDbLogger logger,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService)
     : IRequestHandler<GetAccountHistoryQuery, ICollection<AccountLogResponse>>
@@ -33,7 +30,7 @@ public class GetAccountHistoryQueryHandler(
             var logs = await logger.GetLogs(user);
             return logs.Select(log => new AccountLogResponse
             {
-                Operation = log.Operation.ToString(),
+                Operation = log.AccountOperation.ToString(),
                 OperationDate = log.Date,
             }).ToList();
         }

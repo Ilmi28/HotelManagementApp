@@ -1,0 +1,23 @@
+﻿using HotelManagementApp.Application.Responses.RoomResponses;
+using HotelManagementApp.Core.Exceptions.NotFound;
+using HotelManagementApp.Core.Interfaces.Repositories;
+using MediatR;
+
+namespace HotelManagementApp.Application.CQRS.Room.GetById;
+
+public class GetRoomByIdQueryHandler(IRoomRepository roomRepository) : IRequestHandler<GetRoomByIdQuery, RoomResponse>
+{
+    public async Task<RoomResponse> Handle(GetRoomByIdQuery request, CancellationToken cancellationToken)
+    {
+        var roomModel = await roomRepository.GetRoomById(request.RoomId, cancellationToken)
+            ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
+        return new RoomResponse
+        {
+            RoomName = roomModel.RoomName,
+            RoomType = roomModel.RoomType.ToString(),
+            Price = roomModel.Price,
+            HotelId = roomModel.Hotel.Id
+        };
+
+    }
+}

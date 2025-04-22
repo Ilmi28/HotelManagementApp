@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
-using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
+using HotelManagementApp.Application.CQRS.Auth.RefreshSession;
 using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 using HotelManagementApp.Application.Responses.AuthResponses;
 using MediatR;
@@ -29,6 +29,7 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// </summary>
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginRegisterResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> LoginUser([FromBody] LoginUserCommand cmd, CancellationToken ct)
     {
@@ -41,8 +42,9 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// </summary>
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(RefreshTokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshSessionCommand cmd, CancellationToken ct)
     {
         var response = await mediator.Send(cmd, ct);
         return Ok(response);

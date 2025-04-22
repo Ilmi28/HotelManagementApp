@@ -1,8 +1,8 @@
 ﻿using HotelManagementApp.Application.CQRS.Auth.LoginUser;
-using HotelManagementApp.Application.CQRS.Auth.RefreshToken;
+using HotelManagementApp.Application.CQRS.Auth.RefreshSession;
 using HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Models.TokenModels;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.IntegrationTests.WebApplicationFactories;
@@ -203,7 +203,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
     [Fact]
     public async Task RefreshToken_ValidRequest_ReturnsOK()
     {
-        RefreshTokenCommand cmd = new RefreshTokenCommand
+        RefreshSessionCommand cmd = new RefreshSessionCommand
         {
             RefreshToken = "Xj4z8x+7Q0A="
         };
@@ -221,7 +221,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
     [Fact]
     public async Task RefreshToken_NullRequest_ReturnsBadRequest()
     {
-        RefreshTokenCommand? cmd = null;
+        RefreshSessionCommand? cmd = null;
 
         var response = await _client.PostAsJsonAsync("/api/auth/refresh", cmd);
 
@@ -235,7 +235,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
     [InlineData("T1hKQ1VmcDg=")]
     public async Task RefreshToken_InvalidRefreshToken_ReturnsUnauthorized(string refreshToken)
     {
-        RefreshTokenCommand cmd = new RefreshTokenCommand
+        RefreshSessionCommand cmd = new RefreshSessionCommand
         {
             RefreshToken = refreshToken
         };

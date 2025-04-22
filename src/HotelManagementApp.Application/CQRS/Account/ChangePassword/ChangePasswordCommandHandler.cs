@@ -1,13 +1,10 @@
 ﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
-using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Exceptions.BaseExceptions;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 
@@ -15,7 +12,7 @@ namespace HotelManagementApp.Application.CQRS.Account.ChangePassword;
 
 public class ChangePasswordCommandHandler(
     IUserManager userManager,
-    IDbLogger<UserDto, AccountOperationEnum, UserLog> logger,
+    IAccountDbLogger logger,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService) : IRequestHandler<ChangePasswordCommand>
 {

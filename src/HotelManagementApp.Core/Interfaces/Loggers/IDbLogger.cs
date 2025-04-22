@@ -1,7 +1,4 @@
-﻿using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Models;
-
-namespace HotelManagementApp.Core.Interfaces.Loggers;
+﻿namespace HotelManagementApp.Core.Interfaces.Loggers;
 
 /// <summary>
 /// Interface for logging database operations.

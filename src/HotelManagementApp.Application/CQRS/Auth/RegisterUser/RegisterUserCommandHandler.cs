@@ -6,7 +6,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Models.TokenModels;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
@@ -14,12 +14,12 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 public class RegisterUserCommandHandler(IUserManager userManager,
                                     ITokenService tokenManager,
                                     ITokenRepository tokenRepository,
-                                    IDbLogger<UserDto, AccountOperationEnum, UserLog> logger) 
+                                    IAccountDbLogger logger) 
     : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
 {
     private async Task CreateRefreshTokenInDb(string hashRefreshToken, UserDto user, CancellationToken ct)
     {
-        var token = new Core.Models.RefreshToken
+        var token = new RefreshToken
         {
             UserId = user.Id,
             RefreshTokenHash = hashRefreshToken,

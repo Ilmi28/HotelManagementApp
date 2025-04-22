@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.Core.Interfaces.Repositories;
-using HotelManagementApp.Core.Models;
+using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
