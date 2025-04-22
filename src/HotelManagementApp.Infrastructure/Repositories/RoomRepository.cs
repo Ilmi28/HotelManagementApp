@@ -18,7 +18,6 @@ public class RoomRepository(AppDbContext context) : IRoomRepository
         return await context.Rooms
             .AsNoTracking()
             .Include(r => r.Hotel)
-            .Include(r => r.RoomType)
             .ToListAsync(ct);
     }
 
@@ -26,7 +25,6 @@ public class RoomRepository(AppDbContext context) : IRoomRepository
     {
         return await context.Rooms.AsNoTracking()
             .Include(r => r.Hotel)
-            .Include(r => r.RoomType)
             .FirstOrDefaultAsync(h => h.Id == id, ct);
     }
 
@@ -40,7 +38,6 @@ public class RoomRepository(AppDbContext context) : IRoomRepository
         return await context.Rooms
             .AsNoTracking()
             .Include(r => r.Hotel)
-            .Include(r => r.RoomType)
             .Where(r => r.Hotel.Id == hotelId)
             .ToListAsync(ct);
     }
