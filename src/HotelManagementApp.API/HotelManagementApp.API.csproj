@@ -15,6 +15,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
+    
+  <ItemGroup>
+    <Content Remove="wwwroot\images\077636d1-cd98-4e05-9bf9-135ecfa79bba.jpg" />
+    <Content Remove="wwwroot\images\defaultprofile.jpg" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.4.1" />
@@ -31,6 +36,11 @@
     <ProjectReference Include="..\HotelManagementApp.Application\HotelManagementApp.Application.csproj" />
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
     <ProjectReference Include="..\HotelManagementApp.Infrastructure\HotelManagementApp.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\images\077636d1-cd98-4e05-9bf9-135ecfa79bba.jpg" />
+    <None Include="wwwroot\images\defaultprofile.jpg" />
   </ItemGroup>
 
 </Project>

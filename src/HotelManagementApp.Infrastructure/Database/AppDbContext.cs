@@ -25,6 +25,10 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<RoomModel> Rooms { get; set; }
     public DbSet<RoomType> RoomTypes { get; set; }
     public DbSet<ProfilePicture> ProfilePictures { get; set; }
+    public DbSet<HotelImage> HotelImages { get; set; }
+    public DbSet<HotelService> HotelServices { get; set; }
+    public DbSet<HotelParking> HotelParkings { get; set; }
+    public DbSet<RoomImage> RoomImages { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

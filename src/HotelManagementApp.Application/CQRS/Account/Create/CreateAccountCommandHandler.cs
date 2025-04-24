@@ -3,11 +3,15 @@ using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
+using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Models.AccountModels;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Account.Create;
 
-public class CreateAccountCommandHandler(IUserManager userManager, IAccountDbLogger logger) : IRequestHandler<CreateAccountCommand, string>
+public class CreateAccountCommandHandler(IUserManager userManager, 
+    IAccountDbLogger logger,
+    IProfilePictureRepository profilePictureRepository) : IRequestHandler<CreateAccountCommand, string>
 {
     public async Task<string> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
@@ -28,6 +32,12 @@ public class CreateAccountCommandHandler(IUserManager userManager, IAccountDbLog
         var result = await userManager.CreateAsync(user, request.Password);
         if (!result)
             throw new Exception("Invalid role");
+        var profilePicture = new ProfilePicture
+        {
+            FileName = "defaultprofile.jpg",
+            UserId = user.Id
+        };
+        await profilePictureRepository.AddProfilePicture(profilePicture, cancellationToken);
         await logger.Log(AccountOperationEnum.Create, user);
         return user.Id;
     }

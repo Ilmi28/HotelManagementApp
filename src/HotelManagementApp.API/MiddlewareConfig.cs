@@ -31,6 +31,7 @@ public static class MiddlewareConfig
             });
         });
 
+        app.UseStaticFiles();
         app.UseStatusCodePages();
         if (app.Environment.IsDevelopment())
         {

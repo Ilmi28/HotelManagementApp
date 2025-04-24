@@ -15,6 +15,7 @@ public class RegisterUserCommandHandlerTests
     private readonly Mock<ITokenRepository> _mockTokenRepository;
     private readonly Mock<IUserManager> _mockUserManager;
     private readonly Mock<IAccountDbLogger> _mockLogger;
+    private readonly Mock<IProfilePictureRepository> _mockProfilePictureRepository;
     private readonly RegisterUserCommandHandler _handler;
     public RegisterUserCommandHandlerTests()
     {
@@ -22,8 +23,10 @@ public class RegisterUserCommandHandlerTests
         _mockTokenRepository = new Mock<ITokenRepository>();
         _mockUserManager = new Mock<IUserManager>();
         _mockLogger = new Mock<IAccountDbLogger>();
+        _mockProfilePictureRepository = new Mock<IProfilePictureRepository>();
         _handler = new RegisterUserCommandHandler(_mockUserManager.Object, _mockTokenManager.Object,
-                                                    _mockTokenRepository.Object, _mockLogger.Object);
+                                                    _mockTokenRepository.Object, _mockProfilePictureRepository.Object,
+                                                    _mockLogger.Object);
     }
 
     [Fact]

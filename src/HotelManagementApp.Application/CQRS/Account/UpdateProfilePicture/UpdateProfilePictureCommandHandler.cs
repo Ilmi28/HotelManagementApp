@@ -1,13 +1,11 @@
 ﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
 using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
-using HotelManagementApp.Core.Exceptions.BadRequest;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.AccountModels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
 
@@ -16,8 +14,7 @@ public class UpdateProfilePictureCommandHandler(
     IProfilePictureRepository profilePictureRepository,
     IUserManager userManager,
     IAuthenticationService authenticationService,
-    IAuthorizationService authorizationService,
-    IConfiguration config) : IRequestHandler<UpdateProfilePictureCommand, string>
+    IAuthorizationService authorizationService) : IRequestHandler<UpdateProfilePictureCommand, string>
 {
     public async Task<string> Handle(UpdateProfilePictureCommand request, CancellationToken cancellationToken)
     {   

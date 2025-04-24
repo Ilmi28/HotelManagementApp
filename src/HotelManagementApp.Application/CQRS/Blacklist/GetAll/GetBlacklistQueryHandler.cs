@@ -1,11 +1,17 @@
 ﻿using HotelManagementApp.Application.Responses.AccountResponses;
+using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Application.CQRS.Blacklist.GetAll;
 
-public class GetBlacklistQueryHandler(IBlacklistRepository blacklistRepository, IUserManager userManager) 
+public class GetBlacklistQueryHandler(
+    IBlacklistRepository blacklistRepository, 
+    IUserManager userManager,
+    IProfilePictureRepository profilePictureRepository,
+    IConfiguration config) 
     : IRequestHandler<GetBlacklistQuery, ICollection<AccountResponse>>
 {
     public async Task<ICollection<AccountResponse>> Handle(GetBlacklistQuery request, CancellationToken cancellationToken)
@@ -17,12 +23,15 @@ public class GetBlacklistQueryHandler(IBlacklistRepository blacklistRepository, 
             var user = await userManager.FindByIdAsync(blacklistUser.UserId);
             if (user != null)
             {
+                var profilePicture = await profilePictureRepository.GetProfilePicture(blacklistUser.UserId, cancellationToken)
+                    ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {blacklistUser.UserId} not found");
                 var account = new AccountResponse
                 {
                     Id = user.Id,
                     UserName = user.UserName,
                     Email = user.Email,
-                    Roles = user.Roles
+                    Roles = user.Roles,
+                    ProfilePicture = $"{config.GetValue<string>("ImageUrl")}/{profilePicture.FileName}"
                 };
                 accounts.Add(account);
             }

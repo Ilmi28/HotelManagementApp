@@ -2,7 +2,7 @@
 
 namespace HotelManagementApp.Core.Exceptions.NotFound;
 
-public class BlacklistUserNotFound(string message) : NotFoundException(message)
+public class ProfilePictureNotFoundException(string message) : NotFoundException(message)
 {
 
 }

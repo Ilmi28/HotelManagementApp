@@ -6,6 +6,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Models.TokenModels;
 using MediatR;
 
@@ -14,8 +15,8 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 public class RegisterUserCommandHandler(IUserManager userManager,
                                     ITokenService tokenManager,
                                     ITokenRepository tokenRepository,
-                                    IAccountDbLogger logger) 
-    : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
+                                    IProfilePictureRepository profilePictureRepository,
+                                    IAccountDbLogger logger) : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
 {
     private async Task CreateRefreshTokenInDb(string hashRefreshToken, UserDto user, CancellationToken ct)
     {
@@ -45,6 +46,12 @@ public class RegisterUserCommandHandler(IUserManager userManager,
             Roles = ["Guest"]
         };
         await userManager.CreateAsync(user, request.Password);
+        var profilePicture = new ProfilePicture
+        {
+            FileName = "defaultprofile.jpg",
+            UserId = user.Id
+        };
+        await profilePictureRepository.AddProfilePicture(profilePicture, cancellationToken);
         string identityToken = tokenManager.GenerateIdentityToken(user);
         string refreshToken = tokenManager.GenerateRefreshToken();
         string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
