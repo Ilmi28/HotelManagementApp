@@ -24,7 +24,7 @@ public class GetAccountQueryHandler(
             UserName = user.UserName,
             Email = user.Email,
             Roles = user.Roles,
-            ProfilePicture = $"{config.GetValue<string>("ImageUrl")}/{profilePicture.FileName}"
+            ProfilePicture = $"{config["ImageUrl"]}/{profilePicture.FileName}"
         };
         return response;
     }

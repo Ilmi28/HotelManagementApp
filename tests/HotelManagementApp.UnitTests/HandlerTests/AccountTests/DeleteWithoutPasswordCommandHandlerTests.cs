@@ -1,4 +1,4 @@
-using HotelManagementApp.Application.CQRS.Account.Delete;
+using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -7,21 +7,21 @@ using HotelManagementApp.Core.Interfaces.Loggers;
 using Moq;
 using Xunit;
 
-public class DeleteAccountCommandHandlerTests
+public class DeleteWithoutPasswordCommandHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();
     private readonly Mock<IAccountDbLogger> _loggerMock = new();
-    private readonly DeleteAccountCommandHandler _handler;
+    private readonly DeleteWithoutPasswordCommandHandler _handler;
 
-    public DeleteAccountCommandHandlerTests()
+    public DeleteWithoutPasswordCommandHandlerTests()
     {
-        _handler = new DeleteAccountCommandHandler(_userManagerMock.Object, _loggerMock.Object);
+        _handler = new DeleteWithoutPasswordCommandHandler(_userManagerMock.Object, _loggerMock.Object);
     }
 
     [Fact]
     public async Task Handle_ShouldDeleteUser_WhenValidRequest()
     {
-        var command = new DeleteAccountCommand { UserId = "123", Password = "password" };
+        var command = new DeleteWithoutPasswordCommand { UserId = "123" };
         var user = new UserDto
         {
             Id = "123",
@@ -31,7 +31,6 @@ public class DeleteAccountCommandHandlerTests
         };
 
         _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
         _userManagerMock.Setup(m => m.DeleteAsync(user)).ReturnsAsync(true);
 
         await _handler.Handle(command, default);
@@ -43,7 +42,7 @@ public class DeleteAccountCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldThrowUserNotFoundException_WhenUserDoesNotExist()
     {
-        var command = new DeleteAccountCommand { UserId = "123", Password = "password" };
+        var command = new DeleteWithoutPasswordCommand { UserId = "123" };
 
         _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync((UserDto?)null);
 
@@ -51,27 +50,9 @@ public class DeleteAccountCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldThrowUnauthorizedAccessException_WhenPasswordIsInvalid()
-    {
-        var command = new DeleteAccountCommand { UserId = "123", Password = "wrongpassword" };
-        var user = new UserDto
-        {
-            Id = "123",
-            Email = "test@gmail.com",
-            UserName = "testuser",
-            Roles = new List<string> { "Client" }
-        };
-
-        _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, command.Password)).ReturnsAsync(false);
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _handler.Handle(command, default));
-    }
-
-    [Fact]
     public async Task Handle_ShouldThrowException_WhenUserDeletionFails()
     {
-        var command = new DeleteAccountCommand { UserId = "123", Password = "password" };
+        var command = new DeleteWithoutPasswordCommand { UserId = "123" };
         var user = new UserDto
         {
             Id = "123",
@@ -81,7 +62,6 @@ public class DeleteAccountCommandHandlerTests
         };
 
         _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, command.Password)).ReturnsAsync(true);
         _userManagerMock.Setup(m => m.DeleteAsync(user)).ReturnsAsync(false);
 
         await Assert.ThrowsAsync<Exception>(() => _handler.Handle(command, default));
