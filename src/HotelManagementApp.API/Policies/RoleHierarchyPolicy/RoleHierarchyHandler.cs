@@ -1,26 +1,31 @@
-﻿using HotelManagementApp.Core.Dtos;
+﻿using HotelManagementApp.Core.Interfaces.Identity;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 namespace HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 
-public class RoleHierarchyHandler : AuthorizationHandler<RoleHierarchyRequirement, UserDto>
+public class RoleHierarchyHandler(IUserManager userManager) : AuthorizationHandler<RoleHierarchyRequirement, string>
 {
-    protected override Task HandleRequirementAsync(
+    protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context, 
         RoleHierarchyRequirement requirement, 
-        UserDto resource)
+        string targetUserId)
     {
         var userRoles = context.User.Claims.Where(x => x.Type == ClaimTypes.Role)
             .Select(x => x.Value).ToList();
-        var targetUserRoles = resource.Roles.ToList();
+        var targetUser = await userManager.FindByIdAsync(targetUserId);
+        if (targetUser == null)
+        {
+            context.Fail();
+            return;
+        }
+        var targetUserRoles = targetUser.Roles ?? new List<string>();
 
         var userRoleLevel = GetMaxRoleLevel(userRoles);
-        var targetUserRoleLevel = GetMaxRoleLevel(targetUserRoles);
+        var targetUserRoleLevel = GetMaxRoleLevel(targetUserRoles.ToList());
 
         if (userRoleLevel > targetUserRoleLevel || userRoleLevel == 3)
             context.Succeed(requirement);
-        return Task.CompletedTask;
     }
 
     private int GetMaxRoleLevel(List<string> roles)

@@ -4,13 +4,13 @@ using System.Security.Claims;
 
 namespace HotelManagementApp.Application.Policies.AccountOwnerPolicy;
 
-public class AccountOwnerHandler : AuthorizationHandler<AccountOwnerRequirement, UserDto>
+public class AccountOwnerHandler : AuthorizationHandler<AccountOwnerRequirement, string>
 {
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, 
-        AccountOwnerRequirement requirement, UserDto resource)
+        AccountOwnerRequirement requirement, string targetAccountId)
     {
         var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-        if (userId == resource.Id)
+        if (userId == targetAccountId)
             context.Succeed(requirement);
         return Task.CompletedTask;
     }

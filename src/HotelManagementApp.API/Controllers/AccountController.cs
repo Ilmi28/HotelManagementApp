@@ -3,10 +3,11 @@ using HotelManagementApp.Application.CQRS.Account.ChangePassword;
 using HotelManagementApp.Application.CQRS.Account.Delete;
 using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
-using HotelManagementApp.Application.CQRS.Account.GetProfilePicture;
 using HotelManagementApp.Application.CQRS.Account.History;
 using HotelManagementApp.Application.CQRS.Account.Update;
 using HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
+using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,8 +46,12 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> UpdateAccount([FromBody] UpdateAccountCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> UpdateAccount([FromBody] UpdateAccountCommand cmd, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new AccountOwnerRequirement());
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new RoleHierarchyRequirement());
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         await mediator.Send(cmd, ct);
         return NoContent();
     }
@@ -60,8 +65,12 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountCommand cmd, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new AccountOwnerRequirement());
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new RoleHierarchyRequirement());
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         await mediator.Send(cmd, ct);
         return NoContent();
     }
@@ -74,8 +83,12 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetAccount(string id, CancellationToken ct)
+    public async Task<IActionResult> GetAccount(string id, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, id, new AccountOwnerRequirement());
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, id, new RoleHierarchyRequirement());
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         var account = await mediator.Send(new GetAccountQuery { UserId = id }, ct);
         return Ok(account);
     }
@@ -104,8 +117,11 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteAccountWithoutPassword(string userId, CancellationToken ct)
+    public async Task<IActionResult> DeleteAccountWithoutPassword(string userId, CancellationToken ct, IAuthorizationService authService)
     {
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, userId, new RoleHierarchyRequirement());
+        if (!hierarchyPolicy.Succeeded)
+            return Forbid();
         await mediator.Send(new DeleteWithoutPasswordCommand { UserId = userId }, ct);
         return NoContent();
     }
@@ -119,8 +135,11 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand cmd, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new AccountOwnerRequirement());
+        if (!ownerPolicy.Succeeded)
+            return Forbid();
         await mediator.Send(cmd, ct);
         return NoContent();
     }
@@ -132,8 +151,12 @@ public class AccountController(IMediator mediator) : ControllerBase
     [HttpGet("{userId}/history")]
     [ProducesResponseType(typeof(ICollection<AccountLogResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetHistory(string userId, CancellationToken ct)
+    public async Task<IActionResult> GetHistory(string userId, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, userId, new AccountOwnerRequirement());
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, userId, new RoleHierarchyRequirement());
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         var history = await mediator.Send(new GetAccountHistoryQuery { UserId = userId }, ct);
         return Ok(history);
     }
@@ -145,22 +168,14 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UploadProfilePicture(UpdateProfilePictureCommand cmd, CancellationToken ct)
+    public async Task<IActionResult> UploadProfilePicture(UpdateProfilePictureCommand cmd, CancellationToken ct, IAuthorizationService authService)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new AccountOwnerRequirement());
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, cmd.UserId, new RoleHierarchyRequirement());
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         var fileName = await mediator.Send(cmd, ct);
         return Ok(fileName);
-    }
-
-    /// <summary>
-    /// Returns a profile picture for a user (higher in the hierarchy or owner).
-    /// </summary>
-    [HttpGet("{userId}/profile-picture")]
-    [ProducesResponseType(typeof(File), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetProfilePicture(string userId, CancellationToken ct)
-    {
-        var profilePicture = await mediator.Send(new GetProfilePictureQuery { UserId = userId }, ct);
-        return File(profilePicture, "image/jpeg");
     }
 
 }
