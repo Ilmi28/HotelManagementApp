@@ -10,7 +10,7 @@ using Xunit;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Interfaces.Services;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class GetAccountQueryHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();

@@ -6,7 +6,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using Moq;
 using Xunit;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class ChangePasswordCommandHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();

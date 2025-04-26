@@ -7,7 +7,7 @@ using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Models.AccountModels;
 using Moq;
 using Xunit;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class GetAccountHistoryQueryHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();
