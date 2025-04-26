@@ -1,3 +1,4 @@
+
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -8,12 +9,13 @@ using Microsoft.Extensions.Configuration;
 using Xunit;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Models.AccountModels;
+using HotelManagementApp.Core.Interfaces.Services;
 
 public class GetAccountQueryHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();
     private readonly Mock<IProfilePictureRepository> _profilePictureRepositoryMock = new();
-    private readonly Mock<IConfiguration> _configurationMock = new();
+    private readonly Mock<IFileService> _fileServiceMock = new();
     private readonly GetAccountQueryHandler _handler;
 
     public GetAccountQueryHandlerTests()
@@ -21,7 +23,7 @@ public class GetAccountQueryHandlerTests
         _handler = new GetAccountQueryHandler(
             _userManagerMock.Object,
             _profilePictureRepositoryMock.Object,
-            _configurationMock.Object
+            _fileServiceMock.Object
         );
     }
 
@@ -44,7 +46,7 @@ public class GetAccountQueryHandlerTests
 
         _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync(user);
         _profilePictureRepositoryMock.Setup(m => m.GetProfilePicture(user.Id, default)).ReturnsAsync(profilePicture);
-        _configurationMock.Setup(c => c["ImageUrl"]).Returns("http://example.com");
+        _fileServiceMock.Setup(c => c.GetFileUrl("images",profilePicture.FileName)).Returns($"http://example.com/images/{profilePicture.FileName}");
 
 
         var result = await _handler.Handle(command, default);
@@ -54,7 +56,7 @@ public class GetAccountQueryHandlerTests
         Assert.Equal(user.UserName, result.UserName);
         Assert.Equal(user.Email, result.Email);
         Assert.Equal(user.Roles, result.Roles);
-        Assert.Equal("http://example.com/profile.jpg", result.ProfilePicture);
+        Assert.Equal($"http://example.com/images/profile.jpg", result.ProfilePicture);
     }
 
     [Fact]
