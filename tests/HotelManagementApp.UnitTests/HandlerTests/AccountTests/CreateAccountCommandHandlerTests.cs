@@ -12,10 +12,10 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 
 public class CreateAccountCommandHandlerTests
 {
-    private Mock<IUserManager> _mockUserManager;
-    private Mock<IAccountDbLogger> _mockLogger;
-    private Mock<IProfilePictureRepository> _mockProfilePictureRepository;
-    private IRequestHandler<CreateAccountCommand, string> _handler;
+    private readonly Mock<IUserManager> _mockUserManager;
+    private readonly Mock<IAccountDbLogger> _mockLogger;
+    private readonly Mock<IProfilePictureRepository> _mockProfilePictureRepository;
+    private readonly IRequestHandler<CreateAccountCommand, string> _handler;
 
     public CreateAccountCommandHandlerTests()
     {

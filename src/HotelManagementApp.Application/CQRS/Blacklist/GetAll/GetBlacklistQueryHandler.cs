@@ -2,6 +2,7 @@
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 
@@ -11,8 +12,8 @@ public class GetBlacklistQueryHandler(
     IBlacklistRepository blacklistRepository, 
     IUserManager userManager,
     IProfilePictureRepository profilePictureRepository,
-    IConfiguration config) 
-    : IRequestHandler<GetBlacklistQuery, ICollection<AccountResponse>>
+    IFileService fileService
+    ) : IRequestHandler<GetBlacklistQuery, ICollection<AccountResponse>>
 {
     public async Task<ICollection<AccountResponse>> Handle(GetBlacklistQuery request, CancellationToken cancellationToken)
     {
@@ -31,7 +32,7 @@ public class GetBlacklistQueryHandler(
                     UserName = user.UserName,
                     Email = user.Email,
                     Roles = user.Roles,
-                    ProfilePicture = $"{config.GetValue<string>("ImageUrl")}/{profilePicture.FileName}"
+                    ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
                 };
                 accounts.Add(account);
             }
