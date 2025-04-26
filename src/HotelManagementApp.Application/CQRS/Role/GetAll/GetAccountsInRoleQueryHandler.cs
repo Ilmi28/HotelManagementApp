@@ -2,15 +2,15 @@
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Application.CQRS.Role.GetAll;
 
 public class GetAccountsInRoleQueryHandler(
     IUserRolesManager userRolesManager,
     IProfilePictureRepository profilePictureRepository,
-    IConfiguration config) : IRequestHandler<GetAccountsInRoleQuery, ICollection<AccountResponse>>
+    IFileService fileService) : IRequestHandler<GetAccountsInRoleQuery, ICollection<AccountResponse>>
 {
     public async Task<ICollection<AccountResponse>> Handle(GetAccountsInRoleQuery request, CancellationToken cancellationToken)
     {
@@ -27,7 +27,7 @@ public class GetAccountsInRoleQueryHandler(
                 UserName = user.UserName,
                 Email = user.Email,
                 Roles = user.Roles,
-                ProfilePicture = $"{config.GetValue<string>("ImageUrl")}/{profilePicture.FileName}"
+                ProfilePicture = fileService.GetFileUrl("images", profilePicture.FileName),
             };
             accounts.Add(account);
         }

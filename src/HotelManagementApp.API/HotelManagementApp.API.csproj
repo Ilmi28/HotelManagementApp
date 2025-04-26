@@ -17,7 +17,6 @@
   </PropertyGroup>
     
   <ItemGroup>
-    <Content Remove="wwwroot\images\077636d1-cd98-4e05-9bf9-135ecfa79bba.jpg" />
     <Content Remove="wwwroot\images\defaultprofile.jpg" />
   </ItemGroup>
 
@@ -39,7 +38,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\images\077636d1-cd98-4e05-9bf9-135ecfa79bba.jpg" />
     <None Include="wwwroot\images\defaultprofile.jpg" />
   </ItemGroup>
 

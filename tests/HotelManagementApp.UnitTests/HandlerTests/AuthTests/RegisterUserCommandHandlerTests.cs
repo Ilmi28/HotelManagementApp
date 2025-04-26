@@ -12,7 +12,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.AuthTests;
 public class RegisterUserCommandHandlerTests
 {
     private readonly Mock<ITokenService> _mockTokenManager;
-    private readonly Mock<ITokenRepository> _mockTokenRepository;
+    private readonly Mock<IRefreshTokenRepository> _mockTokenRepository;
     private readonly Mock<IUserManager> _mockUserManager;
     private readonly Mock<IAccountDbLogger> _mockLogger;
     private readonly Mock<IProfilePictureRepository> _mockProfilePictureRepository;
@@ -20,7 +20,7 @@ public class RegisterUserCommandHandlerTests
     public RegisterUserCommandHandlerTests()
     {
         _mockTokenManager = new Mock<ITokenService>();
-        _mockTokenRepository = new Mock<ITokenRepository>();
+        _mockTokenRepository = new Mock<IRefreshTokenRepository>();
         _mockUserManager = new Mock<IUserManager>();
         _mockLogger = new Mock<IAccountDbLogger>();
         _mockProfilePictureRepository = new Mock<IProfilePictureRepository>();

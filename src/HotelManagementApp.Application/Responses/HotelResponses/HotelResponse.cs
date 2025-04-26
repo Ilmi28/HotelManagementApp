@@ -10,4 +10,5 @@ public class HotelResponse
     public required string PhoneNumber { get; set; }
     public required string Email { get; set; }
     public required string Description { get; set; }
+    public ICollection<string> Images { get; set; } = new List<string>();
 }

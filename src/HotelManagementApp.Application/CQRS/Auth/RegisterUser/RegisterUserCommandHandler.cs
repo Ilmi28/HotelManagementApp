@@ -14,7 +14,7 @@ namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 
 public class RegisterUserCommandHandler(IUserManager userManager,
                                     ITokenService tokenManager,
-                                    ITokenRepository tokenRepository,
+                                    IRefreshTokenRepository tokenRepository,
                                     IProfilePictureRepository profilePictureRepository,
                                     IAccountDbLogger logger) : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
 {

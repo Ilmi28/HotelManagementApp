@@ -10,8 +10,8 @@ using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.LoginUser;
 
-public class LoginUserCommandHandler(ITokenService tokenManager,
-                                ITokenRepository tokenRepository,
+public class LoginUserCommandHandler(ITokenService tokenService,
+                                IRefreshTokenRepository tokenRepository,
                                 IUserManager userManager,
                                 IAccountDbLogger logger) : IRequestHandler<LoginUserCommand, LoginRegisterResponse>
 {
@@ -21,7 +21,7 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
         {
             UserId = userDto.Id,
             RefreshTokenHash = hashRefreshToken,
-            ExpirationDate = DateTime.Now.AddDays(tokenManager.GetRefreshTokenExpirationDays())
+            ExpirationDate = DateTime.Now.AddDays(tokenService.GetRefreshTokenExpirationDays())
         };
         _ = await userManager.FindByIdAsync(userDto.Id);
         if (userDto == null)
@@ -40,9 +40,9 @@ public class LoginUserCommandHandler(ITokenService tokenManager,
         var result = await userManager.CheckPasswordAsync(user, request.Password);
         if (!result)
             throw new UnauthorizedAccessException();
-        string identityToken = tokenManager.GenerateIdentityToken(user);
-        string refreshToken = tokenManager.GenerateRefreshToken();
-        string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
+        string identityToken = tokenService.GenerateIdentityToken(user);
+        string refreshToken = tokenService.GenerateRefreshToken();
+        string hashRefreshToken = tokenService.GetHashRefreshToken(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
         result = await CreateRefreshTokenInDb(hashRefreshToken, user, cancellationToken);
         if (!result)
