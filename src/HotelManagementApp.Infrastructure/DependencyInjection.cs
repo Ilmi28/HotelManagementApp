@@ -52,16 +52,18 @@ public static class DependencyInjection
             };
         });
 
-        builder.Services.AddTransient<ITokenRepository, RefreshTokenRepository>();
+        builder.Services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
         builder.Services.AddTransient<IVIPRepository, VIPRepository>();
         builder.Services.AddTransient<IBlacklistRepository, BlacklistRepository>();
         builder.Services.AddTransient<IProfilePictureRepository, ProfilePictureRepository>();
         builder.Services.AddTransient<IHotelRepository, HotelRepository>();
         builder.Services.AddTransient<IRoomRepository, RoomRepository>();
+        builder.Services.AddTransient<IHotelImageRepository, HotelImageRepository>();
+        builder.Services.AddTransient<IRoomImageRepository, RoomImageRepository>();
 
         builder.Services.AddTransient<ITokenService, JwtTokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
-        builder.Services.AddTransient<IImageService, ImageService>();
+        builder.Services.AddTransient<IFileService, FileService>();
 
         return builder;
     }

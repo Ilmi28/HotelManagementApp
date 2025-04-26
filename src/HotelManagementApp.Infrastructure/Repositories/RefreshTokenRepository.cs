@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HotelManagementApp.Infrastructure.Repositories;
 
-public class RefreshTokenRepository(AppDbContext context) : ITokenRepository
+public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenRepository
 {
     public async Task AddToken(RefreshToken token, CancellationToken ct)
     {

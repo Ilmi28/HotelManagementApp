@@ -2,7 +2,7 @@
 
 namespace HotelManagementApp.Core.Interfaces.Repositories;
 
-public interface ITokenRepository
+public interface IRefreshTokenRepository
 {
     Task AddToken(RefreshToken token, CancellationToken ct = default);
     Task<RefreshToken?> GetToken(string refreshToken, CancellationToken ct = default);

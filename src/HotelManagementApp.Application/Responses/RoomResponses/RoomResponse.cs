@@ -7,4 +7,5 @@ public class RoomResponse
     public required string RoomType { get; set; }
     public required decimal Price { get; set; }
     public required int HotelId { get; set; }
+    public ICollection<string> RoomImages { get; set; } = new List<string>();
 }

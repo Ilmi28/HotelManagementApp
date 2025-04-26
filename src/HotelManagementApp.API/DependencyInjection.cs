@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
@@ -12,6 +15,16 @@ public static class DependencyInjection
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddProblemDetails();
+
+        builder.Services.AddScoped<IAuthorizationHandler, AccountOwnerHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, RoleHierarchyHandler>();
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AccountOwner", policy =>
+                policy.Requirements.Add(new AccountOwnerRequirement()));
+            options.AddPolicy("RoleHierarchy", policy =>
+                policy.Requirements.Add(new RoleHierarchyRequirement()));
+        });
 
         builder.Services.AddSwaggerGen(x =>
         {

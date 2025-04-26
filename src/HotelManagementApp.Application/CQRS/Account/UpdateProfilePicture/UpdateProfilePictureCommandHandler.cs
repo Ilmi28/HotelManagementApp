@@ -6,7 +6,7 @@ using MediatR;
 namespace HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
 
 public class UpdateProfilePictureCommandHandler(
-    IImageService imageService,
+    IFileService fileService,
     IProfilePictureRepository profilePictureRepository) : IRequestHandler<UpdateProfilePictureCommand, string>
 {
     public async Task<string> Handle(UpdateProfilePictureCommand request, CancellationToken cancellationToken)
@@ -14,10 +14,10 @@ public class UpdateProfilePictureCommandHandler(
         var prevProfilePicture = await profilePictureRepository.GetProfilePicture(request.UserId, cancellationToken);
         using var stream = new MemoryStream();
         await request.File.CopyToAsync(stream);
-        var imageName = imageService.UploadImage(stream.ToArray());
+        var imageName = fileService.UploadFile("images", stream.ToArray(), Path.GetExtension(request.File.FileName));
         if (prevProfilePicture != null)
         {
-            imageService.DeleteImage(prevProfilePicture.FileName);
+            fileService.DeleteFile("images", prevProfilePicture.FileName);
             await profilePictureRepository.RemoveProfilePicture(request.UserId, cancellationToken);
         }
         var profilePicture = new ProfilePicture
@@ -26,6 +26,6 @@ public class UpdateProfilePictureCommandHandler(
             FileName = imageName
         };
         await profilePictureRepository.AddProfilePicture(profilePicture, cancellationToken);
-        return imageName;
+        return fileService.GetFileUrl("images", imageName);
     }
 }

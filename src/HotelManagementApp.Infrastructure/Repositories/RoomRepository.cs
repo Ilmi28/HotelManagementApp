@@ -9,6 +9,7 @@ public class RoomRepository(AppDbContext context) : IRoomRepository
 {
     public async Task AddRoom(RoomModel model, CancellationToken ct)
     {
+        context.Attach(model.Hotel);
         await context.Rooms.AddAsync(model, ct);
         await context.SaveChangesAsync(ct);
     }

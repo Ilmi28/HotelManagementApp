@@ -6,14 +6,14 @@ using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Auth.RefreshSession;
 
-public class RefreshSessionCommandHandler(ITokenService tokenManager,
-                                    ITokenRepository tokenRepository,
+public class RefreshSessionCommandHandler(ITokenService tokenService,
+                                    IRefreshTokenRepository tokenRepository,
                                     IUserManager userManager) : IRequestHandler<RefreshSessionCommand, RefreshTokenResponse>
 {
     public async Task<RefreshTokenResponse> Handle(RefreshSessionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        string hash = tokenManager.GetHashRefreshToken(request.RefreshToken)
+        string hash = tokenService.GetHashRefreshToken(request.RefreshToken)
                                                     ?? throw new UnauthorizedAccessException();
         var token = await tokenRepository.GetToken(hash, cancellationToken)
                                                 ?? throw new UnauthorizedAccessException();
@@ -21,7 +21,7 @@ public class RefreshSessionCommandHandler(ITokenService tokenManager,
             throw new UnauthorizedAccessException();
         var user = await userManager.FindByIdAsync(token.UserId)
                                                 ?? throw new UnauthorizedAccessException();
-        var identityToken = tokenManager.GenerateIdentityToken(user);
+        var identityToken = tokenService.GenerateIdentityToken(user);
         return new RefreshTokenResponse { IdentityToken = identityToken };
     }
 }

@@ -3,6 +3,7 @@ using HotelManagementApp.Application.CQRS.Hotel.Delete;
 using HotelManagementApp.Application.CQRS.Hotel.GetAll;
 using HotelManagementApp.Application.CQRS.Hotel.GetById;
 using HotelManagementApp.Application.CQRS.Hotel.Update;
+using HotelManagementApp.Application.CQRS.Hotel.UpdateHotelImages;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -76,6 +77,18 @@ public class HotelController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateHotel([FromBody] UpdateHotelCommand cmd, CancellationToken ct)
+    {
+        await mediator.Send(cmd, ct);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Updates hotel images (staff and above)
+    /// </summary>
+    [HttpPut("images")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateHotelImages([FromForm] UpdateHotelImagesCommand cmd, CancellationToken ct)
     {
         await mediator.Send(cmd, ct);
         return NoContent();
