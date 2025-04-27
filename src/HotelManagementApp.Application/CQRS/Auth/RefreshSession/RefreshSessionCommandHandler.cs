@@ -13,11 +13,11 @@ public class RefreshSessionCommandHandler(ITokenService tokenService,
     public async Task<RefreshTokenResponse> Handle(RefreshSessionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        string hash = tokenService.GetHashRefreshToken(request.RefreshToken)
+        string hash = tokenService.GetTokenHash(request.RefreshToken)
                                                     ?? throw new UnauthorizedAccessException();
         var token = await tokenRepository.GetToken(hash, cancellationToken)
                                                 ?? throw new UnauthorizedAccessException();
-        if (token.ExpirationDate < DateTime.Now || token.IsRevoked)
+        if (token.ExpirationDate < DateTime.Now)
             throw new UnauthorizedAccessException();
         var user = await userManager.FindByIdAsync(token.UserId)
                                                 ?? throw new UnauthorizedAccessException();

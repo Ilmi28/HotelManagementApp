@@ -6,6 +6,6 @@ public interface ITokenService
 {
     string GenerateIdentityToken(UserDto user);
     int GetRefreshTokenExpirationDays();
-    string? GetHashRefreshToken(string refreshToken);
-    string GenerateRefreshToken();
+    string? GetTokenHash(string refreshToken);
+    string Generate512Token();
 }

@@ -23,12 +23,13 @@ public class LoginUserCommandHandler(ITokenService tokenService,
             RefreshTokenHash = hashRefreshToken,
             ExpirationDate = DateTime.Now.AddDays(tokenService.GetRefreshTokenExpirationDays())
         };
-        _ = await userManager.FindByIdAsync(userDto.Id);
+        _ = await userManager.FindByIdAsync(userDto.Id)
+            ?? throw new UnauthorizedAccessException();
         if (userDto == null)
             return false;
-        var lastToken = await tokenRepository.GetLastValidToken(userDto.Id, ct);
+        var lastToken = await tokenRepository.GetTokenByUser(userDto.Id, ct);
         if (lastToken != null)
-            await tokenRepository.RevokeToken(lastToken, ct);
+            await tokenRepository.DeleteToken(lastToken, ct);
         await tokenRepository.AddToken(token, ct);
         return true;
     }
@@ -41,8 +42,8 @@ public class LoginUserCommandHandler(ITokenService tokenService,
         if (!result)
             throw new UnauthorizedAccessException();
         string identityToken = tokenService.GenerateIdentityToken(user);
-        string refreshToken = tokenService.GenerateRefreshToken();
-        string hashRefreshToken = tokenService.GetHashRefreshToken(refreshToken)
+        string refreshToken = tokenService.Generate512Token();
+        string hashRefreshToken = tokenService.GetTokenHash(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
         result = await CreateRefreshTokenInDb(hashRefreshToken, user, cancellationToken);
         if (!result)

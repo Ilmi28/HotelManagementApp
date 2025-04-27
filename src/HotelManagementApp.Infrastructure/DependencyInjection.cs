@@ -2,6 +2,7 @@
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Models.TokenModels;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
@@ -61,7 +62,7 @@ public static class DependencyInjection
         builder.Services.AddTransient<IHotelImageRepository, HotelImageRepository>();
         builder.Services.AddTransient<IRoomImageRepository, RoomImageRepository>();
 
-        builder.Services.AddTransient<ITokenService, JwtTokenService>();
+        builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
         builder.Services.AddTransient<IFileService, FileService>();
 

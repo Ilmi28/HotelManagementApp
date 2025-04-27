@@ -44,29 +44,20 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         var token = new RefreshToken
         {
             Id = 1,
-            RefreshTokenHash = _tokenManager.GetHashRefreshToken("Xj4z8x+7Q0A=")!,
+            RefreshTokenHash = _tokenManager.GetTokenHash("Xj4z8x+7Q0A=")!,
             ExpirationDate = DateTime.Now.AddDays(1),
             UserId = user.Id
         };
         var token1 = new RefreshToken
         {
             Id = 2,
-            RefreshTokenHash = _tokenManager.GetHashRefreshToken("K3N5TzFhMkM=")!,
+            RefreshTokenHash = _tokenManager.GetTokenHash("K3N5TzFhMkM=")!,
             ExpirationDate = DateTime.Now.AddDays(-1),
             UserId = user.Id
-        };
-        var token2 = new RefreshToken
-        {
-            Id = 3,
-            RefreshTokenHash = _tokenManager.GetHashRefreshToken("T1hKQ1VmcDg=")!,
-            ExpirationDate = DateTime.Now.AddDays(1),
-            UserId = user.Id,
-            IsRevoked = true
         };
         _manager.CreateAsync(user, "Password123@").Wait();
         _context.RefreshTokens.Add(token);
         _context.RefreshTokens.Add(token1);
-        _context.RefreshTokens.Add(token2);
         _context.SaveChanges();
     }
 
@@ -95,7 +86,7 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         Assert.False(string.IsNullOrEmpty(accessToken));
         Assert.False(string.IsNullOrEmpty(refreshToken));
         Assert.Equal(2, userCount);
-        Assert.Equal(4, tokenCount);
+        Assert.Equal(3, tokenCount);
         Assert.Equal(1, userLogsCount);
     }
 
@@ -162,16 +153,14 @@ public class AuthTests : IClassFixture<AuthWebApplicationFactory>
         string? accessToken = json.RootElement.GetProperty("identityToken").GetString();
         string? refreshToken = json.RootElement.GetProperty("refreshToken").GetString();
         int tokenCount = _context.RefreshTokens.Count();
-        int revokedTokenCount = _context.RefreshTokens.Where(x => x.IsRevoked).Count();
         int userLogsCount = _context.AccountHistory.Count();
 
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(string.IsNullOrEmpty(accessToken));
         Assert.False(string.IsNullOrEmpty(refreshToken));
-        Assert.Equal(4, tokenCount);
+        Assert.Equal(2, tokenCount);
         Assert.Equal(1, userLogsCount);
-        Assert.Equal(2, revokedTokenCount);
     }
 
     [Fact]

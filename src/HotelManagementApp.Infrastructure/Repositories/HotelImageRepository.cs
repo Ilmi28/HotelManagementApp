@@ -25,10 +25,14 @@ public class HotelImageRepository(AppDbContext context) : IHotelImageRepository
 
     public async Task RemoveHotelImagesByHotelId(int hotelId, CancellationToken ct)
     {
-        await context.HotelImages
-            .Include(x => x.Hotel)
-            .Where(x => x.Hotel.Id == hotelId)
-            .ExecuteDeleteAsync(ct);
+        var hotelImage = await context.HotelImages
+                            .Include(x => x.Hotel)
+                            .FirstOrDefaultAsync(x => x.Hotel.Id == hotelId);
+        if (hotelImage != null)
+        {
+            context.HotelImages.Remove(hotelImage);
+            await context.SaveChangesAsync(ct);
+        }
     }
 
 }

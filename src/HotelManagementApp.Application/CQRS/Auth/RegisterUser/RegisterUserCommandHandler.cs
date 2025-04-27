@@ -13,7 +13,7 @@ using MediatR;
 namespace HotelManagementApp.Application.CQRS.Auth.RegisterUser;
 
 public class RegisterUserCommandHandler(IUserManager userManager,
-                                    ITokenService tokenManager,
+                                    ITokenService tokenService,
                                     IRefreshTokenRepository tokenRepository,
                                     IProfilePictureRepository profilePictureRepository,
                                     IAccountDbLogger logger) : IRequestHandler<RegisterUserCommand, LoginRegisterResponse>
@@ -24,7 +24,7 @@ public class RegisterUserCommandHandler(IUserManager userManager,
         {
             UserId = user.Id,
             RefreshTokenHash = hashRefreshToken,
-            ExpirationDate = DateTime.Now.AddDays(tokenManager.GetRefreshTokenExpirationDays())
+            ExpirationDate = DateTime.Now.AddDays(tokenService.GetRefreshTokenExpirationDays())
         };
         await tokenRepository.AddToken(token, ct);
     }
@@ -52,9 +52,9 @@ public class RegisterUserCommandHandler(IUserManager userManager,
             UserId = user.Id
         };
         await profilePictureRepository.AddProfilePicture(profilePicture, cancellationToken);
-        string identityToken = tokenManager.GenerateIdentityToken(user);
-        string refreshToken = tokenManager.GenerateRefreshToken();
-        string hashRefreshToken = tokenManager.GetHashRefreshToken(refreshToken)
+        string identityToken = tokenService.GenerateIdentityToken(user);
+        string refreshToken = tokenService.Generate512Token();
+        string hashRefreshToken = tokenService.GetTokenHash(refreshToken)
             ?? throw new Exception("Refresh token creation failed");
         await CreateRefreshTokenInDb(hashRefreshToken, user, cancellationToken);
         await logger.Log(AccountOperationEnum.Register, user);

@@ -12,18 +12,15 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
         await context.RefreshTokens.AddAsync(token, ct);
         await context.SaveChangesAsync(ct);
     }
-
-    public async Task RevokeToken(RefreshToken token, CancellationToken ct)
+    public async Task DeleteToken(RefreshToken token, CancellationToken ct)
     {
-        token.IsRevoked = true;
-        context.RefreshTokens.Update(token);
+        context.RefreshTokens.Remove(token);
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task<RefreshToken?> GetLastValidToken(string userId, CancellationToken ct)
+    public async Task<RefreshToken?> GetTokenByUser(string userId, CancellationToken ct)
     {
-        return await context.RefreshTokens.FirstOrDefaultAsync(
-            x => x.UserId == userId && x.ExpirationDate > DateTime.Now && !x.IsRevoked, ct);
+        return await context.RefreshTokens.FirstOrDefaultAsync(x => x.UserId == userId, ct);
     }
 
     public async Task<RefreshToken?> GetToken(string refreshToken, CancellationToken ct)

@@ -40,11 +40,10 @@ public class RefreshTokenCommandHandlerTests
         {
             UserId = userDto.Id,
             RefreshTokenHash = "hashedRefreshToken",
-            ExpirationDate = DateTime.Now.AddDays(30),
-            IsRevoked = false
+            ExpirationDate = DateTime.Now.AddDays(30)
         };
 
-        _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
+        _mockTokenManager.Setup(x => x.GetTokenHash(It.IsAny<string>())).Returns("hashedRefreshToken");
         _mockTokenManager.Setup(x => x.GenerateIdentityToken(userDto)).Returns("identityToken");
         _mockTokenRepository.Setup(x => x.GetToken(It.IsAny<string>(), CancellationToken.None)).ReturnsAsync(token);
         _mockUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync(userDto);
@@ -60,7 +59,7 @@ public class RefreshTokenCommandHandlerTests
     public async Task InvalidCommand_ThrowsUnauthorizedException(string? token)
     {
         var cmd = new RefreshSessionCommand { RefreshToken = token! };
-        _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns((string?)null);
+        _mockTokenManager.Setup(x => x.GetTokenHash(It.IsAny<string>())).Returns((string?)null);
 
         var func = async () => await _handler.Handle(cmd, CancellationToken.None);
 

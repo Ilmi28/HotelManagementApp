@@ -44,8 +44,8 @@ public class RegisterUserCommandHandlerTests
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<UserDto>(), cmd.Password)).ReturnsAsync(true);
         _mockTokenManager.Setup(x => x.GetRefreshTokenExpirationDays()).Returns(30);
         _mockTokenManager.Setup(x => x.GenerateIdentityToken(It.IsAny<UserDto>())).Returns("identityToken");
-        _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
-        _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
+        _mockTokenManager.Setup(x => x.Generate512Token()).Returns("refreshToken");
+        _mockTokenManager.Setup(x => x.GetTokenHash(It.IsAny<string>())).Returns("hashedRefreshToken");
 
         var response = await _handler.Handle(cmd, CancellationToken.None);
 

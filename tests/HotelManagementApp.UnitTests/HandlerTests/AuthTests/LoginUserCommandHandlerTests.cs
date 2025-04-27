@@ -44,10 +44,11 @@ public class LoginUserCommandHandlerTests
         _mockTokenManager.Setup(x => x.GetRefreshTokenExpirationDays()).Returns(30);
         _mockTokenManager.Setup(x => x.GenerateIdentityToken(userDto)).Returns("identityToken");
         _mockUserManager.Setup(x => x.FindByEmailAsync("test@mail.com")).ReturnsAsync(userDto);
+        _mockUserManager.Setup(x => x.FindByIdAsync("1")).ReturnsAsync(userDto);
         _mockUserManager.Setup(x => x.CheckPasswordAsync(userDto, "Password123@")).ReturnsAsync(true);
         _mockTokenManager.Setup(x => x.GenerateIdentityToken(userDto)).Returns("identityToken");
-        _mockTokenManager.Setup(x => x.GenerateRefreshToken()).Returns("refreshToken");
-        _mockTokenManager.Setup(x => x.GetHashRefreshToken(It.IsAny<string>())).Returns("hashedRefreshToken");
+        _mockTokenManager.Setup(x => x.Generate512Token()).Returns("refreshToken");
+        _mockTokenManager.Setup(x => x.GetTokenHash(It.IsAny<string>())).Returns("hashedRefreshToken");
 
         var response = await _handler.Handle(cmd, CancellationToken.None);
 

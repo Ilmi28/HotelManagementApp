@@ -35,16 +35,19 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
 
     public async Task UpdateHotel(HotelModel hotel, CancellationToken ct)
     {
-        await context.Hotels
-            .Where(x => x.Id == hotel.Id)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(x => x.Name, hotel.Name)
-                .SetProperty(x => x.Address, hotel.Address)
-                .SetProperty(x => x.City, hotel.City)
-                .SetProperty(x => x.Country, hotel.Country)
-                .SetProperty(x => x.PhoneNumber, hotel.PhoneNumber)
-                .SetProperty(x => x.Email, hotel.Email)
-                .SetProperty(x => x.Description, hotel.Description)
-                , ct);
+        var model = await context.Hotels
+            .FirstOrDefaultAsync(x => x.Id == hotel.Id, ct);
+        if (model != null)
+        {
+            model.Name = hotel.Name;
+            model.Address = hotel.Address;
+            model.City = hotel.City;
+            model.Country = hotel.Country;
+            model.PhoneNumber = hotel.PhoneNumber;
+            model.Email = hotel.Email;
+            model.Description = hotel.Description;
+            context.Hotels.Update(model);
+            await context.SaveChangesAsync(ct);
+        }
     }
 }

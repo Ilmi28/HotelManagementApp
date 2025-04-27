@@ -18,6 +18,13 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<IAuthorizationHandler, AccountOwnerHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, RoleHierarchyHandler>();
+        builder.Services.AddAuthentication(config =>
+        {
+            config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        });
         builder.Services.AddAuthorization(options =>
         {
             options.AddPolicy("AccountOwner", policy =>

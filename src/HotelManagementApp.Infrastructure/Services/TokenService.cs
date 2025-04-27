@@ -9,7 +9,7 @@ using System.Text;
 
 namespace HotelManagementApp.Infrastructure.Services;
 
-public class JwtTokenService(IConfiguration config) : ITokenService
+public class TokenService(IConfiguration config) : ITokenService
 {
     public string GenerateIdentityToken(UserDto user)
     {
@@ -54,18 +54,18 @@ public class JwtTokenService(IConfiguration config) : ITokenService
         }
     }
 
-    public string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+    public string Generate512Token() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(512));
 
     public int GetRefreshTokenExpirationDays() => config.GetValue<int>("JwtTokenConfiguration:RefreshTokenExpirationDays");
 
-    public string? GetHashRefreshToken(string refreshToken)
+    public string? GetTokenHash(string refreshToken)
     {
         try
         {
             byte[] bytes = Convert.FromBase64String(refreshToken);
-            using (var sha256 = SHA256.Create())
+            using (var sha512 = SHA3_512.Create())
             {
-                var hash = sha256.ComputeHash(bytes);
+                var hash = sha512.ComputeHash(bytes);
                 return Convert.ToBase64String(hash);
             }
         }

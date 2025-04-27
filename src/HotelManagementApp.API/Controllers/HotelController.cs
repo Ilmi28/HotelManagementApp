@@ -13,13 +13,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace HotelManagementApp.API.Controllers;
 
 [Route("api/hotel")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-    Roles = "Staff, Manager, Admin")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 [ApiController]
 public class HotelController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Get all hotels (staff and above)
+    /// Get all hotels
     /// </summary>
     [HttpGet("get-all")]
     [ProducesResponseType(typeof(ICollection<HotelResponse>), StatusCodes.Status200OK)]
@@ -35,6 +34,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Add hotel (staff and above)
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddHotel(AddHotelCommand cmd)
@@ -47,6 +47,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Delete hotel by id (staff and above)
     /// </summary>
     [HttpDelete("{hotelId}")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,7 +58,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get hotel by id (staff and above)
+    /// Get hotel by id
     /// </summary>
     [HttpGet("{hotelId}")]
     [ProducesResponseType(typeof(HotelResponse), StatusCodes.Status200OK)]
@@ -73,6 +74,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Update hotel (staff and above)
     /// </summary>
     [HttpPut]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -86,6 +88,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Updates hotel images (staff and above)
     /// </summary>
     [HttpPut("images")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateHotelImages([FromForm] UpdateHotelImagesCommand cmd, CancellationToken ct)
