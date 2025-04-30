@@ -35,4 +35,8 @@
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="HtmlTemplates\" />
+  </ItemGroup>
+
 </Project>

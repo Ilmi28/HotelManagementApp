@@ -1,6 +1,8 @@
 ﻿using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace HotelManagementApp.Infrastructure.Database.Identity;
 
@@ -60,7 +62,8 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
             Id = dbUser.Id,
             UserName = dbUser.UserName!,
             Email = dbUser.Email!,
-            Roles = roles.ToList()
+            Roles = roles.ToList(),
+            IsEmailConfirmed = dbUser.EmailConfirmed
         };
         return userDto;
     }
@@ -76,7 +79,8 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
             Id = dbUser.Id,
             UserName = dbUser.UserName!,
             Email = dbUser.Email!,
-            Roles = roles.ToList()
+            Roles = roles.ToList(),
+            IsEmailConfirmed = dbUser.EmailConfirmed
         };
         return userDto;
     }
@@ -92,7 +96,8 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
             Id = dbUser.Id,
             UserName = dbUser.UserName!,
             Email = dbUser.Email!,
-            Roles = roles.ToList()
+            Roles = roles.ToList(),
+            IsEmailConfirmed = dbUser.EmailConfirmed
         };
         return userDto;
     }
@@ -104,6 +109,7 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
             return false;
         dbUser.UserName = user.UserName;
         dbUser.Email = user.Email;
+        dbUser.EmailConfirmed = user.IsEmailConfirmed;
         var result = await userManager.UpdateAsync(dbUser);
         return result.Succeeded;
     }
@@ -160,5 +166,29 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
             return false;
         var result = await userManager.RemoveFromRoleAsync(dbUser, role);
         return result.Succeeded;
+    }
+
+    public async Task<ICollection<UserDto>> GetUsersWithoutRole()
+    {
+        var userDtos = new List<UserDto>();
+
+        var users = await userManager.Users.ToListAsync();
+
+        foreach (var user in users)
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            if (roles.Count == 0)
+            {
+                userDtos.Add(new UserDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName!,
+                    Email = user.Email!,
+                    Roles = new List<string>()
+                });
+            }
+        }
+
+        return userDtos;
     }
 }

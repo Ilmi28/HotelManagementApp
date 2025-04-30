@@ -24,12 +24,14 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
     {
         return await context.Hotels
             .AsNoTracking()
+            .Include(h => h.City)
             .ToListAsync(ct);
     }
 
     public async Task<HotelModel?> GetHotelById(int id, CancellationToken ct)
     {
         return await context.Hotels.AsNoTracking()
+            .Include(h => h.City)
             .FirstOrDefaultAsync(h => h.Id == id, ct);
     }
 
@@ -42,7 +44,6 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
             model.Name = hotel.Name;
             model.Address = hotel.Address;
             model.City = hotel.City;
-            model.Country = hotel.Country;
             model.PhoneNumber = hotel.PhoneNumber;
             model.Email = hotel.Email;
             model.Description = hotel.Description;

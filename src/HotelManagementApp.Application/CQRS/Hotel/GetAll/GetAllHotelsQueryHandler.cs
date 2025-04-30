@@ -12,14 +12,15 @@ public class GetAllHotelsQueryHandler(
 {
     public async Task<ICollection<HotelResponse>> Handle(GetAllHotelsQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotelModels = await hotelRepository.GetAllHotels(cancellationToken);
         var response = await Task.WhenAll(hotelModels.Select(async h => new HotelResponse
         {
             Id = h.Id,
             Name = h.Name,
             Address = h.Address,
-            City = h.City,
-            Country = h.Country,
+            City = h.City.Name,
+            Country = h.City.Country,
             Description = h.Description,
             PhoneNumber = h.PhoneNumber,
             Email = h.Email,

@@ -140,6 +140,30 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("VIPGuests");
                 });
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Country")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Cities");
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
                 {
                     b.Property<int>("Id")
@@ -170,13 +194,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("CityId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -195,6 +214,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId");
 
                     b.ToTable("Hotels");
                 });
@@ -631,6 +652,17 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelModel", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("City");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelParking", b =>

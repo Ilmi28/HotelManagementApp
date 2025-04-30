@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+namespace HotelManagementApp.API.Policies.AccountOwnerPolicy;
 
 public class AccountOwnerRequirement : IAuthorizationRequirement
 {

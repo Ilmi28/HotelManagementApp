@@ -1,9 +1,11 @@
 ﻿using HotelManagementApp.API.Requests;
 using HotelManagementApp.Application.CQRS.Account.ChangePassword;
+using HotelManagementApp.Application.CQRS.Account.Create;
 using HotelManagementApp.Application.CQRS.Account.Delete;
 using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
 using HotelManagementApp.Application.CQRS.Account.History;
+using HotelManagementApp.Application.CQRS.Account.SendConfirmEmailLink;
 using HotelManagementApp.Application.CQRS.Account.Update;
 using HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
 using HotelManagementApp.Application.Responses.AccountResponses;
@@ -29,8 +31,14 @@ public class AccountController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest cmd, CancellationToken ct)
+    public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest request, CancellationToken ct)
     {
+        var cmd = new CreateAccountCommand
+        {
+            UserName = request.UserName,
+            Email = request.Email,
+            Password = request.Password
+        };
         await mediator.Send(cmd, ct);
         return Created();
     }
@@ -175,5 +183,13 @@ public class AccountController(IMediator mediator) : ControllerBase
         var fileName = await mediator.Send(cmd, ct);
         return Ok(fileName);
     }
+
+    [HttpPost("send-confirmation-email")]
+
+    public async Task<IActionResult> SendConfirmationEmail(SendConfirmEmailLinkCommand cmd, CancellationToken ct)
+    {
+        await mediator.Send(cmd, ct);
+        return NoContent();
+    } 
 
 }

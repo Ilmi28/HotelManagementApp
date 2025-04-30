@@ -24,6 +24,7 @@ public static class MiddlewareConfig
                     UnauthorizedAccessException => new UnauthorizedProblemDetail(exception.Message),
                     ForbiddenException => new ForbiddenProblemDetail(exception.Message),
                     BadRequestException => new BadRequestProblemDetails(exception.Message),
+                    ArgumentNullException => new BadRequestProblemDetails(exception.Message),
                     _ => new InternalServerErrorProblemDetails(exception!.Message)
                 };
                 context.Response.StatusCode = problemDetails.Status!.Value;

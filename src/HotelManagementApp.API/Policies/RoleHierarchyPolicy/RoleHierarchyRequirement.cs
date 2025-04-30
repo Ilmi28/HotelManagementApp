@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+namespace HotelManagementApp.API.Policies.RoleHierarchyPolicy;
 
 public class RoleHierarchyRequirement : IAuthorizationRequirement { }

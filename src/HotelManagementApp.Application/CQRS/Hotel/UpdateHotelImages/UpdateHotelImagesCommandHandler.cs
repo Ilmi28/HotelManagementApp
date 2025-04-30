@@ -13,6 +13,7 @@ public class UpdateHotelImagesCommandHandler(
 {
     public async Task Handle(UpdateHotelImagesCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
             ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
         var hotelImages = await imageRepository.GetHotelImagesByHotelId(request.HotelId, cancellationToken);

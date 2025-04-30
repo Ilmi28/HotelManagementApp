@@ -29,6 +29,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<HotelService> HotelServices { get; set; }
     public DbSet<HotelParking> HotelParkings { get; set; }
     public DbSet<RoomImage> RoomImages { get; set; }
+    public DbSet<City> Cities { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -13,6 +13,7 @@ public class GetHotelByIdQueryHandler(
 {
     public async Task<HotelResponse> Handle(GetHotelByIdQuery request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
             ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
         return new HotelResponse
@@ -20,8 +21,8 @@ public class GetHotelByIdQueryHandler(
             Id = hotel.Id,
             Name = hotel.Name,
             Address = hotel.Address,
-            City = hotel.City,
-            Country = hotel.Country,
+            City = hotel.City.Name,
+            Country = hotel.City.Country,
             Description = hotel.Description,
             PhoneNumber = hotel.PhoneNumber,
             Email = hotel.Email,

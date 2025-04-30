@@ -61,10 +61,13 @@ public static class DependencyInjection
         builder.Services.AddTransient<IRoomRepository, RoomRepository>();
         builder.Services.AddTransient<IHotelImageRepository, HotelImageRepository>();
         builder.Services.AddTransient<IRoomImageRepository, RoomImageRepository>();
+        builder.Services.AddTransient<ICityRepository, CityRepository>();
 
         builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
         builder.Services.AddTransient<IFileService, FileService>();
+        builder.Services.AddTransient<IEmailService, GmailEmailService>();
+        builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
 
         return builder;
     }

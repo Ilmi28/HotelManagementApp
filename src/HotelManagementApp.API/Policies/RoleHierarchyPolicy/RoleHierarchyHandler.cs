@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
-namespace HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+namespace HotelManagementApp.API.Policies.RoleHierarchyPolicy;
 
 public class RoleHierarchyHandler(IUserManager userManager) : AuthorizationHandler<RoleHierarchyRequirement, string>
 {

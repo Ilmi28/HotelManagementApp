@@ -1,5 +1,5 @@
-﻿using HotelManagementApp.Application.Policies.AccountOwnerPolicy;
-using HotelManagementApp.Application.Policies.RoleHierarchyPolicy;
+﻿using HotelManagementApp.API.Policies.AccountOwnerPolicy;
+using HotelManagementApp.API.Policies.RoleHierarchyPolicy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Net.Http.Headers;

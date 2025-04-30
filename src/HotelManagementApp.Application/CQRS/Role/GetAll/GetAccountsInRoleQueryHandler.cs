@@ -14,7 +14,7 @@ public class GetAccountsInRoleQueryHandler(
 {
     public async Task<ICollection<AccountResponse>> Handle(GetAccountsInRoleQuery request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
         var users = await userRolesManager.GetUsersInRoleAsync(request.RoleName.Normalize());
         var accounts = new List<AccountResponse>();
         foreach (var user in users)

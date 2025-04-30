@@ -16,13 +16,7 @@ public class UpdateHotelCommand : IRequest
     [MaxLength(50)]
     public required string Address { get; set; }
     [Required]
-    [MinLength(3)]
-    [MaxLength(50)]
-    public required string City { get; set; }
-    [Required]
-    [MinLength(3)]
-    [MaxLength(50)]
-    public required string Country { get; set; }
+    public required int CityId { get; set; }
     [Required]
     [Phone]
     public required string PhoneNumber { get; set; }

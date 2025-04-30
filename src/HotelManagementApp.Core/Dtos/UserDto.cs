@@ -6,4 +6,5 @@ public class UserDto
     public required string UserName { get; set; }
     public required string Email { get; set; }
     public required IList<string> Roles { get; set; }
+    public bool IsEmailConfirmed { get; set; } = false;
 }

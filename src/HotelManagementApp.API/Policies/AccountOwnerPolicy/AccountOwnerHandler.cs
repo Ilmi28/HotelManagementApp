@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
-namespace HotelManagementApp.Application.Policies.AccountOwnerPolicy;
+namespace HotelManagementApp.API.Policies.AccountOwnerPolicy;
 
 public class AccountOwnerHandler : AuthorizationHandler<AccountOwnerRequirement, string>
 {
