@@ -65,7 +65,7 @@ public static class DependencyInjection
 
         builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
-        builder.Services.AddTransient<IFileService, FileService>();
+        builder.Services.AddTransient<IFileService, LocalFileService>();
         builder.Services.AddTransient<IEmailService, GmailEmailService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
 

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Infrastructure.Services;
 
-public class FileService(IConfiguration config) : IFileService
+public class LocalFileService(IConfiguration config) : IFileService
 {
     private readonly string basePath = config.GetValue<string>("wwwrootPath")
         ?? String.Empty;
