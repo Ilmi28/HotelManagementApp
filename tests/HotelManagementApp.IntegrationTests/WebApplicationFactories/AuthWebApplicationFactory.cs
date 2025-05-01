@@ -1,4 +1,5 @@
-﻿using HotelManagementApp.API;
+﻿using DotNetEnv;
+using HotelManagementApp.API;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.IntegrationTests.TestContext;
 using Microsoft.AspNetCore.Hosting;
@@ -14,6 +15,8 @@ public class AuthWebApplicationFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        Env.Load();
+
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<DbContextOptions<AppDbContext>>();

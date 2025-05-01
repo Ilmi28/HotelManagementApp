@@ -12,4 +12,5 @@ public interface IUserManager
     Task<bool> DeleteAsync(UserDto user);
     Task<bool> UpdateAsync(UserDto user);
     Task<bool> ChangePasswordAsync(UserDto user, string currentPassword, string newPassword);
+    Task<bool> ResetPasswordAsync(UserDto user, string newPassword);
 }
