@@ -2,7 +2,6 @@
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models.TokenModels;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
@@ -66,7 +65,7 @@ public static class DependencyInjection
         builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
         builder.Services.AddTransient<IFileService, LocalFileService>();
-        builder.Services.AddTransient<IEmailService, GmailEmailService>();
+        builder.Services.AddTransient<IEmailService, AzureEmailService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
 
         return builder;

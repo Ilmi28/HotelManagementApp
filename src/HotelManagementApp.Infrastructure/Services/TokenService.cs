@@ -16,8 +16,7 @@ public class TokenService(IConfiguration config) : ITokenService
         var tokenConfig = config.GetSection("JwtTokenConfiguration");
         string issuer = tokenConfig.GetValue<string>("Issuer") ?? string.Empty;
         string[] audience = tokenConfig.GetSection("Audience").Get<string[]>() ?? [];
-        string secretKey = Environment.GetEnvironmentVariable("SecretJwtKey")
-            ?? tokenConfig.GetValue<string>("SecretKey")
+        string secretKey = Environment.GetEnvironmentVariable("JwtSecretKey")
             ?? string.Empty;
         int jwtExpireMinutes = tokenConfig.GetValue<int>("AccessTokenExpirationMinutes");
         DateTime jwtExpireDate = DateTime.Now.AddMinutes(jwtExpireMinutes);
