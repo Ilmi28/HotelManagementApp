@@ -5,7 +5,8 @@ using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using Moq;
-using Xunit;
+
+
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class UpdateAccountCommandHandlerTests
 {
@@ -21,6 +22,7 @@ public class UpdateAccountCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldUpdateUser_WhenValidRequest()
     {
+
         var command = new UpdateAccountCommand
         {
             UserId = "123",

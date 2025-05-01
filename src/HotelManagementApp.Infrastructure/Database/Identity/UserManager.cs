@@ -191,4 +191,15 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
 
         return userDtos;
     }
+
+
+    public async Task<bool> ResetPasswordAsync(UserDto user, string newPassword)
+    {
+        var dbUser = await userManager.FindByIdAsync(user.Id);
+        if (dbUser == null)
+            return false;
+        await userManager.RemovePasswordAsync(dbUser);
+        await userManager.AddPasswordAsync(dbUser, newPassword);
+        return true;
+    }
 }

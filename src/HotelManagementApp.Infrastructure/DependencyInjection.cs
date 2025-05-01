@@ -39,7 +39,9 @@ public static class DependencyInjection
         builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
             var tokenConfiguration = configuration!.GetSection("JwtTokenConfiguration");
-            string secretKey = tokenConfiguration.GetValue<string>("SecretKey") ?? string.Empty;
+            string secretKey = Environment.GetEnvironmentVariable("JwtSecretKey") 
+                ?? tokenConfiguration.GetValue<string>("SecretKey")
+                ?? string.Empty;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -61,6 +63,8 @@ public static class DependencyInjection
         builder.Services.AddTransient<IHotelImageRepository, HotelImageRepository>();
         builder.Services.AddTransient<IRoomImageRepository, RoomImageRepository>();
         builder.Services.AddTransient<ICityRepository, CityRepository>();
+        builder.Services.AddTransient<IConfirmEmailTokensRepository, ConfirmEmailTokensRepository>();
+        builder.Services.AddScoped<IResetPasswordTokenRepository, ResetPasswordTokenRepository>();
 
         builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
