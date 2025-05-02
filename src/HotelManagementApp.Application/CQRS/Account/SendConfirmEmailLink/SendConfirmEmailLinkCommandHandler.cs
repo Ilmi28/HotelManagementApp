@@ -35,7 +35,7 @@ public class SendConfirmEmailLinkCommandHandler(
         await tokenRepository.AddToken(token, cancellationToken);
         var htmlTemplatePath = "../HotelManagementApp.Application/HtmlTemplates/ConfirmEmail.html";
         var htmlTemplate = await File.ReadAllTextAsync(htmlTemplatePath, cancellationToken);
-        var confirmEmailLink = $"{config["BaseUrl"]}/api/account/confirm-email?token={Uri.EscapeDataString(emailConfirmationToken)}&userId={user.Id}";
+        var confirmEmailLink = $"{config["FrontendUrl"]}/account/confirm-email?token={Uri.EscapeDataString(emailConfirmationToken)}&userId={user.Id}";
         htmlTemplate = htmlTemplate.Replace("{{ConfirmationLink}}", confirmEmailLink);
         await emailService.SendEmailAsync(user.Email, "Confirm email", htmlTemplate, cancellationToken);
     }

@@ -178,13 +178,8 @@ public class AccountController(IMediator mediator) : ControllerBase
     [AllowAnonymous]
     [HttpGet("confirm-email")]
     [ProducesResponseType(StatusCodes.Status302Found)]
-    public async Task<IActionResult> ConfirmEmail(string userId, string token, CancellationToken ct, IConfiguration config)
+    public async Task<IActionResult> ConfirmEmail(ConfirmEmailCommand cmd, CancellationToken ct, IConfiguration config)
     {
-        var cmd = new ConfirmEmailCommand
-        {
-            UserId = userId,
-            Token = token
-        };
         await mediator.Send(cmd, ct);
         return Redirect(config["FrontendUrl"]!);
     }
