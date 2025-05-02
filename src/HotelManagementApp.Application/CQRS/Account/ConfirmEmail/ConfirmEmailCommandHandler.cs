@@ -15,7 +15,7 @@ public class ConfirmEmailCommandHandler(
     {
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new UnauthorizedAccessException();
-        var hashToken = tokenService.GetTokenHash(request.Token)
+        var hashToken = tokenService.GetTokenHash(Uri.UnescapeDataString(request.Token))
             ?? throw new UnauthorizedAccessException();
         var token = await tokenRepository.GetToken(hashToken, cancellationToken)
             ?? throw new UnauthorizedAccessException();
