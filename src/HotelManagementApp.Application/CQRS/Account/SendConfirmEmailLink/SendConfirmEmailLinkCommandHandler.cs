@@ -17,7 +17,7 @@ public class SendConfirmEmailLinkCommandHandler(
 {
     public async Task Handle(SendConfirmEmailLinkCommand request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request, nameof(request));
+            ArgumentNullException.ThrowIfNull(request, nameof(request));
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new UnauthorizedAccessException();
         var emailConfirmationToken = tokenService.Generate512Token();

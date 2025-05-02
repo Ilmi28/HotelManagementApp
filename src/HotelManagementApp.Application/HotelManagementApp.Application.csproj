@@ -36,7 +36,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="CQRS\HotelService\" />
     <Folder Include="CQRS\Reservation\" />
     <Folder Include="CQRS\Review\" />
   </ItemGroup>

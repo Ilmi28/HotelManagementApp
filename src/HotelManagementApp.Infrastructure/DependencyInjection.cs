@@ -30,11 +30,11 @@ public static class DependencyInjection
         builder.Services.AddIdentity<User, IdentityRole>()
             .AddEntityFrameworkStores<AppDbContext>();
 
-        builder.Services.AddTransient<IUserManager, UserManager>();
-        builder.Services.AddTransient<IRoleManager, RoleManager>();
-        builder.Services.AddTransient<IUserRolesManager, UserManager>();
+        builder.Services.AddScoped<IUserManager, UserManager>();
+        builder.Services.AddScoped<IRoleManager, RoleManager>();
+        builder.Services.AddScoped<IUserRolesManager, UserManager>();
 
-        builder.Services.AddTransient<IAccountDbLogger, AuthDbLogger>();
+        builder.Services.AddScoped<IAccountDbLogger, AuthDbLogger>();
 
         builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
@@ -54,22 +54,23 @@ public static class DependencyInjection
             };
         });
 
-        builder.Services.AddTransient<IRefreshTokenRepository, RefreshTokenRepository>();
-        builder.Services.AddTransient<IVIPRepository, VIPRepository>();
-        builder.Services.AddTransient<IBlacklistRepository, BlacklistRepository>();
-        builder.Services.AddTransient<IProfilePictureRepository, ProfilePictureRepository>();
-        builder.Services.AddTransient<IHotelRepository, HotelRepository>();
-        builder.Services.AddTransient<IRoomRepository, RoomRepository>();
-        builder.Services.AddTransient<IHotelImageRepository, HotelImageRepository>();
-        builder.Services.AddTransient<IRoomImageRepository, RoomImageRepository>();
-        builder.Services.AddTransient<ICityRepository, CityRepository>();
-        builder.Services.AddTransient<IConfirmEmailTokensRepository, ConfirmEmailTokensRepository>();
+        builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        builder.Services.AddScoped<IVIPRepository, VIPRepository>();
+        builder.Services.AddScoped<IBlacklistRepository, BlacklistRepository>();
+        builder.Services.AddScoped<IProfilePictureRepository, ProfilePictureRepository>();
+        builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+        builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+        builder.Services.AddScoped<IHotelImageRepository, HotelImageRepository>();
+        builder.Services.AddScoped<IRoomImageRepository, RoomImageRepository>();
+        builder.Services.AddScoped<ICityRepository, CityRepository>();
+        builder.Services.AddScoped<IConfirmEmailTokensRepository, ConfirmEmailTokensRepository>();
         builder.Services.AddScoped<IResetPasswordTokenRepository, ResetPasswordTokenRepository>();
+        builder.Services.AddScoped<IHotelServiceRepository, HotelServiceRepository>();
 
-        builder.Services.AddTransient<ITokenService, TokenService>();
-        builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
-        builder.Services.AddTransient<IFileService, LocalFileService>();
-        builder.Services.AddTransient<IEmailService, AzureEmailService>();
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+        builder.Services.AddScoped<IFileService, LocalFileService>();
+        builder.Services.AddScoped<IEmailService, AzureEmailService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
 
         return builder;
