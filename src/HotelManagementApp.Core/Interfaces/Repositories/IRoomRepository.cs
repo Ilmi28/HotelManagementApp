@@ -1,14 +1,14 @@
-﻿using HotelManagementApp.Core.Models.RoomModels;
+﻿using HotelManagementApp.Core.Models.HotelModels;
 
 namespace HotelManagementApp.Core.Interfaces.Repositories;
 
 public interface IRoomRepository
 {
-    Task AddRoom(RoomModel model, CancellationToken ct);
-    Task RemoveRoom(int id, CancellationToken ct);
-    Task<ICollection<RoomModel>> GetAllRooms(CancellationToken ct);
-    Task<RoomModel?> GetRoomById(int id, CancellationToken ct);
-    Task UpdateRoom(RoomModel room, CancellationToken ct);
-    Task<ICollection<RoomModel>> GetRoomsByHotelId(int hotelId, CancellationToken ct);
-    Task<ICollection<RoomType>> GetRoomTypes(CancellationToken ct);
+    Task AddRoom(HotelRoom model, CancellationToken ct);
+    Task RemoveRoom(HotelRoom room, CancellationToken ct);
+    Task<ICollection<HotelRoom>> GetAllRooms(CancellationToken ct);
+    Task<HotelRoom?> GetRoomById(int id, CancellationToken ct);
+    Task UpdateRoom(HotelRoom room, CancellationToken ct);
+    Task<ICollection<HotelRoom>> GetRoomsByHotelId(int hotelId, CancellationToken ct);
+    Task<ICollection<HotelRoomType>> GetRoomTypes(CancellationToken ct);
 }

@@ -1,4 +1,4 @@
-using HotelManagementApp.Application.CQRS.Hotel.Update;
+using HotelManagementApp.Application.CQRS.HotelOps.Update;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Models.HotelModels;
@@ -37,7 +37,7 @@ public class UpdateHotelCommandHandlerTests
             Longitude = 20.0,
             Country = "Updated Country"
         };
-        var hotel = new HotelModel
+        var hotel = new Hotel
         {
             Id = 1,
             Name = "Old Hotel",
@@ -111,7 +111,7 @@ public class UpdateHotelCommandHandlerTests
         };
 
         _cityRepositoryMock.Setup(m => m.GetCityById(command.CityId, default)).ReturnsAsync(city);
-        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((HotelModel?)null);
+        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((Hotel?)null);
 
         await Assert.ThrowsAsync<HotelNotFoundException>(() => _handler.Handle(command, default));
     }

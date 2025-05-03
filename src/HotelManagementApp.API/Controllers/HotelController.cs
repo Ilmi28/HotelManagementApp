@@ -1,13 +1,9 @@
-﻿using HotelManagementApp.Application.CQRS.Hotel.Add;
-using HotelManagementApp.Application.CQRS.Hotel.Delete;
-using HotelManagementApp.Application.CQRS.Hotel.GetAll;
-using HotelManagementApp.Application.CQRS.Hotel.GetById;
-using HotelManagementApp.Application.CQRS.Hotel.Update;
-using HotelManagementApp.Application.CQRS.Hotel.UpdateHotelImages;
-using HotelManagementApp.Application.CQRS.HotelServiceOps.Add;
-using HotelManagementApp.Application.CQRS.HotelServiceOps.Delete;
-using HotelManagementApp.Application.CQRS.HotelServiceOps.GetByHotel;
-using HotelManagementApp.Application.CQRS.HotelServiceOps.Update;
+﻿using HotelManagementApp.Application.CQRS.HotelOps.Add;
+using HotelManagementApp.Application.CQRS.HotelOps.Delete;
+using HotelManagementApp.Application.CQRS.HotelOps.GetAll;
+using HotelManagementApp.Application.CQRS.HotelOps.GetById;
+using HotelManagementApp.Application.CQRS.HotelOps.Update;
+using HotelManagementApp.Application.CQRS.HotelOps.UpdateHotelImages;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -99,40 +95,5 @@ public class HotelController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(cmd, ct);
         return NoContent();
-    }
-
-    [HttpPost("services")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    public async Task<IActionResult> AddHotelService([FromBody] AddHotelServiceCommand cmd, CancellationToken ct)
-    {
-        await mediator.Send(cmd, ct);
-        return Created();
-    }
-
-    [HttpPut("services")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> UpdateHotelService([FromBody] UpdateHotelServiceCommand cmd, CancellationToken ct)
-    {
-        await mediator.Send(cmd, ct);
-        return NoContent();
-    }
-
-    [HttpDelete("services/{hotelServiceId}")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> DeleteHotelService(int hotelServiceId, CancellationToken ct)
-    {
-        await mediator.Send(new DeleteHotelServiceCommand { HotelServiceId = hotelServiceId }, ct);
-        return NoContent();
-    }
-
-    [HttpGet("services/{hotelId}")]
-    [ProducesResponseType(typeof(ICollection<HotelServiceResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetHotelServices(int hotelId, CancellationToken ct)
-    {
-        var hotelServices = await mediator.Send(new GetHotelServicesByHotelIdQuery { HotelId = hotelId }, ct);
-        return Ok(hotelServices);
     }
 }

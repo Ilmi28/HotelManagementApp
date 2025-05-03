@@ -1,5 +1,4 @@
-using HotelManagementApp.Application.CQRS.Hotel.GetAll;
-using HotelManagementApp.Application.Responses.HotelResponses;
+using HotelManagementApp.Application.CQRS.HotelOps.GetAll;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
@@ -35,7 +34,7 @@ public class GetAllHotelsQueryHandlerTests
             Country = "Test Country"
         };
 
-        var hotel = new HotelModel
+        var hotel = new Hotel
         {
             Id = 1,
             Name = "Test Hotel",
@@ -50,7 +49,7 @@ public class GetAllHotelsQueryHandlerTests
             new HotelImage {Id=1, FileName = "image1.jpg",Hotel=hotel }
         };
 
-        _hotelRepositoryMock.Setup(m => m.GetAllHotels(default)).ReturnsAsync(new List<HotelModel> { hotel});
+        _hotelRepositoryMock.Setup(m => m.GetAllHotels(default)).ReturnsAsync(new List<Hotel> { hotel});
         _imageRepositoryMock.Setup(m => m.GetHotelImagesByHotelId(1, default)).ReturnsAsync(images);
         _fileServiceMock.Setup(m => m.GetFileUrl("images", "image1.jpg")).Returns("http://example.com/image1.jpg");
 

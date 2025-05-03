@@ -3,7 +3,6 @@ using HotelManagementApp.Core.Models;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Models.GuestModels;
 using HotelManagementApp.Core.Models.HotelModels;
-using HotelManagementApp.Core.Models.RoomModels;
 using HotelManagementApp.Core.Models.TokenModels;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -21,21 +20,21 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<VIPGuest> VIPGuests { get; set; }
     public DbSet<ResetPasswordToken> ResetPasswordTokens { get; set; }
     public DbSet<ConfirmEmailToken> ConfirmEmailTokens { get; set; }
-    public DbSet<HotelModel> Hotels { get; set; }
-    public DbSet<RoomModel> Rooms { get; set; }
-    public DbSet<RoomType> RoomTypes { get; set; }
+    public DbSet<Hotel> Hotels { get; set; }
+    public DbSet<HotelRoom> HotelRooms { get; set; }
+    public DbSet<HotelRoomType> HotelRoomTypes { get; set; }
     public DbSet<ProfilePicture> ProfilePictures { get; set; }
     public DbSet<HotelImage> HotelImages { get; set; }
     public DbSet<HotelService> HotelServices { get; set; }
     public DbSet<HotelParking> HotelParkings { get; set; }
-    public DbSet<RoomImage> RoomImages { get; set; }
+    public DbSet<HotelRoomImage> HotelRoomImages { get; set; }
     public DbSet<City> Cities { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<AccountOperation>().Property(x => x.Name).HasConversion<string>();
-        modelBuilder.Entity<RoomType>().Property(x => x.Name).HasConversion<string>();
+        modelBuilder.Entity<HotelRoomType>().Property(x => x.Name).HasConversion<string>();
 
         modelBuilder.Ignore<IdentityUserClaim<Guid>>();
         modelBuilder.Ignore<IdentityUserLogin<Guid>>();
@@ -54,7 +53,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
             new IdentityRole { Id = "4", Name = "Staff", NormalizedName = "STAFF" });
 
         modelBuilder.Entity<AccountOperation>().HasData(EnumModel<AccountOperationEnum>.ParseEnumsToModel());
-        modelBuilder.Entity<RoomType>().HasData(EnumModel<RoomTypeEnum>.ParseEnumsToModel());
+        modelBuilder.Entity<HotelRoomType>().HasData(EnumModel<RoomTypeEnum>.ParseEnumsToModel());
         /*modelBuilder.Entity<AccountOperation>().HasData(
             new AccountOperation { Id = 1, Name = "REGISTER" },
             new AccountOperation { Id = 2, Name = "LOGIN" },

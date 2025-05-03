@@ -44,7 +44,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.RenameTable(
                 name: "RoomImage",
-                newName: "RoomImages");
+                newName: "HotelRoomImages");
 
             migrationBuilder.RenameTable(
                 name: "HotelService",
@@ -60,7 +60,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.RenameIndex(
                 name: "IX_RoomImage_RoomId",
-                table: "RoomImages",
+                table: "HotelRoomImages",
                 newName: "IX_RoomImages_RoomId");
 
             migrationBuilder.RenameIndex(
@@ -89,7 +89,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.AddPrimaryKey(
                 name: "PK_RoomImages",
-                table: "RoomImages",
+                table: "HotelRoomImages",
                 column: "Id");
 
             migrationBuilder.AddPrimaryKey(
@@ -133,9 +133,9 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.AddForeignKey(
                 name: "FK_RoomImages_Rooms_RoomId",
-                table: "RoomImages",
+                table: "HotelRoomImages",
                 column: "RoomId",
-                principalTable: "Rooms",
+                principalTable: "HotelRooms",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }
@@ -157,11 +157,11 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.DropForeignKey(
                 name: "FK_RoomImages_Rooms_RoomId",
-                table: "RoomImages");
+                table: "HotelRoomImages");
 
             migrationBuilder.DropPrimaryKey(
                 name: "PK_RoomImages",
-                table: "RoomImages");
+                table: "HotelRoomImages");
 
             migrationBuilder.DropPrimaryKey(
                 name: "PK_HotelServices",
@@ -176,7 +176,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 table: "HotelImages");
 
             migrationBuilder.RenameTable(
-                name: "RoomImages",
+                name: "HotelRoomImages",
                 newName: "RoomImage");
 
             migrationBuilder.RenameTable(
@@ -268,7 +268,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 name: "FK_RoomImage_Rooms_RoomId",
                 table: "RoomImage",
                 column: "RoomId",
-                principalTable: "Rooms",
+                principalTable: "HotelRooms",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }

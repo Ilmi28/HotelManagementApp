@@ -59,13 +59,14 @@ public static class DependencyInjection
         builder.Services.AddScoped<IBlacklistRepository, BlacklistRepository>();
         builder.Services.AddScoped<IProfilePictureRepository, ProfilePictureRepository>();
         builder.Services.AddScoped<IHotelRepository, HotelRepository>();
-        builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+        builder.Services.AddScoped<IRoomRepository, HotelRoomRepository>();
         builder.Services.AddScoped<IHotelImageRepository, HotelImageRepository>();
         builder.Services.AddScoped<IRoomImageRepository, RoomImageRepository>();
         builder.Services.AddScoped<ICityRepository, CityRepository>();
         builder.Services.AddScoped<IConfirmEmailTokensRepository, ConfirmEmailTokensRepository>();
         builder.Services.AddScoped<IResetPasswordTokenRepository, ResetPasswordTokenRepository>();
         builder.Services.AddScoped<IHotelServiceRepository, HotelServiceRepository>();
+        builder.Services.AddScoped<IHotelParkingRepository, HotelParkingRepository>();
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

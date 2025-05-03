@@ -15,6 +15,7 @@ public class UpdateHotelServiceCommand : IRequest
     [MaxLength(200)]
     public required string Description { get; set; }
     [Required]
+    [Range(0, int.MaxValue)]
     public required decimal Price { get; set; }
     [Required]
     public required int HotelId { get; set; }

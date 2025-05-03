@@ -1,4 +1,4 @@
-using HotelManagementApp.Application.CQRS.Hotel.Add;
+using HotelManagementApp.Application.CQRS.HotelOps.Add;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Models.HotelModels;
@@ -41,7 +41,7 @@ public class AddHotelCommandHandlerTests
 
         await _handler.Handle(command, default);
 
-        _hotelRepositoryMock.Verify(m => m.AddHotel(It.Is<HotelModel>(h =>
+        _hotelRepositoryMock.Verify(m => m.AddHotel(It.Is<Hotel>(h =>
             h.Name == command.Name &&
             h.Address == command.Address &&
             h.City == city &&

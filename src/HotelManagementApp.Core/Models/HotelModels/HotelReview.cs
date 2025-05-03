@@ -8,6 +8,6 @@ public class HotelReview
     public int Rating { get; set; }
     public required string Review { get; set; }
     public DateTime LastModified { get; set; } = DateTime.Now;
-    public required HotelModel Hotel { get; set; }
+    public required Hotel Hotel { get; set; }
 
 }

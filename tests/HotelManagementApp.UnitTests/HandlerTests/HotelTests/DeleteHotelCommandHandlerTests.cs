@@ -1,4 +1,4 @@
-using HotelManagementApp.Application.CQRS.Hotel.Delete;
+using HotelManagementApp.Application.CQRS.HotelOps.Delete;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Models.HotelModels;
@@ -27,7 +27,7 @@ public class DeleteHotelCommandHandlerTests
             Longitude = 20.0,
             Country = "Test Country"
         };
-        var hotel = new HotelModel
+        var hotel = new Hotel
         {
             Name = "Test Hotel",
             Address = "123 Test Street",
@@ -49,7 +49,7 @@ public class DeleteHotelCommandHandlerTests
     {
         var command = new DeleteHotelCommand { HotelId = 1 };
 
-        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((HotelModel?)null);
+        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((Hotel?)null);
 
         await Assert.ThrowsAsync<HotelNotFoundException>(() => _handler.Handle(command, default));
     }

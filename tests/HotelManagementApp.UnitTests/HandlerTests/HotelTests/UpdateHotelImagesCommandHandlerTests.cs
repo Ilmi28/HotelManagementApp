@@ -1,11 +1,9 @@
-using HotelManagementApp.Application.CQRS.Hotel.UpdateHotelImages;
+using HotelManagementApp.Application.CQRS.HotelOps.UpdateHotelImages;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
-using Microsoft.AspNetCore.Http;
 using Moq;
-using Xunit;
 
 public class UpdateHotelImagesCommandHandlerTests
 {
@@ -28,7 +26,7 @@ public class UpdateHotelImagesCommandHandlerTests
     {
         var command = new UpdateHotelImagesCommand { HotelId = 1 };
 
-        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((HotelModel?)null);
+        _hotelRepositoryMock.Setup(m => m.GetHotelById(command.HotelId, default)).ReturnsAsync((Hotel?)null);
 
         await Assert.ThrowsAsync<HotelNotFoundException>(() => _handler.Handle(command, default));
     }

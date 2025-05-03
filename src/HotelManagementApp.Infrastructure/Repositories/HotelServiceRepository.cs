@@ -18,6 +18,7 @@ public class HotelServiceRepository(AppDbContext context) : IHotelServiceReposit
     {
         return await context.HotelServices
             .Include(x => x.Hotel)
+            .AsNoTracking()
             .Where(h => h.Hotel.Id == hotelId)
             .ToListAsync(cancellationToken);
     }
@@ -26,6 +27,7 @@ public class HotelServiceRepository(AppDbContext context) : IHotelServiceReposit
     {
         return await context.HotelServices
             .Include(x => x.Hotel)
+            .AsNoTracking()
             .FirstOrDefaultAsync(h => h.Id == id, cancellationToken);
     }
 
@@ -37,6 +39,7 @@ public class HotelServiceRepository(AppDbContext context) : IHotelServiceReposit
 
     public async Task UpdateHotelService(HotelService hotelService, CancellationToken cancellationToken)
     {
+        context.Attach(hotelService.Hotel);
         context.HotelServices.Update(hotelService);
         await context.SaveChangesAsync(cancellationToken);
     }

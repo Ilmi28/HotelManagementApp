@@ -7,7 +7,7 @@ namespace HotelManagementApp.Infrastructure.Repositories;
 
 public class HotelRepository(AppDbContext context) : IHotelRepository
 {
-    public async Task AddHotel(HotelModel model, CancellationToken ct)
+    public async Task AddHotel(Hotel model, CancellationToken ct)
     {
         await context.Hotels.AddAsync(model, ct);
         await context.SaveChangesAsync(ct);
@@ -20,7 +20,7 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
             .ExecuteDeleteAsync(ct);
     }
 
-    public async Task<ICollection<HotelModel>> GetAllHotels(CancellationToken ct)
+    public async Task<ICollection<Hotel>> GetAllHotels(CancellationToken ct)
     {
         return await context.Hotels
             .AsNoTracking()
@@ -28,14 +28,14 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
             .ToListAsync(ct);
     }
 
-    public async Task<HotelModel?> GetHotelById(int id, CancellationToken ct)
+    public async Task<Hotel?> GetHotelById(int id, CancellationToken ct)
     {
         return await context.Hotels.AsNoTracking()
             .Include(h => h.City)
             .FirstOrDefaultAsync(h => h.Id == id, ct);
     }
 
-    public async Task UpdateHotel(HotelModel hotel, CancellationToken ct)
+    public async Task UpdateHotel(Hotel hotel, CancellationToken ct)
     {
         var model = await context.Hotels
             .FirstOrDefaultAsync(x => x.Id == hotel.Id, ct);

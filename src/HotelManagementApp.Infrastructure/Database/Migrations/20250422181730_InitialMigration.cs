@@ -176,7 +176,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RoomTypes",
+                name: "HotelRoomTypes",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
@@ -370,7 +370,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Rooms",
+                name: "HotelRooms",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
@@ -407,7 +407,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     table.ForeignKey(
                         name: "FK_RoomImage_Rooms_RoomId",
                         column: x => x.RoomId,
-                        principalTable: "Rooms",
+                        principalTable: "HotelRooms",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -437,7 +437,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 });
 
             migrationBuilder.InsertData(
-                table: "RoomTypes",
+                table: "HotelRoomTypes",
                 columns: new[] { "Id", "Name" },
                 values: new object[,]
                 {
@@ -506,7 +506,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rooms_HotelId",
-                table: "Rooms",
+                table: "HotelRooms",
                 column: "HotelId");
         }
 
@@ -562,7 +562,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 name: "RoomImage");
 
             migrationBuilder.DropTable(
-                name: "RoomTypes");
+                name: "HotelRoomTypes");
 
             migrationBuilder.DropTable(
                 name: "VIPGuests");
@@ -574,7 +574,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "Rooms");
+                name: "HotelRooms");
 
             migrationBuilder.DropTable(
                 name: "Hotels");

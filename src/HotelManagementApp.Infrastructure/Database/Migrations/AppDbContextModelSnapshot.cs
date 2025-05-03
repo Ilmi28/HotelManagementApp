@@ -35,7 +35,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountHistory");
+                    b.ToTable("AccountHistory", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.AccountModels.AccountOperation", b =>
@@ -50,7 +50,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountOperations");
+                    b.ToTable("AccountOperations", (string)null);
 
                     b.HasData(
                         new
@@ -101,7 +101,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProfilePictures");
+                    b.ToTable("ProfilePictures", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.BlacklistedGuest", b =>
@@ -119,7 +119,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BlackListedGuests");
+                    b.ToTable("BlackListedGuests", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.VIPGuest", b =>
@@ -137,7 +137,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VIPGuests");
+                    b.ToTable("VIPGuests", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.City", b =>
@@ -147,6 +147,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Country")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<double>("Latitude")
@@ -161,30 +162,10 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cities");
+                    b.ToTable("Cities", (string)null);
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("HotelId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HotelId");
-
-                    b.ToTable("HotelImages");
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -217,7 +198,27 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("CityId");
 
-                    b.ToTable("Hotels");
+                    b.ToTable("Hotels", (string)null);
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HotelId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.ToTable("HotelImages", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelParking", b =>
@@ -229,14 +230,20 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Property<int>("CarSpaces")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("HotelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Price")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelParkings");
+                    b.ToTable("HotelParkings", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelService", b =>
@@ -246,7 +253,6 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("HotelId")
@@ -263,7 +269,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelServices");
+                    b.ToTable("HotelServices", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomImage", b =>
@@ -283,7 +289,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("RoomImages");
+                    b.ToTable("HotelRoomImages", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
@@ -313,7 +319,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("Rooms");
+                    b.ToTable("HotelRooms", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomType", b =>
@@ -328,7 +334,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RoomTypes");
+                    b.ToTable("HotelRoomTypes", (string)null);
 
                     b.HasData(
                         new
@@ -375,7 +381,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ConfirmEmailTokens");
+                    b.ToTable("ConfirmEmailTokens", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.RefreshToken", b =>
@@ -397,7 +403,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.ResetPasswordToken", b =>
@@ -422,7 +428,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ResetPasswordTokens");
+                    b.ToTable("ResetPasswordTokens", (string)null);
                 });
 
             modelBuilder.Entity("HotelManagementApp.Infrastructure.Database.Identity.User", b =>
@@ -643,18 +649,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
-                {
-                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelModel", "Hotel")
-                        .WithMany("HotelImages")
-                        .HasForeignKey("HotelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Hotel");
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.HotelModels.City", "City")
                         .WithMany()
@@ -665,9 +660,20 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Navigation("City");
                 });
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
+                        .WithMany("HotelImages")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelParking", b =>
                 {
-                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelModel", "Hotel")
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
                         .WithMany("HotelParkings")
                         .HasForeignKey("HotelId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -678,7 +684,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelService", b =>
                 {
-                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelModel", "Hotel")
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
                         .WithMany("HotelServices")
                         .HasForeignKey("HotelId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -690,7 +696,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomImage", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.RoomModels.RoomModel", "Room")
-                        .WithMany("RoomImages")
+                        .WithMany("HotelRoomImages")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -700,8 +706,8 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
                 {
-                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelModel", "Hotel")
-                        .WithMany("Rooms")
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
+                        .WithMany("HotelRooms")
                         .HasForeignKey("HotelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -760,20 +766,20 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
                 {
                     b.Navigation("HotelImages");
 
                     b.Navigation("HotelParkings");
 
-                    b.Navigation("HotelServices");
+                    b.Navigation("HotelRooms");
 
-                    b.Navigation("Rooms");
+                    b.Navigation("HotelServices");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
                 {
-                    b.Navigation("RoomImages");
+                    b.Navigation("HotelRoomImages");
                 });
 #pragma warning restore 612, 618
         }

@@ -287,7 +287,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("RoomImages");
+                    b.ToTable("HotelRoomImages");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
@@ -317,7 +317,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("Rooms");
+                    b.ToTable("HotelRooms");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomType", b =>
@@ -332,7 +332,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RoomTypes");
+                    b.ToTable("HotelRoomTypes");
 
                     b.HasData(
                         new
@@ -694,7 +694,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomImage", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.RoomModels.RoomModel", "Room")
-                        .WithMany("RoomImages")
+                        .WithMany("HotelRoomImages")
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -705,7 +705,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelModel", "Hotel")
-                        .WithMany("Rooms")
+                        .WithMany("HotelRooms")
                         .HasForeignKey("HotelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -772,12 +772,12 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.Navigation("HotelServices");
 
-                    b.Navigation("Rooms");
+                    b.Navigation("HotelRooms");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
                 {
-                    b.Navigation("RoomImages");
+                    b.Navigation("HotelRoomImages");
                 });
 #pragma warning restore 612, 618
         }

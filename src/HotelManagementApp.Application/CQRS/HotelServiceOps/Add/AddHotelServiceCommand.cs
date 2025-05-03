@@ -11,9 +11,10 @@ public class AddHotelServiceCommand : IRequest
     public required string Name { get; set; }
     [Required]
     [MinLength(10)]
-    [MaxLength(200)]
+    [MaxLength(100)]
     public required string Description { get; set; }
     [Required]
+    [Range(0, int.MaxValue)]
     public required decimal Price { get; set; }
     [Required]
     public required int HotelId { get; set; }
