@@ -5,6 +5,7 @@ using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
 using Xunit;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.HotelOpsTests;
 public class DeleteHotelCommandHandlerTests
 {
     private readonly Mock<IHotelRepository> _hotelRepositoryMock = new();

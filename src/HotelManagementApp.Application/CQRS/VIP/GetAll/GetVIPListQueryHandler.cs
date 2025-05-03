@@ -2,6 +2,7 @@
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 
@@ -10,7 +11,7 @@ namespace HotelManagementApp.Application.CQRS.VIP.GetAll;
 public class GetVIPListQueryHandler(IVIPRepository vipRepository, 
                     IUserManager userManager, 
                     IProfilePictureRepository profilePictureRepository,
-                    IConfiguration config) 
+                    IFileService fileService) 
                     : IRequestHandler<GetVIPListQuery, ICollection<AccountResponse>>
 {
     public async Task<ICollection<AccountResponse>> Handle(GetVIPListQuery request, CancellationToken cancellationToken)
@@ -31,7 +32,7 @@ public class GetVIPListQueryHandler(IVIPRepository vipRepository,
                     UserName = user.UserName,
                     Email = user.Email,
                     Roles = user.Roles,
-                    ProfilePicture = $"{config.GetValue<string>("ImageUrl")}/{profilePicture.FileName}"
+                    ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
                 };
                 accounts.Add(account);
             }

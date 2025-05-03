@@ -3,6 +3,7 @@ using HotelManagementApp.Core.Interfaces.Repositories;
 using Moq;
 using Xunit;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.CitiesTests;
 public class GetCountriesQueryHandlerTests
 {
     private readonly Mock<ICityRepository> _cityRepositoryMock = new();
