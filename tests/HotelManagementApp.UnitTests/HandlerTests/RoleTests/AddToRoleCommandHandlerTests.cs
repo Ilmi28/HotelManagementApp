@@ -7,6 +7,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using Moq;
 using Xunit;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.RoleTests;
 public class AddToRoleCommandHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock = new();

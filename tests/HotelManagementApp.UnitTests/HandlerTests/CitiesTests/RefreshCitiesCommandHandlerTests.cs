@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Moq;
 using Xunit;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.CitiesTests;
 public class RefreshCitiesCommandHandlerTests
 {
     private readonly Mock<ICityRepository> _cityRepositoryMock = new();
