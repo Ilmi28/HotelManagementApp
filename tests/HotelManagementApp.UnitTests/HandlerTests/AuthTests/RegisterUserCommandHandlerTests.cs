@@ -3,7 +3,8 @@ using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.TokenRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using Moq;
 

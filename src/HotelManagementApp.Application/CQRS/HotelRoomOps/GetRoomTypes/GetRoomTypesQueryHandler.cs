@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.Application.Responses.RoomResponses;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.HotelRoomOps.GetRoomTypes;

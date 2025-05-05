@@ -3,13 +3,13 @@ using HotelManagementApp.Application.CQRS.Account.GetAccountById;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
 using Moq;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Interfaces.Services;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class GetAccountQueryHandlerTests
 {

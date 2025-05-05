@@ -1,7 +1,7 @@
 ﻿using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
@@ -25,6 +25,7 @@ public class GetAccountQueryHandler(
             Email = user.Email,
             Roles = user.Roles,
             ProfilePicture = fileService.GetFileUrl("images", profilePicture.FileName),
+            IsEmailConfirmed = user.IsEmailConfirmed
         };
         return response;
     }

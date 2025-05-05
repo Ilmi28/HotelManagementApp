@@ -3,7 +3,7 @@ using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 using HotelManagementApp.Core.Models.AccountModels;
 using MediatR;
 

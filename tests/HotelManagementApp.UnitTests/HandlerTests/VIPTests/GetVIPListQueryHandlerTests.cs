@@ -16,6 +16,8 @@ using Org.BouncyCastle.Bcpg;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Models.GuestModels;
 using HotelManagementApp.Core.Exceptions.NotFound;
+using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
 {

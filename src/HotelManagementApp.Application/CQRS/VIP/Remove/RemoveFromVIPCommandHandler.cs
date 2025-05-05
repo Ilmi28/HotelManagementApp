@@ -1,6 +1,6 @@
 ﻿using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.VIP.Remove;

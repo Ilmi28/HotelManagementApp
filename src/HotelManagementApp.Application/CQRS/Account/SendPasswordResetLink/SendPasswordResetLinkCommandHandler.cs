@@ -1,5 +1,5 @@
 ﻿using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.TokenRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.TokenModels;
 using MediatR;

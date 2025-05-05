@@ -3,7 +3,7 @@ using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 using Moq;
 using Xunit;
 

@@ -35,7 +35,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountHistory", (string)null);
+                    b.ToTable("AccountHistory");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.AccountModels.AccountOperation", b =>
@@ -50,7 +50,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountOperations", (string)null);
+                    b.ToTable("AccountOperations");
 
                     b.HasData(
                         new
@@ -101,7 +101,128 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProfilePictures", (string)null);
+                    b.ToTable("ProfilePictures");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.DiscountCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DiscountAmount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DiscountCodes");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.HotelDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HotelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.ToTable("HotelDiscounts");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ParkingDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ParkingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParkingId");
+
+                    b.ToTable("ParkingDiscounts");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.RoomDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("RoomDiscounts");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ServiceDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("ServiceDiscounts");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.BlacklistedGuest", b =>
@@ -119,7 +240,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BlackListedGuests", (string)null);
+                    b.ToTable("BlackListedGuests");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.VIPGuest", b =>
@@ -137,7 +258,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VIPGuests", (string)null);
+                    b.ToTable("VIPGuests");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.City", b =>
@@ -162,7 +283,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cities", (string)null);
+                    b.ToTable("Cities");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
@@ -198,7 +319,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("CityId");
 
-                    b.ToTable("Hotels", (string)null);
+                    b.ToTable("Hotels");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
@@ -218,7 +339,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelImages", (string)null);
+                    b.ToTable("HotelImages");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelParking", b =>
@@ -239,60 +360,52 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Property<int>("Price")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelParkings", (string)null);
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("HotelParkings");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelService", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelReview", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("HotelId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Review")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("Price")
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelServices", (string)null);
+                    b.ToTable("HotelReviews");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomImage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoomId");
-
-                    b.ToTable("HotelRoomImages", (string)null);
-                });
-
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoom", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -319,10 +432,30 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelRooms", (string)null);
+                    b.ToTable("HotelRooms");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomType", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoomImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("HotelRoomImages");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoomType", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -334,7 +467,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("HotelRoomTypes", (string)null);
+                    b.ToTable("HotelRoomTypes");
 
                     b.HasData(
                         new
@@ -356,6 +489,349 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         {
                             Id = 4,
                             Name = "BUSINESS"
+                        });
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelService", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HotelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("HotelServices");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyPoints", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GuestId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoyaltyPoints");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyPointsLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoyaltyPointsHistory");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyReward", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PointsRequired")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RewardName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoyaltyRewards");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CancelledOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("CancelledOrders");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CompletedOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("CompletedOrders");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ConfirmedOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("ConfirmedOrders");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Order", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderDetails", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderStatuses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "PENDING"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "PAID"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "CANCELLED"
+                        });
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.PendingOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("PendingOrders");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Reservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("Reservations");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.PaymentMethod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentMethods");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "CASH"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "CREDITCARD"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "LOYALTYPOINTS"
                         });
                 });
 
@@ -381,7 +857,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ConfirmEmailTokens", (string)null);
+                    b.ToTable("ConfirmEmailTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.RefreshToken", b =>
@@ -403,7 +879,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.ResetPasswordToken", b =>
@@ -428,7 +904,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ResetPasswordTokens", (string)null);
+                    b.ToTable("ResetPasswordTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Infrastructure.Database.Identity.User", b =>
@@ -649,6 +1125,50 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.HotelDiscount", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
+                        .WithMany()
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ParkingDiscount", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelParking", "Parking")
+                        .WithMany()
+                        .HasForeignKey("ParkingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Parking");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.RoomDiscount", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelRoom", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ServiceDiscount", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelService", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Service");
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.HotelModels.City", "City")
@@ -679,7 +1199,44 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Reservation", null)
+                        .WithMany("HotelParkings")
+                        .HasForeignKey("ReservationId");
+
                     b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelReview", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
+                        .WithMany()
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoom", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
+                        .WithMany("Rooms")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoomImage", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelRoom", "Room")
+                        .WithMany("RoomImages")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelService", b =>
@@ -690,29 +1247,96 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Reservation", null)
+                        .WithMany("HotelServices")
+                        .HasForeignKey("ReservationId");
+
                     b.Navigation("Hotel");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomImage", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CancelledOrder", b =>
                 {
-                    b.HasOne("HotelManagementApp.Core.Models.RoomModels.RoomModel", "Room")
-                        .WithMany("HotelRoomImages")
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CompletedOrder", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ConfirmedOrder", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderDetails", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithOne("OrderDetails")
+                        .HasForeignKey("HotelManagementApp.Core.Models.OrderModels.OrderDetails", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.PendingOrder", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Reservation", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany("Reservations")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.HotelRoom", "Room")
+                        .WithMany()
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Order");
+
                     b.Navigation("Room");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.Payment", b =>
                 {
-                    b.HasOne("HotelManagementApp.Core.Models.HotelModels.Hotel", "Hotel")
-                        .WithMany("HotelRooms")
-                        .HasForeignKey("HotelId")
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Hotel");
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -772,14 +1396,29 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.Navigation("HotelParkings");
 
-                    b.Navigation("HotelRooms");
-
                     b.Navigation("HotelServices");
+
+                    b.Navigation("Rooms");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.RoomModels.RoomModel", b =>
+            modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoom", b =>
                 {
-                    b.Navigation("HotelRoomImages");
+                    b.Navigation("RoomImages");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Order", b =>
+                {
+                    b.Navigation("OrderDetails")
+                        .IsRequired();
+
+                    b.Navigation("Reservations");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Reservation", b =>
+                {
+                    b.Navigation("HotelParkings");
+
+                    b.Navigation("HotelServices");
                 });
 #pragma warning restore 612, 618
         }
