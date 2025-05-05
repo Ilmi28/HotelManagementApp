@@ -5,7 +5,7 @@ using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
 using Xunit;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.CitiesTests;
 public class GetCityByIdQueryHandlerTests
 {
     private readonly Mock<ICityRepository> _cityRepositoryMock = new();

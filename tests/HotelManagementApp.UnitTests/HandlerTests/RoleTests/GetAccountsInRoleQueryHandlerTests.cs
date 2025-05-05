@@ -9,6 +9,7 @@ using HotelManagementApp.Core.Models.AccountModels;
 using Moq;
 using Xunit;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.RoleTests;
 public class GetAccountsInRoleQueryHandlerTests
 {
     private readonly Mock<IUserRolesManager> _userRolesManagerMock = new();

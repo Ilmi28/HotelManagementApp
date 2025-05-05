@@ -5,6 +5,7 @@ using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
 
+namespace HotelManagementApp.UnitTests.HandlerTests.HotelOpsTests;
 public class UpdateHotelImagesCommandHandlerTests
 {
     private readonly Mock<IHotelRepository> _hotelRepositoryMock = new();
