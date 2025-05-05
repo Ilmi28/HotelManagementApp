@@ -13,6 +13,7 @@ using HotelManagementApp.Core.Dtos;
 using System.Diagnostics;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Core.Exceptions.Conflict;
+using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 
 
 namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
