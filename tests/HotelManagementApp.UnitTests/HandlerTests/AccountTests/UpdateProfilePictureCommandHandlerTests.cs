@@ -1,5 +1,5 @@
 using HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.AccountModels;
 using Microsoft.AspNetCore.Http;

@@ -1,6 +1,6 @@
 using HotelManagementApp.Application.CQRS.Cities.GetByCountry;
 using HotelManagementApp.Application.Responses.HotelResponses;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
 using Xunit;

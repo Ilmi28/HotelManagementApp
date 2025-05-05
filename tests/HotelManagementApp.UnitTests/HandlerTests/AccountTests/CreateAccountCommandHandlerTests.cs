@@ -6,7 +6,7 @@ using HotelManagementApp.Core.Interfaces.Loggers;
 using MediatR;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 

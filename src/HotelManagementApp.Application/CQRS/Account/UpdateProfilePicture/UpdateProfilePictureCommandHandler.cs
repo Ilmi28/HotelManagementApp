@@ -1,4 +1,4 @@
-﻿using HotelManagementApp.Core.Interfaces.Repositories;
+﻿using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.AccountModels;
 using MediatR;

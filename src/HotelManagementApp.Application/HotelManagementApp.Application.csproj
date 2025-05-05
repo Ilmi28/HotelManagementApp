@@ -36,7 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="CQRS\Reservation\" />
+    <Folder Include="CQRS\OrderOps\ConfirmOrder\" />
+    <Folder Include="CQRS\OrderOps\RemoveReservation\" />
     <Folder Include="CQRS\Review\" />
   </ItemGroup>
 

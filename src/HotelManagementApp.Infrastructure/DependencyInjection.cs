@@ -1,11 +1,23 @@
 ﻿using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.TokenRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Infrastructure.Database;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Infrastructure.Loggers;
-using HotelManagementApp.Infrastructure.Repositories;
+using HotelManagementApp.Infrastructure.Repositories.AccountRepositories;
+using HotelManagementApp.Infrastructure.Repositories.DiscountRepositories;
+using HotelManagementApp.Infrastructure.Repositories.GuestRepositories;
+using HotelManagementApp.Infrastructure.Repositories.HotelRepositories;
+using HotelManagementApp.Infrastructure.Repositories.LoyaltyPointsRepositories;
+using HotelManagementApp.Infrastructure.Repositories.OrderRepositories;
+using HotelManagementApp.Infrastructure.Repositories.TokenRepositories;
 using HotelManagementApp.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +79,19 @@ public static class DependencyInjection
         builder.Services.AddScoped<IResetPasswordTokenRepository, ResetPasswordTokenRepository>();
         builder.Services.AddScoped<IHotelServiceRepository, HotelServiceRepository>();
         builder.Services.AddScoped<IHotelParkingRepository, HotelParkingRepository>();
+        builder.Services.AddScoped<ILoyaltyPointsRepository, LoyaltyPointsRepository>();
+        builder.Services.AddScoped<ILoyaltyPointsHistoryRepository, LoyaltyPointsHistoryRepository>();
+        builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+        builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+        builder.Services.AddScoped<IPendingOrderRepository, PendingOrderRepository>();
+        builder.Services.AddScoped<ICancelledOrderRepository, CancelledOrderRepository>();
+        builder.Services.AddScoped<IConfirmedOrderRepository, ConfirmedOrderRepository>();
+        builder.Services.AddScoped<ICompletedOrderRepository, CompletedOrderRepository>();
+        builder.Services.AddScoped<IHotelDiscountRepository, HotelDiscountRepository>();
+        builder.Services.AddScoped<IRoomDiscountRepository, RoomDiscountRepository>();
+        builder.Services.AddScoped<IParkingDiscountRepository, ParkingDiscountRepository>();
+        builder.Services.AddScoped<IServiceDiscountRepository, ServiceDiscountRepository>();
+
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

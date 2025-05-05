@@ -1,6 +1,6 @@
 ﻿using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories;
+using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.Cities.GetById;

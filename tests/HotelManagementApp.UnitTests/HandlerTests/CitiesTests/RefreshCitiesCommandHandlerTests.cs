@@ -1,12 +1,12 @@
 
 using HotelManagementApp.Application.CQRS.Cities.Refresh;
-using HotelManagementApp.Core.Interfaces.Repositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using System.Linq;
 using System.Collections.Generic;
 using Moq;
 using Xunit;
+using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 
 public class RefreshCitiesCommandHandlerTests
 {

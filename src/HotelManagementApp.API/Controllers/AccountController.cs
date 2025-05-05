@@ -5,6 +5,7 @@ using HotelManagementApp.Application.CQRS.Account.Create;
 using HotelManagementApp.Application.CQRS.Account.Delete;
 using HotelManagementApp.Application.CQRS.Account.DeleteWithoutPassword;
 using HotelManagementApp.Application.CQRS.Account.GetAccountById;
+using HotelManagementApp.Application.CQRS.Account.GetAccountsWithoutRole;
 using HotelManagementApp.Application.CQRS.Account.History;
 using HotelManagementApp.Application.CQRS.Account.ResetPassword;
 using HotelManagementApp.Application.CQRS.Account.SendConfirmEmailLink;
@@ -41,6 +42,18 @@ public class AccountController(IMediator mediator) : ControllerBase
         };
         await mediator.Send(cmd, ct);
         return Created();
+    }
+
+    /// <summary>
+    /// Returns all accounts without any roles (for staff and above).
+    /// </summary>
+    [Authorize(Roles = "Admin, Manager, Staff")]
+    [HttpGet("without-role")]
+    [ProducesResponseType(typeof(ICollection<AccountResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAccountsWithoutRole(CancellationToken ct)
+    {
+        var accounts = await mediator.Send(new GetAccountsWithoutRoleQuery(), ct);
+        return Ok(accounts);
     }
 
     /// <summary>
