@@ -2,6 +2,7 @@
 using HotelManagementApp.Application.CQRS.HotelOps.Delete;
 using HotelManagementApp.Application.CQRS.HotelOps.GetAll;
 using HotelManagementApp.Application.CQRS.HotelOps.GetById;
+using HotelManagementApp.Application.CQRS.HotelOps.GetWeatherByHotelId;
 using HotelManagementApp.Application.CQRS.HotelOps.Update;
 using HotelManagementApp.Application.CQRS.HotelOps.UpdateHotelImages;
 using HotelManagementApp.Application.Responses.HotelResponses;
@@ -21,6 +22,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Get all hotels
     /// </summary>
     [HttpGet("get-all")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(ICollection<HotelResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllHotels(CancellationToken ct)
@@ -61,6 +63,7 @@ public class HotelController(IMediator mediator) : ControllerBase
     /// Get hotel by id
     /// </summary>
     [HttpGet("{hotelId}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(HotelResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -95,5 +98,14 @@ public class HotelController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(cmd, ct);
         return NoContent();
+    }
+
+    [HttpGet("weather/{hotelId}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(WeatherResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetWeatherByHotelId(int hotelId, CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetWeatherByHotelIdQuery { HotelId = hotelId }, ct);
+        return Ok(response);
     }
 }

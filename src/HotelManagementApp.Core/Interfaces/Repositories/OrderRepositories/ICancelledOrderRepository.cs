@@ -9,4 +9,5 @@ public interface ICancelledOrderRepository
     Task<ICollection<CancelledOrder>> GetCancelledOrders(CancellationToken ct);
     Task<CancelledOrder?> GetCancelledOrderById(int id, CancellationToken ct);
     Task DeleteCancelledOrder(CancelledOrder order, CancellationToken ct);
+    Task<CancelledOrder?> GetCancelledOrderByOrderId(int id, CancellationToken ct);
 }

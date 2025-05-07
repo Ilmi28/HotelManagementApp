@@ -9,8 +9,8 @@ public class CancelledOrderRepository(AppDbContext context) : ICancelledOrderRep
 {
     public async Task AddCancelledOrder(CancelledOrder order, CancellationToken ct)
     {
-        await context.CancelledOrders.AddAsync(order);
-        await context.SaveChangesAsync();
+        await context.CancelledOrders.AddAsync(order, ct);
+        await context.SaveChangesAsync(ct);
     }
 
     public async Task<ICollection<CancelledOrder>> GetCancelledOrdersByGuestId(string guestId, CancellationToken ct)
@@ -19,7 +19,7 @@ public class CancelledOrderRepository(AppDbContext context) : ICancelledOrderRep
             .AsNoTracking()
             .Include(x => x.Order)
             .Where(x => x.Order.UserId == guestId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<ICollection<CancelledOrder>> GetCancelledOrders(CancellationToken ct)
@@ -27,7 +27,7 @@ public class CancelledOrderRepository(AppDbContext context) : ICancelledOrderRep
         return await context.CancelledOrders
             .AsNoTracking()
             .Include(x => x.Order)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<CancelledOrder?> GetCancelledOrderById(int id, CancellationToken ct)
@@ -42,5 +42,13 @@ public class CancelledOrderRepository(AppDbContext context) : ICancelledOrderRep
     {
         context.CancelledOrders.Remove(order);
         await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<CancelledOrder?> GetCancelledOrderByOrderId(int id, CancellationToken ct)
+    {
+        return await context.CancelledOrders
+            .AsNoTracking()
+            .Include(x => x.Order)
+            .FirstOrDefaultAsync(x => x.Order.Id == id, ct);
     }
 }

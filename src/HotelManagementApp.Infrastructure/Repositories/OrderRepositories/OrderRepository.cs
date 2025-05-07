@@ -13,24 +13,6 @@ public class OrderRepository(AppDbContext context) : IOrderRepository
         await context.SaveChangesAsync();
     }
 
-    public async Task AddConfirmedOrder(ConfirmedOrder order)
-    {
-        await context.ConfirmedOrders.AddAsync(order);
-        await context.SaveChangesAsync();
-    }
-
-    public async Task AddPendingOrder(PendingOrder order)
-    {
-        await context.PendingOrders.AddAsync(order);
-        await context.SaveChangesAsync();
-    }
-
-    public async Task AddCancelledOrder(CancelledOrder order)
-    {
-        await context.CancelledOrders.AddAsync(order);
-        await context.SaveChangesAsync();
-    }
-
     public async Task<Order?> GetOrderById(int id)
     {
         return await context.Orders

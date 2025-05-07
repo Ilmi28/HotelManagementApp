@@ -9,8 +9,8 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
 {
     public async Task AddConfirmedOrder(ConfirmedOrder order, CancellationToken ct)
     {
-        await context.ConfirmedOrders.AddAsync(order);
-        await context.SaveChangesAsync();
+        await context.ConfirmedOrders.AddAsync(order, ct);
+        await context.SaveChangesAsync(ct);
     }
 
     public Task DeleteConfirmedOrder(ConfirmedOrder order, CancellationToken ct)
@@ -23,7 +23,7 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
         return await context.ConfirmedOrders
             .AsNoTracking()
             .Include(x => x.Order)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public async Task<ConfirmedOrder?> GetConfirmedOrderByOrderId(int id, CancellationToken ct)
@@ -31,7 +31,7 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
         return await context.ConfirmedOrders
             .AsNoTracking()
             .Include(x => x.Order)
-            .FirstOrDefaultAsync(x => x.Order.Id == id);
+            .FirstOrDefaultAsync(x => x.Order.Id == id, ct);
     }
 
     public async Task<ICollection<ConfirmedOrder>> GetConfirmedOrdersByGuestId(string guestId, CancellationToken ct)
@@ -40,6 +40,6 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
             .AsNoTracking()
             .Include(x => x.Order)
             .Where(x => x.Order.UserId == guestId)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 }

@@ -98,6 +98,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IFileService, LocalFileService>();
         builder.Services.AddScoped<IEmailService, AzureEmailService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
+        builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>();
 
         return builder;
     }

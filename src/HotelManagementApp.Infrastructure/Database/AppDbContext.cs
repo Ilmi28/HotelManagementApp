@@ -7,7 +7,6 @@ using HotelManagementApp.Core.Models.HotelModels;
 using HotelManagementApp.Core.Models.LoyaltyPointsModels;
 using HotelManagementApp.Core.Models.OrderModels;
 using HotelManagementApp.Core.Models.PaymentModels;
-using HotelManagementApp.Core.Models.RoleModels;
 using HotelManagementApp.Core.Models.TokenModels;
 using HotelManagementApp.Infrastructure.Database.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -23,7 +22,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<AccountLog> AccountHistory { get; set; }
     public DbSet<BlacklistedGuest> BlackListedGuests { get; set; }
     public DbSet<AccountOperation> AccountOperations { get; set; }
-    public DbSet<VIPGuest> VIPGuests { get; set; }
+    public DbSet<VIPGuest> VipGuests { get; set; }
     public DbSet<ResetPasswordToken> ResetPasswordTokens { get; set; }
     public DbSet<ConfirmEmailToken> ConfirmEmailTokens { get; set; }
     public DbSet<Hotel> Hotels { get; set; }

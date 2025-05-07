@@ -9,8 +9,8 @@ public class CompletedOrderRepository(AppDbContext context) : ICompletedOrderRep
 {
     public async Task AddCompletedOrder(CompletedOrder order, CancellationToken ct)
     {
-        await context.CompletedOrders.AddAsync(order);
-        await context.SaveChangesAsync();
+        await context.CompletedOrders.AddAsync(order, ct);
+        await context.SaveChangesAsync(ct);
     }
 
     public Task DeleteCompletedOrder(CompletedOrder order, CancellationToken ct)
@@ -24,12 +24,15 @@ public class CompletedOrderRepository(AppDbContext context) : ICompletedOrderRep
         return await context.CompletedOrders
             .AsNoTracking()
             .Include(x => x.Order)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: ct);
     }
 
-    public Task<CompletedOrder?> GetCompletedOrderByOrderId(int id, CancellationToken ct)
+    public async Task<CompletedOrder?> GetCompletedOrderByOrderId(int id, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        return await context.CompletedOrders
+            .Include(x => x.Order)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Order.Id == id, ct);
     }
 
     public async Task<ICollection<CompletedOrder>> GetCompletedOrdersByGuestId(string guestId, CancellationToken ct)
@@ -38,6 +41,6 @@ public class CompletedOrderRepository(AppDbContext context) : ICompletedOrderRep
             .AsNoTracking()
             .Include(x => x.Order)
             .Where(x => x.Order.UserId == guestId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: ct);
     }
 }
