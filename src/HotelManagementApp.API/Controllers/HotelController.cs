@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HotelManagementApp.API.Controllers;
 
 [Route("api/hotel")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 [ApiController]
 public class HotelController(IMediator mediator) : ControllerBase
 {

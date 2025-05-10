@@ -11,8 +11,7 @@ public class GetAllRoomsQueryHandler(
     IRoomRepository roomRepository, 
     IRoomImageRepository imageRepository,
     IFileService fileService,
-    IHotelDiscountRepository hotelDiscountRepository,
-    IRoomDiscountRepository roomDiscountRepository) : IRequestHandler<GetAllRoomsQuery, ICollection<RoomResponse>>
+    IRoomDiscountService discountService) : IRequestHandler<GetAllRoomsQuery, ICollection<RoomResponse>>
 {
     public async Task<ICollection<RoomResponse>> Handle(GetAllRoomsQuery request, CancellationToken cancellationToken)
     {
@@ -20,19 +19,6 @@ public class GetAllRoomsQueryHandler(
         var response = new List<RoomResponse>();
         foreach (var room in rooms)
         {
-            var hotelDiscounts = await hotelDiscountRepository.GetDiscountsByTypeId(room.Hotel.Id, cancellationToken);
-            var roomDiscounts = await roomDiscountRepository.GetDiscountsByTypeId(room.Id, cancellationToken);
-            int totalDiscountPercent = 0;
-            foreach (var discount in roomDiscounts)
-            {
-                if (discount.From < DateTime.Now && discount.To > DateTime.Now)
-                    totalDiscountPercent += discount.DiscountPercent;
-            }
-            foreach (var discount in hotelDiscounts)
-            {
-                if (discount.From < DateTime.Now && discount.To > DateTime.Now)
-                    totalDiscountPercent += discount.DiscountPercent;
-            }
             response.Add(new RoomResponse
             {
                 Id = room.Id,
@@ -42,7 +28,7 @@ public class GetAllRoomsQueryHandler(
                 HotelId = room.Hotel.Id,
                 RoomImages = (await imageRepository.GetRoomImagesByRoomId(room.Id, cancellationToken))
                     .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList(),
-                DiscountPercent = totalDiscountPercent <= 100 ? totalDiscountPercent : 100,
+                DiscountPercent = await discountService.CalculateDiscount(room, cancellationToken),
             });
         }
         return response;

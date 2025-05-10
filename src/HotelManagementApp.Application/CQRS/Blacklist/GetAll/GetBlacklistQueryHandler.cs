@@ -22,21 +22,20 @@ public class GetBlacklistQueryHandler(
         var accounts = new List<AccountResponse>();
         foreach (var blacklistUser in blacklist)
         {
-            var user = await userManager.FindByIdAsync(blacklistUser.UserId);
-            if (user != null)
+            var user = await userManager.FindByIdAsync(blacklistUser.UserId)
+                       ?? throw new UserNotFoundException($"User with id {blacklistUser.UserId} not found");
+            var profilePicture = await profilePictureRepository.GetProfilePicture(blacklistUser.UserId, cancellationToken)
+                                 ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {blacklistUser.UserId} not found");
+            var account = new AccountResponse
             {
-                var profilePicture = await profilePictureRepository.GetProfilePicture(blacklistUser.UserId, cancellationToken)
-                    ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {blacklistUser.UserId} not found");
-                var account = new AccountResponse
-                {
-                    Id = user.Id,
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    Roles = user.Roles,
-                    ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
-                };
-                accounts.Add(account);
-            }
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                Roles = user.Roles,
+                ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
+                IsEmailConfirmed = user.IsEmailConfirmed
+            };
+            accounts.Add(account);
         }
         return accounts;
     }

@@ -17,8 +17,8 @@ public class HotelServiceRepository(AppDbContext context) : IHotelServiceReposit
     public async Task<ICollection<HotelService>> GetHotelServicesByHotel(int hotelId, CancellationToken cancellationToken)
     {
         return await context.HotelServices
-            .Include(x => x.Hotel)
             .AsNoTracking()
+            .Include(x => x.Hotel)
             .Where(h => h.Hotel.Id == hotelId)
             .ToListAsync(cancellationToken);
     }
@@ -26,8 +26,8 @@ public class HotelServiceRepository(AppDbContext context) : IHotelServiceReposit
     public async Task<HotelService?> GetHotelServiceById(int id, CancellationToken cancellationToken)
     {
         return await context.HotelServices
-            .Include(x => x.Hotel)
             .AsNoTracking()
+            .Include(x => x.Hotel)
             .FirstOrDefaultAsync(h => h.Id == id, cancellationToken);
     }
 

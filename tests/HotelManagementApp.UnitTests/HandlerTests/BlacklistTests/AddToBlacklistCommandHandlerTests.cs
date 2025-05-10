@@ -19,8 +19,7 @@ public class AddToBlacklistCommandHandlerTests
     {
         _handler = new AddToBlacklistCommandHandler(
             _blacklistRepositoryMock.Object,
-            _userManagerMock.Object,
-            _userRolesManagerMock.Object
+            _userManagerMock.Object
         );
     }
 
@@ -42,23 +41,6 @@ public class AddToBlacklistCommandHandlerTests
         await _handler.Handle(command, default);
 
         _blacklistRepositoryMock.Verify(m => m.AddUserToBlacklist(command.UserId, default), Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldThrowPolicyForbiddenException_WhenUserIsNotGuest()
-    {
-        var command = new AddToBlacklistCommand { UserId = "123" };
-        var user = new UserDto
-        {
-            Id = "123",
-            Email = "test@gmail.com",
-            UserName = "testuser",
-            Roles = new List<string> { "Client" }
-        };
-        _userManagerMock.Setup(m => m.FindByIdAsync(command.UserId)).ReturnsAsync(user);
-        _userRolesManagerMock.Setup(m => m.IsUserInRoleAsync(command.UserId, "Guest")).ReturnsAsync(false);
-
-        await Assert.ThrowsAsync<PolicyForbiddenException>(() => _handler.Handle(command, default));
     }
 
     [Fact]

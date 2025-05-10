@@ -4,11 +4,13 @@ using HotelManagementApp.Application.CQRS.Discount.GetDiscountsByHotel;
 using HotelManagementApp.Application.CQRS.Discount.RemoveHotelDiscount;
 using HotelManagementApp.Application.Responses.DiscountResponses;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotelManagementApp.API.Controllers;
 
 [Route("api/discounts")]
+[Authorize(Roles = "Manager, Admin")]
 [ApiController]
 public class DiscountController(IMediator mediator) : ControllerBase
 {

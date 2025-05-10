@@ -21,7 +21,7 @@ using System.Security.Claims;
 
 namespace HotelManagementApp.API.Controllers;
 
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 [ApiController]
 [Route("api/account")]
 public class AccountController(IMediator mediator) : ControllerBase
@@ -189,7 +189,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpGet("confirm-email")]
+    [HttpPost("confirm-email")]
     [ProducesResponseType(StatusCodes.Status302Found)]
     public async Task<IActionResult> ConfirmEmail(ConfirmEmailCommand cmd, CancellationToken ct, IConfiguration config)
     {

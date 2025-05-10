@@ -2,6 +2,7 @@
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.HotelServiceOps.GetByHotel;
@@ -9,8 +10,7 @@ namespace HotelManagementApp.Application.CQRS.HotelServiceOps.GetByHotel;
 public class GetHotelServicesByHotelIdQueryHandler(
     IHotelRepository hotelRepository, 
     IHotelServiceRepository hotelServiceRepository,
-    IHotelDiscountRepository hotelDiscountRepository,
-    IServiceDiscountRepository serviceDiscountRepository) 
+    IServiceDiscountService discountService) 
     : IRequestHandler<GetHotelServicesByHotelIdQuery, ICollection<HotelServiceResponse>>
 {
     public async Task<ICollection<HotelServiceResponse>> Handle(GetHotelServicesByHotelIdQuery request, CancellationToken cancellationToken)
@@ -18,28 +18,19 @@ public class GetHotelServicesByHotelIdQueryHandler(
         var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
             ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
         var hotelServices = await hotelServiceRepository.GetHotelServicesByHotel(hotel.Id, cancellationToken);
-        var hotelDiscounts = await hotelDiscountRepository.GetDiscountsByTypeId(hotel.Id, cancellationToken);
-        var serviceDiscounts = await serviceDiscountRepository.GetDiscountsByTypeId(hotel.Id, cancellationToken);
-        int totalDiscountPercent = 0;
-        foreach (var discount in hotelDiscounts)
+        var response = new List<HotelServiceResponse>();
+        foreach (var hotelService in hotelServices)
         {
-            if (discount.From < DateTime.Now && discount.To > DateTime.Now)
-                totalDiscountPercent += discount.DiscountPercent;
+            response.Add(new HotelServiceResponse
+            {
+                Id = hotelService.Id,
+                Name = hotelService.Name,
+                Description = hotelService.Description,
+                Price = hotelService.Price,
+                HotelId = hotelService.Hotel.Id,
+                Discount = await discountService.CalculateDiscount(hotelService, cancellationToken),
+            });
         }
-        foreach (var discount in serviceDiscounts)
-        {
-            if (discount.From < DateTime.Now && discount.To > DateTime.Now)
-                totalDiscountPercent += discount.DiscountPercent;
-        }
-        var response = hotelServices.Select(h => new HotelServiceResponse
-        {
-            Id = h.Id,
-            Name = h.Name,
-            Description = h.Description,
-            Price = h.Price,
-            HotelId = h.Hotel.Id,
-            Discount = totalDiscountPercent <= 100 ? totalDiscountPercent : 100,
-        }).ToList();
         return response;
     }
 }

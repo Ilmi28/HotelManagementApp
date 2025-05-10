@@ -1,4 +1,5 @@
 ﻿using HotelManagementApp.API.AppProblemDetails;
+using HotelManagementApp.API.AppMiddleware;
 using HotelManagementApp.Core.Exceptions.BaseExceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,7 @@ public static class MiddlewareConfig
                     ForbiddenException => new ForbiddenProblemDetail(exception.Message),
                     BadRequestException => new BadRequestProblemDetails(exception.Message),
                     ArgumentNullException => new BadRequestProblemDetails(exception.Message),
+                    InvalidOperationException => new BadRequestProblemDetails(exception.Message),
                     _ => new InternalServerErrorProblemDetails(exception!.Message)
                 };
                 context.Response.StatusCode = problemDetails.Status!.Value;
@@ -41,6 +43,7 @@ public static class MiddlewareConfig
         }
         app.UseHttpsRedirection();
         app.UseAuthentication();
+        app.UseMiddleware<BlacklistMiddleware>();
         app.UseAuthorization();
         app.MapControllers();
 

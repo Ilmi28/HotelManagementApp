@@ -1,9 +1,10 @@
 ﻿using HotelManagementApp.Core.Interfaces.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
 namespace HotelManagementApp.Infrastructure.Services;
 
-public class LocalFileService(IConfiguration config) : IFileService
+public class LocalFileService(IConfiguration config, IHttpContextAccessor accessor) : IFileService
 {
     private readonly string basePath = config.GetValue<string>("wwwrootPath")
         ?? String.Empty;
@@ -46,7 +47,7 @@ public class LocalFileService(IConfiguration config) : IFileService
 
     public string GetFileUrl(string folder, string fileName)
     {
-        var baseUrl = config["BaseUrl"];
+        var baseUrl = accessor.HttpContext?.Request.Scheme + "://" + accessor.HttpContext?.Request.Host;
         var link = $"{baseUrl}/{folder}/{fileName}";
         return link;
     }

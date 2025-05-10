@@ -11,8 +11,7 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/guest")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, 
-    Roles = "Staff, Manager, Admin")]
+[Authorize(Roles = "Staff, Manager, Admin")]
 public class GuestController(IMediator mediator) : ControllerBase
 {
     /// <summary>

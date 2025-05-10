@@ -12,12 +12,11 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/vip")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-    Roles = "Staff, Manager, Admin")]
+[Authorize]
 public class VIPController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Adds a guest to the VIP list (staff and above).
+    /// Adds a guest to the VIP list (manager and above).
     /// </summary>
     [HttpPatch("add/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -25,6 +24,7 @@ public class VIPController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [Authorize(Roles = "Manager, Admin")]
     public async Task<IActionResult> AddToVIP(string userId, CancellationToken ct)
     {
         await mediator.Send(new AddToVIPCommand { UserId = userId }, ct);
@@ -32,7 +32,7 @@ public class VIPController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Removes a guest from the VIP list (staff and above).
+    /// Removes a guest from the VIP list (manager and above).
     /// </summary>
     [HttpPatch("remove/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -40,6 +40,7 @@ public class VIPController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [Authorize(Roles = "Manager, Admin")]
     public async Task<IActionResult> RemoveFromVIP(string userId, CancellationToken ct)
     {
         await mediator.Send(new RemoveFromVIPCommand { UserId = userId }, ct);
@@ -53,6 +54,7 @@ public class VIPController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(ICollection<AccountResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [Authorize(Roles = "Manager, Admin, Staff")]
     public async Task<IActionResult> GetAllVIPUsers(CancellationToken ct)
     {
         var query = new GetVIPListQuery();
@@ -66,10 +68,14 @@ public class VIPController(IMediator mediator) : ControllerBase
     [HttpGet("isVIP/{userId}")]
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> IsGuestVIP(string userId, CancellationToken ct)
+    public async Task<IActionResult> IsGuestVIP(string userId, IAuthorizationService authService, CancellationToken ct)
     {
+        var ownerPolicy = await authService.AuthorizeAsync(User, userId, "AccountOwner");
+        var hierarchyPolicy = await authService.AuthorizeAsync(User, userId, "RoleHierarchy");
+        if (!ownerPolicy.Succeeded && !hierarchyPolicy.Succeeded)
+            return Forbid();
         var query = new IsGuestVIPQuery { UserId = userId };
         var result = await mediator.Send(query, ct);
-        return Ok(result);
+        return Ok(new { IsVIP = result });
     }
 }

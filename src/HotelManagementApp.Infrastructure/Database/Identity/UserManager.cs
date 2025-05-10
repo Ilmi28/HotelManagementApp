@@ -126,7 +126,8 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
                 Id = user.Id,
                 UserName = user.UserName!,
                 Email = user.Email!,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                IsEmailConfirmed = user.EmailConfirmed
             };
             userDtos.Add(userDto);
         }
@@ -184,7 +185,8 @@ public class UserManager(UserManager<User> userManager) : IUserManager, IUserRol
                     Id = user.Id,
                     UserName = user.UserName!,
                     Email = user.Email!,
-                    Roles = new List<string>()
+                    Roles = new List<string>(),
+                    IsEmailConfirmed = user.EmailConfirmed
                 });
             }
         }

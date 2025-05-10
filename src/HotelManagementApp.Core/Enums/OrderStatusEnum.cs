@@ -3,6 +3,7 @@
 public enum OrderStatusEnum
 {
     Pending,
-    Paid,
+    Confirmed,
     Cancelled,
+    Completed
 }

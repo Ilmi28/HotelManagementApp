@@ -9,6 +9,7 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
 {
     public async Task AddConfirmedOrder(ConfirmedOrder order, CancellationToken ct)
     {
+        context.Attach(order.Order);
         await context.ConfirmedOrders.AddAsync(order, ct);
         await context.SaveChangesAsync(ct);
     }

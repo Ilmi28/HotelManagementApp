@@ -11,8 +11,7 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/staff")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-    Roles = "Manager, Admin")]
+[Authorize(Roles = "Manager, Admin")]
 public class StaffController(IMediator mediator) : ControllerBase
 {
     /// <summary>

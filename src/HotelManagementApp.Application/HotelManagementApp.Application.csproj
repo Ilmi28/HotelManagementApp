@@ -11,17 +11,14 @@
     <Compile Remove="CQRS\Manager\**" />
     <Compile Remove="CQRS\MyAccount\**" />
     <Compile Remove="CQRS\Worker\**" />
-    <Compile Remove="Services\**" />
     <EmbeddedResource Remove="CQRS\Account\PasswordReset\**" />
     <EmbeddedResource Remove="CQRS\Manager\**" />
     <EmbeddedResource Remove="CQRS\MyAccount\**" />
     <EmbeddedResource Remove="CQRS\Worker\**" />
-    <EmbeddedResource Remove="Services\**" />
     <None Remove="CQRS\Account\PasswordReset\**" />
     <None Remove="CQRS\Manager\**" />
     <None Remove="CQRS\MyAccount\**" />
     <None Remove="CQRS\Worker\**" />
-    <None Remove="Services\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,8 +33,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="CQRS\OrderOps\CancelOrder\" />
     <Folder Include="CQRS\OrderOps\ConfirmOrder\" />
-    <Folder Include="CQRS\OrderOps\RemoveReservation\" />
+    <Folder Include="CQRS\OrderOps\PayForOrder\" />
     <Folder Include="CQRS\Review\" />
   </ItemGroup>
 

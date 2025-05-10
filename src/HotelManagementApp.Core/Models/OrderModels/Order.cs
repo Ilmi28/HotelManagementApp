@@ -9,6 +9,5 @@ public class Order
     public required OrderStatusEnum Status { get; set; }
     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
     public required string UserId { get; set; }
-    public decimal TotalPrice { get; set; }
 
 }

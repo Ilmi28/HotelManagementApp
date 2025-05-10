@@ -9,6 +9,7 @@ public class CompletedOrderRepository(AppDbContext context) : ICompletedOrderRep
 {
     public async Task AddCompletedOrder(CompletedOrder order, CancellationToken ct)
     {
+        context.Attach(order.Order);
         await context.CompletedOrders.AddAsync(order, ct);
         await context.SaveChangesAsync(ct);
     }

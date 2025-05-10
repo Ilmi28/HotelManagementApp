@@ -1,15 +1,16 @@
-﻿using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
-using HotelManagementApp.Core.Models.HotelModels;
+﻿using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using HotelManagementApp.Core.Models.OrderModels;
 using HotelManagementApp.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
-namespace HotelManagementApp.Infrastructure.Repositories.OrderRepositories;
+namespace HotelManagementApp.Infrastructure.Repositories.ReservationRepositories;
 
 public class ReservationRepository(AppDbContext context) : IReservationRepository
 {
     public async Task AddReservation(Reservation reservation, CancellationToken ct = default)
     {
+        context.Attach(reservation.Room);
+        context.Attach(reservation.Order);
         await context.Reservations.AddAsync(reservation, ct);
         await context.SaveChangesAsync(ct);
     }
@@ -18,6 +19,10 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
+            .Include(x => x.Order)
+            .Include(x => x.Room)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken: ct);
     }
 
@@ -25,17 +30,24 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
+            .Include(x => x.Order)
+            .Include(x => x.Room)
+            .ThenInclude(x => x.Hotel)
             .ToListAsync(cancellationToken: ct);
     }
 
-    public async Task<ICollection<HotelRoom>> GetReservationsByRoomId(int roomId, CancellationToken ct = default)
+    public async Task<ICollection<Reservation>> GetReservationsByRoomId(int roomId, CancellationToken ct = default)
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
+            .Include(x => x.Order)
             .Include(x => x.Room)
             .ThenInclude(x => x.Hotel)
             .Where(x => x.Room.Id == roomId)
-            .Select(x => x.Room)
             .ToListAsync(cancellationToken: ct);
     }
 
@@ -43,6 +55,9 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
+            .Include(x => x.Order)
             .Include(x => x.Room)
             .ThenInclude(x => x.Hotel)
             .Where(x => x.Room.Hotel.Id == hotelId)
@@ -65,6 +80,10 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
+            .Include(x => x.Room)
+            .ThenInclude(x => x.Hotel)
             .Include(x => x.Order)
             .Where(x => x.Order.UserId == guestId)
             .ToListAsync(cancellationToken: ct);
@@ -74,7 +93,11 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
+            .Include(x => x.ReservationParkings)
+            .Include(x => x.ReservationServices)
             .Include(x => x.Order)
+            .Include(x => x.Room)
+            .ThenInclude(x => x.Hotel)
             .Where(x => x.Order.Id == orderId)
             .ToListAsync(cancellationToken: ct);
     }

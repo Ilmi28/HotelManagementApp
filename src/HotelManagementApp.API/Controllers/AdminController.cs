@@ -8,8 +8,7 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/admin")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-    Roles = "Admin")]
+[Authorize(Roles = "Admin")]
 public class AdminController(IMediator mediator) : ControllerBase
 {
     /// <summary>

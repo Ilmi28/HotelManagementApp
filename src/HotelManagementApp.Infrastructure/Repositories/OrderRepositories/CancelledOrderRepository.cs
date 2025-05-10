@@ -9,6 +9,7 @@ public class CancelledOrderRepository(AppDbContext context) : ICancelledOrderRep
 {
     public async Task AddCancelledOrder(CancelledOrder order, CancellationToken ct)
     {
+        context.Attach(order.Order);
         await context.CancelledOrders.AddAsync(order, ct);
         await context.SaveChangesAsync(ct);
     }

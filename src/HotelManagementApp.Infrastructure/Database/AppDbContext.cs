@@ -53,6 +53,8 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<HotelDiscount> HotelDiscounts { get; set; }
     public DbSet<ServiceDiscount> ServiceDiscounts { get; set; }
     public DbSet<ParkingDiscount> ParkingDiscounts { get; set; }
+    public DbSet<ReservationParking> ReservationParkings { get; set; }
+    public DbSet<ReservationService> ReservationServices { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

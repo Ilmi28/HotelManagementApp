@@ -23,16 +23,16 @@ public class HotelParkingRepository(AppDbContext context) : IHotelParkingReposit
     public async Task<HotelParking?> GetHotelParkingById(int id, CancellationToken ct)
     {
         return await context.HotelParkings
-            .Include(x => x.Hotel)
             .AsNoTracking()
+            .Include(x => x.Hotel)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
     public async Task<ICollection<HotelParking>> GetHotelParkingsByHotelId(int hotelId, CancellationToken ct)
     {
         return await context.HotelParkings
-            .Include(x => x.Hotel)
             .AsNoTracking()
+            .Include(x => x.Hotel)
             .Where(hp => hp.Hotel.Id == hotelId)
             .ToListAsync(ct);
     }

@@ -41,4 +41,8 @@
     <ProjectReference Include="..\HotelManagementApp.Core\HotelManagementApp.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Repositories\PaymentRepositories\" />
+  </ItemGroup>
+
 </Project>

@@ -9,6 +9,7 @@ public class PendingOrderRepository(AppDbContext context) : IPendingOrderReposit
 {
     public async Task AddPendingOrder(PendingOrder order, CancellationToken ct)
     {
+        context.Attach(order.Order);
         await context.PendingOrders.AddAsync(order, ct);
         await context.SaveChangesAsync(ct);
     }

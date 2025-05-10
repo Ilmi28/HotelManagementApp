@@ -26,6 +26,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
+using HotelManagementApp.Infrastructure.Repositories.ReservationRepositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace HotelManagementApp.Infrastructure;
 
@@ -48,7 +51,13 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<IAccountDbLogger, AuthDbLogger>();
 
-        builder.Services.AddAuthentication().AddJwtBearer(options =>
+        builder.Services.AddAuthentication(config =>
+        {
+            config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            config.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        }).AddJwtBearer(options =>
         {
             var tokenConfiguration = configuration!.GetSection("JwtTokenConfiguration");
             string secretKey = Environment.GetEnvironmentVariable("JwtSecretKey") 
@@ -91,7 +100,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IRoomDiscountRepository, RoomDiscountRepository>();
         builder.Services.AddScoped<IParkingDiscountRepository, ParkingDiscountRepository>();
         builder.Services.AddScoped<IServiceDiscountRepository, ServiceDiscountRepository>();
-
+        builder.Services.AddScoped<IReservationParkingRepository, ReservationParkingRepository>();
+        builder.Services.AddScoped<IReservationServiceRepository, ReservationServiceRepository>();
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

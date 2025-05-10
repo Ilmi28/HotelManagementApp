@@ -11,12 +11,11 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/blacklist")]
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-    Roles = "Staff, Manager, Admin")]
+[Authorize(Roles = "Manager, Admin")]
 public class BlacklistController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Adds a guest to the blacklist (staff and above).
+    /// Adds a guest to the blacklist (manager and above).
     /// </summary>
     [HttpPatch("add/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -31,7 +30,7 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Removes a guest from the blacklist (staff and above).
+    /// Removes a guest from the blacklist (manager and above).
     /// </summary>
     [HttpPatch("remove/{userId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -46,7 +45,7 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Returns all blacklisted users (staff and above).
+    /// Returns all blacklisted users (manager and above).
     /// </summary>
     [HttpGet("all")]
     [ProducesResponseType(typeof(ICollection<AccountResponse>), StatusCodes.Status200OK)]

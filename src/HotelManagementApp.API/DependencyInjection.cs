@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using HotelManagementApp.API.Policies.OrderAccessPolicy;
+using HotelManagementApp.API.Policies.ReservationAccessPolicy;
 
 namespace HotelManagementApp.API;
 
@@ -18,19 +20,18 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<IAuthorizationHandler, AccountOwnerHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, RoleHierarchyHandler>();
-        builder.Services.AddAuthentication(config =>
-        {
-            config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            config.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
-            config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            config.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-        });
+        builder.Services.AddScoped<IAuthorizationHandler, OrderAccessHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, ReservationAccessHandler>();
         builder.Services.AddAuthorization(options =>
         {
             options.AddPolicy("AccountOwner", policy =>
                 policy.Requirements.Add(new AccountOwnerRequirement()));
             options.AddPolicy("RoleHierarchy", policy =>
                 policy.Requirements.Add(new RoleHierarchyRequirement()));
+            options.AddPolicy("OrderAccess", policy =>
+                policy.Requirements.Add(new OrderAccessRequirement()));
+            options.AddPolicy("ReservationAccess", policy =>
+                policy.Requirements.Add(new ReservationAccessRequirement()));
         });
 
         builder.Services.AddSwaggerGen(x =>

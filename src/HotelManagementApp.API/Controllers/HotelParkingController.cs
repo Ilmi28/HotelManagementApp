@@ -12,7 +12,7 @@ namespace HotelManagementApp.API.Controllers;
 
 [ApiController]
 [Route("api/hotel-parkings")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class HotelParkingController(IMediator mediator) : ControllerBase
 {
     [HttpPost]

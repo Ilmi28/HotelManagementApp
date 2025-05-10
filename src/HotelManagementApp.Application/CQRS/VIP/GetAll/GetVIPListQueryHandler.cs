@@ -24,18 +24,16 @@ public class GetVIPListQueryHandler(IVIPRepository vipRepository,
                 ?? throw new UserNotFoundException($"User with id {vip.UserId} not found");
             var profilePicture = await profilePictureRepository.GetProfilePicture(vip.UserId, cancellationToken)
                 ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {vip.UserId} not found");
-            if (user != null)
+            var account = new AccountResponse
             {
-                var account = new AccountResponse
-                {
-                    Id = user.Id,
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    Roles = user.Roles,
-                    ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
-                };
-                accounts.Add(account);
-            }
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                Roles = user.Roles,
+                ProfilePicture = fileService.GetFileUrl("images",profilePicture.FileName),
+                IsEmailConfirmed = user.IsEmailConfirmed
+            };
+            accounts.Add(account);
         }
         return accounts;
     }

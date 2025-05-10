@@ -24,9 +24,7 @@ public class BlacklistRepository(AppDbContext context) : IBlacklistRepository
     public async Task<bool> IsUserBlacklisted(string userId, CancellationToken ct)
     {
         var user = await context.BlackListedGuests.FirstOrDefaultAsync(x => x.UserId == userId, ct);
-        if (user == null)
-            return true;
-        return false;
+        return user != null;
     }
 
     public async Task RemoveUserFromBlacklist(string userId, CancellationToken ct)

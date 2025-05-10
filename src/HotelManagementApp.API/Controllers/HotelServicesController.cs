@@ -12,7 +12,7 @@ namespace HotelManagementApp.API.Controllers;
 
 [ApiController]
 [Route("api/hotel-services")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class HotelServicesController(IMediator mediator) : ControllerBase
 {
     /// <summary>
