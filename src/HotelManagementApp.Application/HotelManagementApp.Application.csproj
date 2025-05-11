@@ -33,9 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="CQRS\OrderOps\CancelOrder\" />
-    <Folder Include="CQRS\OrderOps\ConfirmOrder\" />
-    <Folder Include="CQRS\OrderOps\PayForOrder\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\ExchangePointsForReward\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\GetAvailableRewards\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsByGuest\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsHistoryByGuest\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsHistoryOfGuests\" />
+    <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsOfGuests\" />
     <Folder Include="CQRS\Review\" />
   </ItemGroup>
 

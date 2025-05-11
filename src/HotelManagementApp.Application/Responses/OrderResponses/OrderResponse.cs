@@ -15,5 +15,6 @@ public class OrderResponse
     public DateTime? Confirmed { get; set; }
     public DateTime? Completed { get; set; }
     public DateTime? Canceled { get; set; }
+    public required decimal TotalPrice { get; set; }
     
 }

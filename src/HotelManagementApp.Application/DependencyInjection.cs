@@ -15,6 +15,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IRoomDiscountService, RoomDiscountService>();
         builder.Services.AddScoped<IParkingDiscountService, ParkingDiscountService>();
         builder.Services.AddScoped<IServiceDiscountService, ServiceDiscountService>();
+        builder.Services.AddScoped<IPricingService, PricingService>();
         
         return builder;
     }

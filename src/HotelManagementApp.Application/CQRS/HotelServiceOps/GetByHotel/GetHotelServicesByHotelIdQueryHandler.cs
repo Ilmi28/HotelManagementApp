@@ -21,6 +21,7 @@ public class GetHotelServicesByHotelIdQueryHandler(
         var response = new List<HotelServiceResponse>();
         foreach (var hotelService in hotelServices)
         {
+            var discount = await discountService.CalculateDiscount(hotelService, cancellationToken);
             response.Add(new HotelServiceResponse
             {
                 Id = hotelService.Id,
@@ -28,7 +29,8 @@ public class GetHotelServicesByHotelIdQueryHandler(
                 Description = hotelService.Description,
                 Price = hotelService.Price,
                 HotelId = hotelService.Hotel.Id,
-                Discount = await discountService.CalculateDiscount(hotelService, cancellationToken),
+                Discount = discount,
+                FinalPrice = hotelService.Price - (discount * hotelService.Price / 100)
             });
         }
         return response;

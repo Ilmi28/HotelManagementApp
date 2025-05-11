@@ -6,7 +6,9 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using HotelManagementApp.API.Policies.OrderAccessPolicy;
+using HotelManagementApp.API.Policies.PaymentAccessPolicy;
 using HotelManagementApp.API.Policies.ReservationAccessPolicy;
+using HotelManagementApp.Core.Models.PaymentModels;
 
 namespace HotelManagementApp.API;
 
@@ -32,6 +34,8 @@ public static class DependencyInjection
                 policy.Requirements.Add(new OrderAccessRequirement()));
             options.AddPolicy("ReservationAccess", policy =>
                 policy.Requirements.Add(new ReservationAccessRequirement()));
+            options.AddPolicy("PaymentAccess", policy =>
+                policy.Requirements.Add(new PaymentAccessRequirement()));
         });
 
         builder.Services.AddSwaggerGen(x =>

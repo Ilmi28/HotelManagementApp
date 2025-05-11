@@ -17,6 +17,7 @@ public class GetRoomByIdQueryHandler(
     {
         var roomModel = await roomRepository.GetRoomById(request.RoomId, cancellationToken)
             ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
+        var discount = await discountService.CalculateDiscount(roomModel, cancellationToken);
         return new RoomResponse
         {
             RoomName = roomModel.RoomName,
@@ -25,7 +26,8 @@ public class GetRoomByIdQueryHandler(
             HotelId = roomModel.Hotel.Id,
             RoomImages = (await imageRepository.GetRoomImagesByRoomId(roomModel.Id, cancellationToken))
                 .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList(),
-            DiscountPercent = await discountService.CalculateDiscount(roomModel, cancellationToken),
+            DiscountPercent = discount,
+            FinalPrice = roomModel.Price - (roomModel.Price * discount / 100),
         };
 
     }

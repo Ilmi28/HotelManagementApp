@@ -104,27 +104,6 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("ProfilePictures");
                 });
 
-            modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.DiscountCode", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("DiscountAmount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ExpirationDate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DiscountCodes");
-                });
-
             modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.HotelDiscount", b =>
                 {
                     b.Property<int>("Id")
@@ -540,6 +519,10 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Points")
                         .HasColumnType("INTEGER");
 
@@ -815,11 +798,61 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("ReservationServices");
                 });
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CashPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("CashPayments");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CreditCardPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreditCardCvv")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreditCardExpirationDate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreditCardNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("CreditCardPayments");
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.Payment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("INTEGER");
@@ -858,11 +891,6 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         {
                             Id = 2,
                             Name = "CREDITCARD"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "LOYALTYPOINTS"
                         });
                 });
 
@@ -1387,6 +1415,28 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Navigation("HotelService");
 
                     b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CashPayment", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.PaymentModels.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CreditCardPayment", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.PaymentModels.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.Payment", b =>
