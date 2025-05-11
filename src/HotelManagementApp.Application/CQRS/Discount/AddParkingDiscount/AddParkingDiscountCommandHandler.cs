@@ -10,6 +10,8 @@ public class AddParkingDiscountCommandHandler(
     IHotelParkingRepository parkingRepository,
     IParkingDiscountRepository discountRepository) : IRequestHandler<AddParkingDiscountCommand>
 {
+
+
     public async Task Handle(AddParkingDiscountCommand request, CancellationToken cancellationToken)
     {
         var parking = await parkingRepository.GetHotelParkingById(request.ParkingId, cancellationToken)

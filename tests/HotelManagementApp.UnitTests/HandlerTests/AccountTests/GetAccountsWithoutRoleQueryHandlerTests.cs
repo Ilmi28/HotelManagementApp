@@ -13,7 +13,7 @@ using HotelManagementApp.Core.Models;
 using HotelManagementApp.Core.Models.AccountModels;
 using Moq;
 using Xunit;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class GetAccountsWithoutRoleQueryHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock;

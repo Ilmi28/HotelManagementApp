@@ -12,7 +12,7 @@ public class GetDiscountByHotelQueryHandler(
 {
     public async Task<ICollection<HotelDiscountResponse>> Handle(GetDiscountByHotelQuery request, CancellationToken cancellationToken)
     {
-        var hotel = hotelRepository.GetHotelById(request.HotelId, cancellationToken)
+        var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
             ?? throw new HotelNotFoundException($"Hotel with if {request.HotelId} not found");
         var discounts = await discountRepository.GetDiscountsByTypeId(request.HotelId, cancellationToken);
         return discounts.Select(x => new HotelDiscountResponse

@@ -10,7 +10,7 @@ using HotelManagementApp.Core.Models.TokenModels;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Xunit;
-
+namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class SendConfirmEmailLinkCommandHandlerTests
 {
     private readonly Mock<IEmailService> _emailServiceMock;
