@@ -1,6 +1,7 @@
 ﻿using HotelManagementApp.Application.CQRS.HotelParkingOps.Add;
 using HotelManagementApp.Application.CQRS.HotelParkingOps.Delete;
 using HotelManagementApp.Application.CQRS.HotelParkingOps.GetByHotelId;
+using HotelManagementApp.Application.CQRS.HotelParkingOps.GetByid;
 using HotelManagementApp.Application.CQRS.HotelParkingOps.Update;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
@@ -24,7 +25,7 @@ public class HotelParkingController(IMediator mediator) : ControllerBase
         return Created();
     }
 
-    [HttpGet("{hotelId}")]
+    [HttpGet("get-by-hotel/{hotelId}")]
     [ProducesResponseType(typeof(ICollection<HotelParkingResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHotelParkings(int hotelId, CancellationToken ct)
     {
@@ -48,5 +49,12 @@ public class HotelParkingController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(cmd, ct);
         return NoContent();
+    }
+
+    [HttpGet("{parkingId}")]
+    public async Task<IActionResult> GetHotelParkingById(int parkingId, CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetHotelParkingByIdQuery { ParkingId = parkingId }, ct);
+        return Ok(response);
     }
 }

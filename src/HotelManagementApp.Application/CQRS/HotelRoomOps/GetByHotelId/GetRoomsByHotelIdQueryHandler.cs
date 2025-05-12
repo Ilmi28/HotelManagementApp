@@ -23,6 +23,7 @@ public class GetRoomsByHotelIdQueryHandler(
         var response = new List<RoomResponse>();
         foreach (var room in roomModels)
         {
+            var discount = await discountService.CalculateDiscount(room, cancellationToken);
             var roomResponse = new RoomResponse
             {
                 Id = room.Id,
@@ -32,7 +33,8 @@ public class GetRoomsByHotelIdQueryHandler(
                 HotelId = room.Hotel.Id,
                 RoomImages = (await imageRepository.GetRoomImagesByRoomId(room.Id, cancellationToken))
                     .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList(),
-                DiscountPercent = await discountService.CalculateDiscount(room, cancellationToken),
+                DiscountPercent = discount,
+                FinalPrice = room.Price - (room.Price * discount / 100),
             };
             response.Add(roomResponse);
         }

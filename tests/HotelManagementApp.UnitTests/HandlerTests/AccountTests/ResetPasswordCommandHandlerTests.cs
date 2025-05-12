@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.Account.ResetPassword;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
@@ -8,8 +5,11 @@ using HotelManagementApp.Core.Interfaces.Repositories.TokenRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.TokenModels;
 using Moq;
+
 using Xunit;
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
+
+
 public class ResetPasswordCommandHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock;

@@ -27,7 +27,7 @@ public class HotelImageRepository(AppDbContext context) : IHotelImageRepository
     {
         var hotelImage = await context.HotelImages
                             .Include(x => x.Hotel)
-                            .FirstOrDefaultAsync(x => x.Hotel.Id == hotelId);
+                            .FirstOrDefaultAsync(x => x.Hotel.Id == hotelId, ct);
         if (hotelImage != null)
         {
             context.HotelImages.Remove(hotelImage);

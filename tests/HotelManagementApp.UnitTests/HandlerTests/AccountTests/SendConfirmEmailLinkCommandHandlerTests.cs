@@ -1,16 +1,14 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.Account.SendConfirmEmailLink;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.TokenRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models.TokenModels;
 using Microsoft.Extensions.Configuration;
 using Moq;
+
 using Xunit;
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
+
 public class SendConfirmEmailLinkCommandHandlerTests
 {
     private readonly Mock<IEmailService> _emailServiceMock;

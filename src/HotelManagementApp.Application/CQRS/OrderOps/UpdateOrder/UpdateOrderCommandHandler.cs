@@ -1,3 +1,4 @@
+using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Models.OrderModels;
@@ -19,7 +20,8 @@ public class UpdateOrderCommandHandler(
             throw new InvalidOperationException("Guest role is required to update an order");
         var order = await orderRepository.GetOrderById(request.OrderId, cancellationToken)
             ?? throw new OrderNotFoundException($"Order with ID {request.OrderId} not found");
-        
+        if (order.Status is OrderStatusEnum.Cancelled or OrderStatusEnum.Completed or OrderStatusEnum.Confirmed)
+            throw new InvalidOperationException($"Order should be pending to change details. Current status: {order.Status}");
         order.OrderDetails.FirstName = request.FirstName;
         order.OrderDetails.LastName = request.LastName;
         order.OrderDetails.PhoneNumber = request.PhoneNumber;

@@ -26,7 +26,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
+using HotelManagementApp.Infrastructure.Repositories.PaymentRepositories;
 using HotelManagementApp.Infrastructure.Repositories.ReservationRepositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -102,11 +104,17 @@ public static class DependencyInjection
         builder.Services.AddScoped<IServiceDiscountRepository, ServiceDiscountRepository>();
         builder.Services.AddScoped<IReservationParkingRepository, ReservationParkingRepository>();
         builder.Services.AddScoped<IReservationServiceRepository, ReservationServiceRepository>();
+        builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+        builder.Services.AddScoped<ICashPaymentRepository, CashPaymentRepository>();
+        builder.Services.AddScoped<ICreditCardPaymentRepository, CreditCardPaymentRepository>();
+        builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();
+        builder.Services.AddScoped<IHotelReviewImageRepository, HotelReviewImageRepository>();
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
         builder.Services.AddScoped<IFileService, LocalFileService>();
         builder.Services.AddScoped<IEmailService, AzureEmailService>();
+        builder.Services.AddScoped<ICreditCardPaymentService, FakeCreditCardPaymentService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
         builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>();
 

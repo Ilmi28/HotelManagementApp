@@ -21,7 +21,7 @@ public class UpdateRoomImagesCommandHandler(
         foreach (var file in request.RoomImages)
         {
             using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
+            await file.CopyToAsync(stream, cancellationToken);
             var imageName = fileService.UploadFile("images", stream.ToArray(), Path.GetExtension(file.FileName));
             await imageRepository.AddRoomImage(new HotelRoomImage
             {

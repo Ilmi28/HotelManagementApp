@@ -1,19 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.Account.GetAccountsWithoutRole;
-using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
-using HotelManagementApp.Core.Models;
 using HotelManagementApp.Core.Models.AccountModels;
 using Moq;
+
 using Xunit;
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
+
 public class GetAccountsWithoutRoleQueryHandlerTests
 {
     private readonly Mock<IUserManager> _userManagerMock;

@@ -22,8 +22,8 @@ public class GetBlacklistQueryHandler(
         var accounts = new List<AccountResponse>();
         foreach (var blacklistUser in blacklist)
         {
-            var user = await userManager.FindByIdAsync(blacklistUser.UserId)
-                       ?? throw new UserNotFoundException($"User with id {blacklistUser.UserId} not found");
+            var user = await userManager.FindByIdAsync(blacklistUser.UserId);
+            if (user == null) continue;
             var profilePicture = await profilePictureRepository.GetProfilePicture(blacklistUser.UserId, cancellationToken)
                                  ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {blacklistUser.UserId} not found");
             var account = new AccountResponse

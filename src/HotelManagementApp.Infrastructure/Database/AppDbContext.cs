@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<HotelParking> HotelParkings { get; set; }
     public DbSet<HotelRoomImage> HotelRoomImages { get; set; }
     public DbSet<HotelReview> HotelReviews { get; set; }
+    public DbSet<HotelReviewImage> HotelReviewImages { get; set; }
     public DbSet<City> Cities { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
     public DbSet<LoyaltyPoints> LoyaltyPoints { get; set; }
@@ -41,6 +42,8 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<LoyaltyReward> LoyaltyRewards { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<CashPayment> CashPayments { get; set; }
+    public DbSet<CreditCardPayment> CreditCardPayments { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderDetails> OrderDetails { get; set; }
     public DbSet<PendingOrder> PendingOrders { get; set; }
@@ -49,7 +52,6 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<CompletedOrder> CompletedOrders { get; set; }
     public DbSet<OrderStatus> OrderStatuses { get; set; }
     public DbSet<RoomDiscount> RoomDiscounts { get; set; }
-    public DbSet<DiscountCode> DiscountCodes { get; set; }
     public DbSet<HotelDiscount> HotelDiscounts { get; set; }
     public DbSet<ServiceDiscount> ServiceDiscounts { get; set; }
     public DbSet<ParkingDiscount> ParkingDiscounts { get; set; }

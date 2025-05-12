@@ -21,6 +21,7 @@ public class GetHotelParkingsByHotelIdQueryHandler(
         var response = new List<HotelParkingResponse>();
         foreach (var parking in parkings)
         {
+            var discount = await discountService.CalculateDiscount(parking, cancellationToken);
             response.Add(new HotelParkingResponse
             {
                 Id = parking.Id,
@@ -28,7 +29,8 @@ public class GetHotelParkingsByHotelIdQueryHandler(
                 Description = parking.Description,
                 Price = parking.Price,
                 HotelId = parking.Hotel.Id,
-                DiscountPercent = await discountService.CalculateDiscount(parking, cancellationToken),
+                DiscountPercent = discount,
+                FinalPrice = parking.Price - ((discount / 100m) * parking.Price),
             });
         }
 

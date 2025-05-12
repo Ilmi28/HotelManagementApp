@@ -57,7 +57,7 @@ public class VIPController(IMediator mediator) : ControllerBase
     [Authorize(Roles = "Manager, Admin, Staff")]
     public async Task<IActionResult> GetAllVIPUsers(CancellationToken ct)
     {
-        var query = new GetVIPListQuery();
+        var query = new GetVipListQuery();
         var result = await mediator.Send(query, ct);
         return Ok(result);
     }

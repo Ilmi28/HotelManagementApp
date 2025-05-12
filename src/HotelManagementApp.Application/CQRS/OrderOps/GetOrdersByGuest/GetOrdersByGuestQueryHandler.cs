@@ -4,6 +4,7 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
+using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.OrderOps.GetOrdersByGuest;
@@ -14,7 +15,8 @@ public class GetOrdersByGuestQueryHandler(
     ICompletedOrderRepository completedOrderRepository,
     IConfirmedOrderRepository confirmedOrderRepository,
     ICancelledOrderRepository cancelledOrderRepository,
-    IUserManager userManager) : IRequestHandler<GetOrdersByGuestQuery, ICollection<OrderResponse>>
+    IUserManager userManager,
+    IPricingService pricingService) : IRequestHandler<GetOrdersByGuestQuery, ICollection<OrderResponse>>
 {
     public async Task<ICollection<OrderResponse>> Handle(GetOrdersByGuestQuery request, CancellationToken cancellationToken)
     {
@@ -43,8 +45,9 @@ public class GetOrdersByGuestQueryHandler(
                 PhoneNumber = order.OrderDetails.PhoneNumber,
                 Created = pendingOrder?.Date,
                 Confirmed = confirmedOrder?.Date,
-                Canceled = cancelledOrder?.Date,
-                Completed = completedOrder?.Date
+                Cancelled = cancelledOrder?.Date,
+                Completed = completedOrder?.Date,
+                TotalPrice = await pricingService.CalculatePriceForOrder(order, cancellationToken)
             });
         }
 

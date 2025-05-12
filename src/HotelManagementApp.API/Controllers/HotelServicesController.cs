@@ -1,6 +1,7 @@
 ﻿using HotelManagementApp.Application.CQRS.HotelServiceOps.Add;
 using HotelManagementApp.Application.CQRS.HotelServiceOps.Delete;
 using HotelManagementApp.Application.CQRS.HotelServiceOps.GetByHotel;
+using HotelManagementApp.Application.CQRS.HotelServiceOps.GetById;
 using HotelManagementApp.Application.CQRS.HotelServiceOps.Update;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
@@ -54,11 +55,20 @@ public class HotelServicesController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Get hotel services by hotel id
     /// </summary>
-    [HttpGet("{hotelId}")]
+    [HttpGet("get-by-hotel/{hotelId}")]
     [ProducesResponseType(typeof(ICollection<HotelServiceResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHotelServices(int hotelId, CancellationToken ct)
     {
         var hotelServices = await mediator.Send(new GetHotelServicesByHotelIdQuery { HotelId = hotelId }, ct);
         return Ok(hotelServices);
     }
+
+    [HttpGet("{serviceId}")]
+    public async Task<IActionResult> GetHotelServiceById(int serviceId, CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetHotelServiceByIdQuery {ServiceId = serviceId}, ct);
+        return Ok(response);
+    }
+    
+    
 }

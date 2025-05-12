@@ -6,4 +6,5 @@ public class LoyaltyPointsLog
     public required string UserId { get; set; }
     public required DateTime Date { get; set; }
     public required int Points { get; set; }
+    public required string Description { get; set; }
 }
