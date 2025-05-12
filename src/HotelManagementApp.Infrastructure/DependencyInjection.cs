@@ -26,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using HotelManagementApp.Infrastructure.Repositories.PaymentRepositories;
 using HotelManagementApp.Infrastructure.Repositories.ReservationRepositories;
@@ -106,6 +107,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
         builder.Services.AddScoped<ICashPaymentRepository, CashPaymentRepository>();
         builder.Services.AddScoped<ICreditCardPaymentRepository, CreditCardPaymentRepository>();
+        builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();
+        builder.Services.AddScoped<IHotelReviewImageRepository, HotelReviewImageRepository>();
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

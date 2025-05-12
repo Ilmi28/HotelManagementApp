@@ -27,11 +27,11 @@ namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
         private readonly Mock<IUserManager> _userManagerMock = new();
         private readonly Mock<IProfilePictureRepository> _profilePictureRepositoryMock = new();
         private readonly Mock<IFileService> _fileServiceMock = new();
-        private readonly GetVIPListQueryHandler _handler;
+        private readonly GetVipListQueryHandler _handler;
 
         public GetVIPListQueryHandlerTests()
         {
-            _handler = new GetVIPListQueryHandler(
+            _handler = new GetVipListQueryHandler(
                 _vipRepositoryMock.Object,
                 _userManagerMock.Object,
                 _profilePictureRepositoryMock.Object,
@@ -66,7 +66,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
             _profilePictureRepositoryMock.Setup(m => m.GetProfilePicture("123", default)).ReturnsAsync(profilePicture);
             _fileServiceMock.Setup(m => m.GetFileUrl("images", "profile.jpg")).Returns("http://example.com/images/profile.jpg");
 
-            var result = await _handler.Handle(new GetVIPListQuery(), default);
+            var result = await _handler.Handle(new GetVipListQuery(), default);
             Assert.NotNull(result);
             Assert.Single(result);
             Assert.Equal("123", result.First().Id);
@@ -82,7 +82,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
             };
             _vipRepositoryMock.Setup(m => m.GetVIPUsers(default)).ReturnsAsync(vipList);
             _userManagerMock.Setup(m => m.FindByIdAsync("123")).ReturnsAsync((UserDto?)null);
-            await Assert.ThrowsAsync<UserNotFoundException>(() => _handler.Handle(new GetVIPListQuery(), default));
+            await Assert.ThrowsAsync<UserNotFoundException>(() => _handler.Handle(new GetVipListQuery(), default));
         }
 
         [Fact]
@@ -105,7 +105,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
             _userManagerMock.Setup(m => m.FindByIdAsync("123")).ReturnsAsync(user);
             _profilePictureRepositoryMock.Setup(m => m.GetProfilePicture("123", default)).ReturnsAsync((ProfilePicture?)null);
 
-            await Assert.ThrowsAsync<ProfilePictureNotFoundException>(() => _handler.Handle(new GetVIPListQuery(), default));
+            await Assert.ThrowsAsync<ProfilePictureNotFoundException>(() => _handler.Handle(new GetVipListQuery(), default));
         }
     }
 }

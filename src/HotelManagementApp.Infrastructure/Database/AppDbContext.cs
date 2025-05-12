@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<HotelParking> HotelParkings { get; set; }
     public DbSet<HotelRoomImage> HotelRoomImages { get; set; }
     public DbSet<HotelReview> HotelReviews { get; set; }
+    public DbSet<HotelReviewImage> HotelReviewImages { get; set; }
     public DbSet<City> Cities { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
     public DbSet<LoyaltyPoints> LoyaltyPoints { get; set; }

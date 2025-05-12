@@ -19,7 +19,7 @@ public class ConfirmedOrderRepository(AppDbContext context) : IConfirmedOrderRep
         throw new NotImplementedException();
     }
 
-    public async Task<ICollection<ConfirmedOrder>> GetAllConfirmedOrders(CancellationToken ct)
+    public async Task<ICollection<ConfirmedOrder>> GetConfirmedOrders(CancellationToken ct)
     {
         return await context.ConfirmedOrders
             .AsNoTracking()

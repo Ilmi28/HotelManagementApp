@@ -37,7 +37,7 @@ public class GetOrderByIdQueryHandler(
             PhoneNumber = order.OrderDetails.PhoneNumber,
             Created = pendingOrder?.Date,
             Confirmed = confirmedOrder?.Date,
-            Canceled = cancelledOrder?.Date,
+            Cancelled = cancelledOrder?.Date,
             Completed = completedOrder?.Date,
             TotalPrice = await pricingService.CalculatePriceForOrder(order, cancellationToken)
         };

@@ -1,6 +1,6 @@
 using HotelManagementApp.Core.Models.PaymentModels;
 
-namespace HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+namespace HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 
 public interface IPaymentRepository
 {

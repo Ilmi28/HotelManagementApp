@@ -1,8 +1,8 @@
-using HotelManagementApp.Application.Responses.OrderResponses;
-using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Application.Responses.PaymentResponses;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using MediatR;
 
-namespace HotelManagementApp.Application.CQRS.OrderOps.GetPaymentMethods;
+namespace HotelManagementApp.Application.CQRS.PaymentOps.GetPaymentMethods;
 
 public class GetPaymentMethodsQueryHandler(IPaymentRepository paymentRepository) : IRequestHandler<GetPaymentMethodsQuery, ICollection<PaymentMethodResponse>>
 {

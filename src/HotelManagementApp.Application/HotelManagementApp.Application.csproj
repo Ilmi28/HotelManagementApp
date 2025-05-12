@@ -39,7 +39,6 @@
     <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsHistoryByGuest\" />
     <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsHistoryOfGuests\" />
     <Folder Include="CQRS\LoyaltyPointsOps\GetLoyaltyPointsOfGuests\" />
-    <Folder Include="CQRS\Review\" />
   </ItemGroup>
 
 </Project>

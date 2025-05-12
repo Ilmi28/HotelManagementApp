@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using HotelManagementApp.API.Policies.ConfirmedEmailPolicy;
 using HotelManagementApp.API.Policies.OrderAccessPolicy;
 using HotelManagementApp.API.Policies.PaymentAccessPolicy;
 using HotelManagementApp.API.Policies.ReservationAccessPolicy;
+using HotelManagementApp.API.Policies.ReviewAccessPolicy;
 using HotelManagementApp.Core.Models.PaymentModels;
 
 namespace HotelManagementApp.API;
@@ -24,6 +26,9 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAuthorizationHandler, RoleHierarchyHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, OrderAccessHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, ReservationAccessHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, PaymentAccessHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, ConfirmedEmailHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, ReviewAccessHandler>();
         builder.Services.AddAuthorization(options =>
         {
             options.AddPolicy("AccountOwner", policy =>
@@ -36,6 +41,10 @@ public static class DependencyInjection
                 policy.Requirements.Add(new ReservationAccessRequirement()));
             options.AddPolicy("PaymentAccess", policy =>
                 policy.Requirements.Add(new PaymentAccessRequirement()));
+            options.AddPolicy("EmailConfirmed", policy => 
+                policy.Requirements.Add(new ConfirmedEmailRequirement()));
+            options.AddPolicy("ReviewAccess", policy => 
+                policy.Requirements.Add(new ReviewAccessRequirement()));
         });
 
         builder.Services.AddSwaggerGen(x =>

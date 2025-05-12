@@ -22,7 +22,7 @@ public class PendingOrderRepository(AppDbContext context) : IPendingOrderReposit
             .FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
-    public async Task<ICollection<PendingOrder>> GetAllPendingOrders(CancellationToken ct)
+    public async Task<ICollection<PendingOrder>> GetPendingOrders(CancellationToken ct)
     {
         return await context.PendingOrders
             .AsNoTracking()

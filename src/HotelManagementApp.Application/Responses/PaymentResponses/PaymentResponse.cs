@@ -1,6 +1,4 @@
-using HotelManagementApp.Core.Enums;
-
-namespace HotelManagementApp.Application.Responses.OrderResponses;
+namespace HotelManagementApp.Application.Responses.PaymentResponses;
 
 public class PaymentResponse
 {
@@ -8,5 +6,5 @@ public class PaymentResponse
     public required int OrderId { get; set; }
     public required string PaymentMethod { get; set; }
     public required decimal Amount { get; set; }
-    public DateTime Date { get; set; }
+    public required DateTime Date { get; set; }
 }

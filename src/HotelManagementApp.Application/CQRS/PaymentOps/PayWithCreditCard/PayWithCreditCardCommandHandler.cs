@@ -1,6 +1,7 @@
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using HotelManagementApp.Core.Models.PaymentModels;

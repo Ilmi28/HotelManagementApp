@@ -1,4 +1,5 @@
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Models.PaymentModels;
 using HotelManagementApp.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using Microsoft.AspNetCore.Authorization;
 
 namespace HotelManagementApp.API.Policies.PaymentAccessPolicy;

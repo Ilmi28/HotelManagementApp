@@ -20,7 +20,7 @@ public class CompletedOrderRepository(AppDbContext context) : ICompletedOrderRep
         return context.SaveChangesAsync(ct);
     }
 
-    public async Task<ICollection<CompletedOrder>> GetAllCompletedOrders(CancellationToken ct)
+    public async Task<ICollection<CompletedOrder>> GetCompletedOrders(CancellationToken ct)
     {
         return await context.CompletedOrders
             .AsNoTracking()

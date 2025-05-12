@@ -1,4 +1,4 @@
-namespace HotelManagementApp.Application.Responses.OrderResponses;
+namespace HotelManagementApp.Application.Responses.PaymentResponses;
 
 public class CreditCardPaymentResponse
 {

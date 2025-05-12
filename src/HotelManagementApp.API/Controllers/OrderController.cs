@@ -4,6 +4,10 @@ using HotelManagementApp.Application.CQRS.OrderOps.CreateOrder;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrderById;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrdersByGuest;
 using HotelManagementApp.Application.CQRS.OrderOps.UpdateOrder;
+using HotelManagementApp.Application.CQRS.OrderOps.GetPendingOrders;
+using HotelManagementApp.Application.CQRS.OrderOps.GetConfirmedOrders;
+using HotelManagementApp.Application.CQRS.OrderOps.GetCompletedOrders;
+using HotelManagementApp.Application.CQRS.OrderOps.GetCancelledOrders;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Models.OrderModels;
 using MediatR;
@@ -24,6 +28,7 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// <response code="204">Order created successfully</response>
     /// <response code="403">User is not authorized to create this order</response>
     [HttpPost]
+    [Authorize(Policy = "EmailConfirmed")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddOrder([FromBody] CreateOrderCommand cmd, IAuthorizationService authService, CancellationToken ct)
@@ -42,6 +47,7 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// <response code="204">Order updated successfully</response>
     /// <response code="403">User is not authorized to update this order</response>
     [HttpPut]
+    [Authorize(Policy = "EmailConfirmed")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateOrder([FromBody] UpdateOrderCommand cmd, IAuthorizationService authService, CancellationToken ct)
@@ -87,6 +93,7 @@ public class OrderController(IMediator mediator) : ControllerBase
     }
 
     [HttpPatch("confirm/{orderId}")]
+    [Authorize(Policy = "EmailConfirmed")]
     public async Task<IActionResult> ConfirmOrder(int orderId, IAuthorizationService authService, CancellationToken ct)
     {
         var orderPolicy = await authService.AuthorizeAsync(User, orderId, "OrderAccess");
@@ -96,11 +103,60 @@ public class OrderController(IMediator mediator) : ControllerBase
     }
     
     [HttpPatch("cancel/{orderId}")]
+    [Authorize(Policy = "EmailConfirmed")]
     public async Task<IActionResult> CancelOrder(int orderId, IAuthorizationService authService, CancellationToken ct)
     {
         var orderPolicy = await authService.AuthorizeAsync(User, orderId, "OrderAccess");
         if (!orderPolicy.Succeeded) return Forbid();
         await mediator.Send(new CancelOrderCommand {OrderId = orderId}, ct);
         return NoContent();
+    }
+    
+    /// <summary>
+    /// Gets all pending orders
+    /// </summary>
+    /// <response code="200">Returns list of pending orders</response>
+    [HttpGet("pending")]
+    [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendingOrders(CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetPendingOrdersQuery(), ct);
+        return Ok(response);
+    }
+    
+    /// <summary>
+    /// Gets all confirmed orders
+    /// </summary>
+    /// <response code="200">Returns list of confirmed orders</response>
+    [HttpGet("confirmed")]
+    [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetConfirmedOrders(CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetConfirmedOrdersQuery(), ct);
+        return Ok(response);
+    }
+    
+    /// <summary>
+    /// Gets all completed orders
+    /// </summary>
+    /// <response code="200">Returns list of completed orders</response>
+    [HttpGet("completed")]
+    [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCompletedOrders(CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetCompletedOrdersQuery(), ct);
+        return Ok(response);
+    }
+    
+    /// <summary>
+    /// Gets all cancelled orders
+    /// </summary>
+    /// <response code="200">Returns list of cancelled orders</response>
+    [HttpGet("cancelled")]
+    [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCancelledOrders(CancellationToken ct)
+    {
+        var response = await mediator.Send(new GetCancelledOrdersQuery(), ct);
+        return Ok(response);
     }
 }

@@ -8,20 +8,20 @@ using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.VIP.GetAll;
 
-public class GetVIPListQueryHandler(IVIPRepository vipRepository, 
+public class GetVipListQueryHandler(IVIPRepository vipRepository, 
                     IUserManager userManager, 
                     IProfilePictureRepository profilePictureRepository,
                     IFileService fileService) 
-                    : IRequestHandler<GetVIPListQuery, ICollection<AccountResponse>>
+                    : IRequestHandler<GetVipListQuery, ICollection<AccountResponse>>
 {
-    public async Task<ICollection<AccountResponse>> Handle(GetVIPListQuery request, CancellationToken cancellationToken)
+    public async Task<ICollection<AccountResponse>> Handle(GetVipListQuery request, CancellationToken cancellationToken)
     {
         var vipList = await vipRepository.GetVIPUsers(cancellationToken);
         var accounts = new List<AccountResponse>();
         foreach (var vip in vipList)
         {
-            var user = await userManager.FindByIdAsync(vip.UserId)
-                ?? throw new UserNotFoundException($"User with id {vip.UserId} not found");
+            var user = await userManager.FindByIdAsync(vip.UserId);
+            if (user == null) continue;
             var profilePicture = await profilePictureRepository.GetProfilePicture(vip.UserId, cancellationToken)
                 ?? throw new ProfilePictureNotFoundException($"Profile picture of user with id {vip.UserId} not found");
             var account = new AccountResponse

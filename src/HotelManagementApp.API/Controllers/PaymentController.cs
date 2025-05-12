@@ -1,13 +1,14 @@
-using HotelManagementApp.Application.CQRS.OrderOps.GetPaymentMethods;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetAllPayments;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetCashPaymentByPayment;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetCashPayments;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetCreditCardPaymentByPayment;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetCreditCardPayments;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetPaymentByOrder;
+using HotelManagementApp.Application.CQRS.PaymentOps.GetPaymentMethods;
 using HotelManagementApp.Application.CQRS.PaymentOps.PayWithCash;
 using HotelManagementApp.Application.CQRS.PaymentOps.PayWithCreditCard;
 using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Responses.PaymentResponses;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
