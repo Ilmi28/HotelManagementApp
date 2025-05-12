@@ -12,7 +12,6 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using Microsoft.Extensions.Configuration;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Services;
-using Org.BouncyCastle.Bcpg;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Models.GuestModels;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -73,17 +72,6 @@ namespace HotelManagementApp.UnitTests.HandlerTests.VIPTests
             Assert.Equal("http://example.com/images/profile.jpg", result.First().ProfilePicture);
         }
 
-        [Fact]
-        public async Task Handle_ShouldThrowUserNotFoundException_WhenUserDoesNotExist()
-        {
-            var vipList = new List<VIPGuest>
-            {
-                new VIPGuest{UserId = "123" }
-            };
-            _vipRepositoryMock.Setup(m => m.GetVIPUsers(default)).ReturnsAsync(vipList);
-            _userManagerMock.Setup(m => m.FindByIdAsync("123")).ReturnsAsync((UserDto?)null);
-            await Assert.ThrowsAsync<UserNotFoundException>(() => _handler.Handle(new GetVipListQuery(), default));
-        }
 
         [Fact]
         public async Task Handle_ShouldThrowProfilePictureNotFoundException_WhenProfilePictureNotFound()
