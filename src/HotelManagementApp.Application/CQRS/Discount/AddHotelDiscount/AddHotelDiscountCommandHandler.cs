@@ -11,6 +11,7 @@ public class AddHotelDiscountCommandHandler(
     IHotelRepository hotelRepository, 
     IHotelDiscountRepository hotelDiscountRepository) : IRequestHandler<AddHotelDiscountCommand>
 {
+
     public async Task Handle(AddHotelDiscountCommand request, CancellationToken cancellationToken)
     {
         var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)

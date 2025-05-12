@@ -6,6 +6,7 @@ using HotelManagementApp.Core.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using Moq;
 
+using Xunit;
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 
 public class SendConfirmEmailLinkCommandHandlerTests
