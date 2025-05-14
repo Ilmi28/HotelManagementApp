@@ -4,8 +4,8 @@ namespace HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositor
 
 public interface ILoyaltyPointsRepository
 {
-    Task AddLoyaltyPoints(LoyaltyPoints loyaltyPoints);
-    Task UpdateLoyaltyPoints(LoyaltyPoints loyaltyPoints);
-    Task<LoyaltyPoints?> GetLoyaltyPointsByGuestId(string id);
-    Task<ICollection<LoyaltyReward>> GetLoyaltyRewards();
+    Task AddLoyaltyPoints(LoyaltyPoints loyaltyPoints, CancellationToken cancellationToken);
+    Task UpdateLoyaltyPoints(LoyaltyPoints loyaltyPoints, CancellationToken cancellationToken);
+    Task<LoyaltyPoints?> GetLoyaltyPointsByGuestId(string id, CancellationToken cancellationToken);
+    Task<ICollection<LoyaltyPoints>> GetAllLoyaltyPoints(CancellationToken cancellationToken);
 }

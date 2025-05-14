@@ -35,7 +35,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountHistory", (string)null);
+                    b.ToTable("AccountHistory");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.AccountModels.AccountOperation", b =>
@@ -50,7 +50,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountOperations", (string)null);
+                    b.ToTable("AccountOperations");
 
                     b.HasData(
                         new
@@ -101,7 +101,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProfilePictures", (string)null);
+                    b.ToTable("ProfilePictures");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.HotelDiscount", b =>
@@ -126,7 +126,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelDiscounts", (string)null);
+                    b.ToTable("HotelDiscounts");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ParkingDiscount", b =>
@@ -151,7 +151,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("ParkingId");
 
-                    b.ToTable("ParkingDiscounts", (string)null);
+                    b.ToTable("ParkingDiscounts");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.RoomDiscount", b =>
@@ -176,7 +176,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("RoomDiscounts", (string)null);
+                    b.ToTable("RoomDiscounts");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.DiscountModels.ServiceDiscount", b =>
@@ -201,7 +201,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("ServiceDiscounts", (string)null);
+                    b.ToTable("ServiceDiscounts");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.BlacklistedGuest", b =>
@@ -219,7 +219,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BlackListedGuests", (string)null);
+                    b.ToTable("BlackListedGuests");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.GuestModels.VIPGuest", b =>
@@ -237,7 +237,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("VipGuests", (string)null);
+                    b.ToTable("VipGuests");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.City", b =>
@@ -262,7 +262,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cities", (string)null);
+                    b.ToTable("Cities");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.Hotel", b =>
@@ -298,7 +298,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("CityId");
 
-                    b.ToTable("Hotels", (string)null);
+                    b.ToTable("Hotels");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelImage", b =>
@@ -318,7 +318,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelImages", (string)null);
+                    b.ToTable("HotelImages");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelParking", b =>
@@ -343,7 +343,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelParkings", (string)null);
+                    b.ToTable("HotelParkings");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelReview", b =>
@@ -378,7 +378,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelReviews", (string)null);
+                    b.ToTable("HotelReviews");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelReviewImage", b =>
@@ -398,7 +398,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelReviewId");
 
-                    b.ToTable("HotelReviewImages", (string)null);
+                    b.ToTable("HotelReviewImages");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoom", b =>
@@ -428,7 +428,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelRooms", (string)null);
+                    b.ToTable("HotelRooms");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoomImage", b =>
@@ -448,7 +448,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("HotelRoomImages", (string)null);
+                    b.ToTable("HotelRoomImages");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.HotelModels.HotelRoomType", b =>
@@ -463,7 +463,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("HotelRoomTypes", (string)null);
+                    b.ToTable("HotelRoomTypes");
 
                     b.HasData(
                         new
@@ -511,7 +511,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("HotelId");
 
-                    b.ToTable("HotelServices", (string)null);
+                    b.ToTable("HotelServices");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyPoints", b =>
@@ -529,7 +529,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoyaltyPoints", (string)null);
+                    b.ToTable("LoyaltyPoints");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyPointsLog", b =>
@@ -554,7 +554,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoyaltyPointsHistory", (string)null);
+                    b.ToTable("LoyaltyPointsHistory");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyReward", b =>
@@ -576,7 +576,30 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoyaltyRewards", (string)null);
+                    b.ToTable("LoyaltyRewards");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyRewardUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LoyaltyRewardId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoyaltyRewardId");
+
+                    b.ToTable("LoyaltyRewardUsers");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CancelledOrder", b =>
@@ -595,7 +618,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("CancelledOrders", (string)null);
+                    b.ToTable("CancelledOrders");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CompletedOrder", b =>
@@ -614,7 +637,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("CompletedOrders", (string)null);
+                    b.ToTable("CompletedOrders");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ConfirmedOrder", b =>
@@ -633,7 +656,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("ConfirmedOrders", (string)null);
+                    b.ToTable("ConfirmedOrders");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Order", b =>
@@ -651,7 +674,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderDetails", b =>
@@ -692,7 +715,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("OrderDetails", (string)null);
+                    b.ToTable("OrderDetails");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderStatus", b =>
@@ -707,7 +730,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("OrderStatuses", (string)null);
+                    b.ToTable("OrderStatuses");
 
                     b.HasData(
                         new
@@ -748,7 +771,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("PendingOrders", (string)null);
+                    b.ToTable("PendingOrders");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.Reservation", b =>
@@ -775,7 +798,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("Reservations", (string)null);
+                    b.ToTable("Reservations");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ReservationParking", b =>
@@ -796,7 +819,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("ReservationId");
 
-                    b.ToTable("ReservationParkings", (string)null);
+                    b.ToTable("ReservationParkings");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ReservationService", b =>
@@ -817,7 +840,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("ReservationId");
 
-                    b.ToTable("ReservationServices", (string)null);
+                    b.ToTable("ReservationServices");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CashPayment", b =>
@@ -833,7 +856,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("PaymentId");
 
-                    b.ToTable("CashPayments", (string)null);
+                    b.ToTable("CashPayments");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.CreditCardPayment", b =>
@@ -861,7 +884,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("PaymentId");
 
-                    b.ToTable("CreditCardPayments", (string)null);
+                    b.ToTable("CreditCardPayments");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.Payment", b =>
@@ -886,7 +909,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.PaymentModels.PaymentMethod", b =>
@@ -901,7 +924,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PaymentMethods", (string)null);
+                    b.ToTable("PaymentMethods");
 
                     b.HasData(
                         new
@@ -938,7 +961,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ConfirmEmailTokens", (string)null);
+                    b.ToTable("ConfirmEmailTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.RefreshToken", b =>
@@ -960,7 +983,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.TokenModels.ResetPasswordToken", b =>
@@ -985,7 +1008,7 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ResetPasswordTokens", (string)null);
+                    b.ToTable("ResetPasswordTokens");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Infrastructure.Database.Identity.User", b =>
@@ -1336,6 +1359,17 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Hotel");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyRewardUser", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.LoyaltyPointsModels.LoyaltyReward", "LoyaltyReward")
+                        .WithMany()
+                        .HasForeignKey("LoyaltyRewardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LoyaltyReward");
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.CancelledOrder", b =>

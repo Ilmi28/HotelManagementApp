@@ -1,15 +1,11 @@
 using HotelManagementApp.Application.CQRS.HotelParkingOps.GetByid;
-using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
-namespace HotelManagementApp.UnitTests.HandlerTests.HotelParkingTests
+namespace HotelManagementApp.UnitTests.HandlerTests.HotelParkingOpsTests
 {
     public class GetHotelParkingByIdQueryHandlerTests
     {

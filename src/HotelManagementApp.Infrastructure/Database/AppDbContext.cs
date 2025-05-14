@@ -40,6 +40,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<LoyaltyPoints> LoyaltyPoints { get; set; }
     public DbSet<LoyaltyPointsLog> LoyaltyPointsHistory { get; set; }
     public DbSet<LoyaltyReward> LoyaltyRewards { get; set; }
+    public DbSet<LoyaltyRewardUser> LoyaltyRewardUsers { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<CashPayment> CashPayments { get; set; }

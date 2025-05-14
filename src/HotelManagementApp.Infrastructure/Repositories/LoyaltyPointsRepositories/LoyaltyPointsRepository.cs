@@ -8,31 +8,29 @@ namespace HotelManagementApp.Infrastructure.Repositories.LoyaltyPointsRepositori
 public class LoyaltyPointsRepository(AppDbContext context) : ILoyaltyPointsRepository
 {
 
-    public async Task AddLoyaltyPoints(LoyaltyPoints loyaltyPoints)
+    public async Task AddLoyaltyPoints(LoyaltyPoints loyaltyPoints, CancellationToken cancellationToken)
     {
-        await context.LoyaltyPoints.AddAsync(loyaltyPoints);
-        await context.SaveChangesAsync();
+        await context.LoyaltyPoints.AddAsync(loyaltyPoints, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateLoyaltyPoints(LoyaltyPoints loyaltyPoints)
+    public async Task UpdateLoyaltyPoints(LoyaltyPoints loyaltyPoints, CancellationToken cancellationToken)
     {
         context.LoyaltyPoints.Update(loyaltyPoints);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<LoyaltyPoints?> GetLoyaltyPointsByGuestId(string id)
+    public async Task<LoyaltyPoints?> GetLoyaltyPointsByGuestId(string id, CancellationToken cancellationToken)
     {
         return await context.LoyaltyPoints
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.GuestId == id);
+            .FirstOrDefaultAsync(x => x.GuestId == id, cancellationToken);
     }
 
-    public async Task<ICollection<LoyaltyReward>> GetLoyaltyRewards()
+    public async Task<ICollection<LoyaltyPoints>> GetAllLoyaltyPoints(CancellationToken cancellationToken)
     {
-        return await context.LoyaltyRewards
+        return await context.LoyaltyPoints
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
-
-
 }

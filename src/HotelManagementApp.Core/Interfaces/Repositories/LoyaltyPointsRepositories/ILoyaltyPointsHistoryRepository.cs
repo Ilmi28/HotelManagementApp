@@ -4,6 +4,7 @@ namespace HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositor
 
 public interface ILoyaltyPointsHistoryRepository
 {
-    Task AddPointsLog(LoyaltyPointsLog log);
-    Task<ICollection<LoyaltyPointsLog>> GetLoyaltyPointsHistoryByGuestId(string guestId);
+    Task AddPointsLog(LoyaltyPointsLog log, CancellationToken cancellationToken);
+    Task<ICollection<LoyaltyPointsLog>> GetLoyaltyPointsHistoryByGuestId(string guestId, CancellationToken cancellationToken);
+    Task<ICollection<LoyaltyPointsLog>> GetAllLoyaltyPointsHistory(CancellationToken cancellationToken);
 }

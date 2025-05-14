@@ -109,6 +109,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICreditCardPaymentRepository, CreditCardPaymentRepository>();
         builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();
         builder.Services.AddScoped<IHotelReviewImageRepository, HotelReviewImageRepository>();
+        builder.Services.AddScoped<ILoyaltyRewardsRepository, LoyaltyRewardRepository>();
+        builder.Services.AddScoped<ILoyaltyRewardUserRepository, LoyaltyRewardUserRepository>();
 
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

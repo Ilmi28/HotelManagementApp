@@ -4,7 +4,7 @@ public class LoyaltyPointsLog
 {
     public int Id { get; set; }
     public required string UserId { get; set; }
-    public required DateTime Date { get; set; }
+    public DateTime Date { get; set; } = DateTime.Now;
     public required int Points { get; set; }
     public required string Description { get; set; }
 }

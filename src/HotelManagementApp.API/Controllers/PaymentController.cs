@@ -7,6 +7,7 @@ using HotelManagementApp.Application.CQRS.PaymentOps.GetPaymentByOrder;
 using HotelManagementApp.Application.CQRS.PaymentOps.GetPaymentMethods;
 using HotelManagementApp.Application.CQRS.PaymentOps.PayWithCash;
 using HotelManagementApp.Application.CQRS.PaymentOps.PayWithCreditCard;
+using HotelManagementApp.Application.Events.OrderCompleted;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Application.Responses.PaymentResponses;
 using MediatR;
@@ -35,6 +36,7 @@ public class PaymentController(IMediator mediator) : ControllerBase
         var orderPolicy = await authService.AuthorizeAsync(User, cmd.OrderId, "OrderAccess");
         if (!orderPolicy.Succeeded) return Forbid();
         await mediator.Send(cmd, cancellationToken);
+        await mediator.Publish(new OrderCompletedEvent { OrderId = cmd.OrderId }, cancellationToken);
         return NoContent();
     }
 
@@ -45,6 +47,7 @@ public class PaymentController(IMediator mediator) : ControllerBase
         var orderPolicy = await authService.AuthorizeAsync(User, cmd.OrderId, "OrderAccess");
         if (!orderPolicy.Succeeded) return Forbid();
         await mediator.Send(cmd, cancellationToken);
+        await mediator.Publish(new OrderCompletedEvent { OrderId = cmd.OrderId }, cancellationToken);
         return NoContent();
     }
 
