@@ -34,7 +34,6 @@ public class AddLoyaltyPointsOrderCompletedHandler(
             existingLoyaltyPoints.Points += points;
             await loyaltyPointsRepository.UpdateLoyaltyPoints(existingLoyaltyPoints, cancellationToken);
         }
-
         var historyLog = new LoyaltyPointsLog
         {
             UserId = order.UserId,

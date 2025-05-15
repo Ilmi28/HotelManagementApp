@@ -2,6 +2,7 @@ using HotelManagementApp.Application.CQRS.OrderOps.GetOrderReservations;
 using HotelManagementApp.Application.CQRS.ReservationOps.AddReservation;
 using HotelManagementApp.Application.CQRS.ReservationOps.AddReservationParking;
 using HotelManagementApp.Application.CQRS.ReservationOps.AddReservationService;
+using HotelManagementApp.Application.CQRS.ReservationOps.GetAvailableDays;
 using HotelManagementApp.Application.CQRS.ReservationOps.GetReservationParkings;
 using HotelManagementApp.Application.CQRS.ReservationOps.GetReservationServices;
 using HotelManagementApp.Application.CQRS.ReservationOps.RemoveReservation;
@@ -103,6 +104,13 @@ public class ReservationController(IMediator mediator) : ControllerBase
         var reservationPolicy = await authService.AuthorizeAsync(User, reservationId, "ReservationAccess");
         if (!reservationPolicy.Succeeded) return Forbid();
         var response = await mediator.Send(new GetReservationServicesQuery { ReservationId = reservationId }, ct);
+        return Ok(response);
+    }
+
+    [HttpPost("get-available-days")]
+    public async Task<IActionResult> GetAvailableDays([FromBody] GetAvailableDaysQuery query, CancellationToken ct)
+    {
+        var response = await mediator.Send(query, ct);
         return Ok(response);
     }
 }
