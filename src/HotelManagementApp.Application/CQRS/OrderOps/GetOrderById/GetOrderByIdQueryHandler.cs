@@ -1,3 +1,4 @@
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
@@ -9,10 +10,7 @@ namespace HotelManagementApp.Application.CQRS.OrderOps.GetOrderById;
 
 public class GetOrderByIdQueryHandler(
     IOrderRepository orderRepository,
-    IPendingOrderRepository pendingOrderRepository,
-    ICompletedOrderRepository completedOrderRepository,
-    IConfirmedOrderRepository confirmedOrderRepository,
-    ICancelledOrderRepository cancelledOrderRepository,
+    IOrderStatusService orderStatusService,
     IPricingService pricingService,
     IPaymentRepository paymentRepository) : IRequestHandler<GetOrderByIdQuery, OrderResponse>
 {
@@ -21,10 +19,7 @@ public class GetOrderByIdQueryHandler(
         var order = await orderRepository.GetOrderById(request.OrderId, cancellationToken)
             ?? throw new OrderNotFoundException($"Order with id {request.OrderId} not found");
 
-        var pendingOrder = await pendingOrderRepository.GetPendingOrderById(order.Id, cancellationToken);
-        var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
-        var cancelledOrder = await cancelledOrderRepository.GetCancelledOrderByOrderId(order.Id, cancellationToken);
-        var completedOrder = await completedOrderRepository.GetCompletedOrderByOrderId(order.Id, cancellationToken);
+        var orderStatuses = await orderStatusService.GetOrderStatusesAsync(order, cancellationToken);
         var payment = await paymentRepository.GetPaymentsByOrderId(order.Id, cancellationToken);
         return new OrderResponse
         {
@@ -37,10 +32,10 @@ public class GetOrderByIdQueryHandler(
             FirstName = order.OrderDetails.FirstName,
             LastName = order.OrderDetails.LastName,
             PhoneNumber = order.OrderDetails.PhoneNumber,
-            Created = pendingOrder?.Date,
-            Confirmed = confirmedOrder?.Date,
-            Cancelled = cancelledOrder?.Date,
-            Completed = completedOrder?.Date,
+            Created = orderStatuses.CreatedDate,
+            Confirmed = orderStatuses.ConfirmedDate,
+            Cancelled = orderStatuses.CancelledDate,
+            Completed = orderStatuses.CompletedDate,
             TotalPrice = payment?.Amount ?? await pricingService.CalculatePriceForOrder(order, cancellationToken),
         };
     }

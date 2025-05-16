@@ -1,3 +1,4 @@
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
@@ -9,9 +10,7 @@ namespace HotelManagementApp.Application.CQRS.OrderOps.GetCompletedOrders;
 
 public class GetCompletedOrdersQueryHandler(
     ICompletedOrderRepository completedOrderRepository,
-    IPendingOrderRepository pendingOrderRepository,
-    IConfirmedOrderRepository confirmedOrderRepository,
-    ICancelledOrderRepository cancelledOrderRepository,
+    IOrderStatusService orderStatusService,
     IOrderRepository orderRepository,
     IPaymentRepository paymentRepository) : IRequestHandler<GetCompletedOrdersQuery, ICollection<OrderResponse>>
 {
@@ -25,11 +24,9 @@ public class GetCompletedOrdersQueryHandler(
             var order = await orderRepository.GetOrderById(completedOrder.Order.Id, cancellationToken);
             if (order == null) continue;
             
-            var cancelledOrder = await cancelledOrderRepository.GetCancelledOrderByOrderId(order.Id, cancellationToken);
-            if (cancelledOrder != null) continue;
+            var orderStatuses = await orderStatusService.GetOrderStatusesAsync(order, cancellationToken);
+            if (orderStatuses.CancelledDate != null) continue;
             
-            var pendingOrder = await pendingOrderRepository.GetPendingOrderByOrderId(order.Id, cancellationToken);
-            var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
             var payment = await paymentRepository.GetPaymentsByOrderId(order.Id, cancellationToken)
                           ?? throw new PaymentNotFoundException($"Payment for order with id {order.Id} not found");
             
@@ -44,10 +41,10 @@ public class GetCompletedOrdersQueryHandler(
                 FirstName = order.OrderDetails.FirstName,
                 LastName = order.OrderDetails.LastName,
                 PhoneNumber = order.OrderDetails.PhoneNumber,
-                Created = pendingOrder?.Date,
-                Confirmed = confirmedOrder?.Date,
+                Created = orderStatuses?.CreatedDate,
+                Confirmed = orderStatuses?.ConfirmedDate,
                 Cancelled = null,
-                Completed = completedOrder.Date,
+                Completed = orderStatuses?.CompletedDate,
                 TotalPrice = payment.Amount
             });
         }

@@ -1,3 +1,4 @@
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
@@ -7,8 +8,7 @@ namespace HotelManagementApp.Application.CQRS.OrderOps.GetPendingOrders;
 
 public class GetPendingOrdersQueryHandler(
     IPendingOrderRepository pendingOrderRepository,
-    IConfirmedOrderRepository confirmedOrderRepository,
-    ICancelledOrderRepository cancelledOrderRepository,
+    IOrderStatusService orderStatusService,
     IOrderRepository orderRepository,
     IPricingService pricingService) : IRequestHandler<GetPendingOrdersQuery, ICollection<OrderResponse>>
 {
@@ -22,11 +22,9 @@ public class GetPendingOrdersQueryHandler(
             var order = await orderRepository.GetOrderById(pendingOrder.Order.Id, cancellationToken);
             if (order == null) continue;
             
-            var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
-            if (confirmedOrder != null) continue;
-            
-            var cancelledOrder = await cancelledOrderRepository.GetCancelledOrderByOrderId(order.Id, cancellationToken);
-            if (cancelledOrder != null) continue;
+            var orderStatuses = await orderStatusService.GetOrderStatusesAsync(order, cancellationToken);
+            if (orderStatuses.ConfirmedDate != null) continue;
+            if (orderStatuses.CancelledDate != null) continue;
             
             response.Add(new OrderResponse
             {
@@ -39,7 +37,7 @@ public class GetPendingOrdersQueryHandler(
                 FirstName = order.OrderDetails.FirstName,
                 LastName = order.OrderDetails.LastName,
                 PhoneNumber = order.OrderDetails.PhoneNumber,
-                Created = pendingOrder.Date,
+                Created = orderStatuses?.CreatedDate,
                 Confirmed = null,
                 Cancelled = null,
                 Completed = null,

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Reflection;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Application.Services;
 using HotelManagementApp.Application.Services.DiscountServices;
 using HotelManagementApp.Application.Services.PriceServices;
@@ -26,6 +27,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IParkingDiscountService, ParkingDiscountService>();
         builder.Services.AddScoped<IServiceDiscountService, ServiceDiscountService>();
         builder.Services.AddScoped<IPricingService, OrderPricingService>();
+        builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
         
         return builder;
     }

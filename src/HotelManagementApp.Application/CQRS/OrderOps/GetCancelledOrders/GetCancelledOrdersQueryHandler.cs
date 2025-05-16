@@ -1,3 +1,4 @@
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
@@ -7,9 +8,7 @@ namespace HotelManagementApp.Application.CQRS.OrderOps.GetCancelledOrders;
 
 public class GetCancelledOrdersQueryHandler(
     ICancelledOrderRepository cancelledOrderRepository,
-    IPendingOrderRepository pendingOrderRepository,
-    IConfirmedOrderRepository confirmedOrderRepository,
-    ICompletedOrderRepository completedOrderRepository,
+    IOrderStatusService orderStatusService,
     IOrderRepository orderRepository,
     IPricingService pricingService) : IRequestHandler<GetCancelledOrdersQuery, ICollection<OrderResponse>>
 {
@@ -23,9 +22,7 @@ public class GetCancelledOrdersQueryHandler(
             var order = await orderRepository.GetOrderById(cancelledOrder.Order.Id, cancellationToken);
             if (order == null) continue;
             
-            var pendingOrder = await pendingOrderRepository.GetPendingOrderByOrderId(order.Id, cancellationToken);
-            var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
-            var completedOrder = await completedOrderRepository.GetCompletedOrderByOrderId(order.Id, cancellationToken);
+            var orderStatuses = await orderStatusService.GetOrderStatusesAsync(order, cancellationToken);
             
             response.Add(new OrderResponse
             {
@@ -38,10 +35,10 @@ public class GetCancelledOrdersQueryHandler(
                 FirstName = order.OrderDetails.FirstName,
                 LastName = order.OrderDetails.LastName,
                 PhoneNumber = order.OrderDetails.PhoneNumber,
-                Created = pendingOrder?.Date,
-                Confirmed = confirmedOrder?.Date,
-                Cancelled = cancelledOrder.Date,
-                Completed = completedOrder?.Date,
+                Created = orderStatuses?.CreatedDate,
+                Confirmed = orderStatuses?.ConfirmedDate,
+                Cancelled = orderStatuses?.CancelledDate,
+                Completed = orderStatuses?.CompletedDate,
                 TotalPrice = await pricingService.CalculatePriceForOrder(order, cancellationToken)
             });
         }
