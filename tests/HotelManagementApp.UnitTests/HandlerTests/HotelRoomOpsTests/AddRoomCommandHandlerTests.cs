@@ -4,11 +4,8 @@ using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
-namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomTests
+namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
 {
     public class AddRoomCommandHandlerTests
     {

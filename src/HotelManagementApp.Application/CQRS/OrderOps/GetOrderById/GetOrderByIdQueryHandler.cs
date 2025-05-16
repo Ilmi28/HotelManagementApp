@@ -1,6 +1,7 @@
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
@@ -12,7 +13,8 @@ public class GetOrderByIdQueryHandler(
     ICompletedOrderRepository completedOrderRepository,
     IConfirmedOrderRepository confirmedOrderRepository,
     ICancelledOrderRepository cancelledOrderRepository,
-    IPricingService pricingService) : IRequestHandler<GetOrderByIdQuery, OrderResponse>
+    IPricingService pricingService,
+    IPaymentRepository paymentRepository) : IRequestHandler<GetOrderByIdQuery, OrderResponse>
 {
     public async Task<OrderResponse> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
@@ -23,7 +25,7 @@ public class GetOrderByIdQueryHandler(
         var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
         var cancelledOrder = await cancelledOrderRepository.GetCancelledOrderByOrderId(order.Id, cancellationToken);
         var completedOrder = await completedOrderRepository.GetCompletedOrderByOrderId(order.Id, cancellationToken);
-
+        var payment = await paymentRepository.GetPaymentsByOrderId(order.Id, cancellationToken);
         return new OrderResponse
         {
             Id = order.Id,
@@ -39,7 +41,7 @@ public class GetOrderByIdQueryHandler(
             Confirmed = confirmedOrder?.Date,
             Cancelled = cancelledOrder?.Date,
             Completed = completedOrder?.Date,
-            TotalPrice = await pricingService.CalculatePriceForOrder(order, cancellationToken)
+            TotalPrice = payment?.Amount ?? await pricingService.CalculatePriceForOrder(order, cancellationToken),
         };
     }
 }

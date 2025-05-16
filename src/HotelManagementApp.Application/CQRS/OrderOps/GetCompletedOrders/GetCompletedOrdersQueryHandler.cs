@@ -1,5 +1,7 @@
 using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
+using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
@@ -11,7 +13,7 @@ public class GetCompletedOrdersQueryHandler(
     IConfirmedOrderRepository confirmedOrderRepository,
     ICancelledOrderRepository cancelledOrderRepository,
     IOrderRepository orderRepository,
-    IPricingService pricingService) : IRequestHandler<GetCompletedOrdersQuery, ICollection<OrderResponse>>
+    IPaymentRepository paymentRepository) : IRequestHandler<GetCompletedOrdersQuery, ICollection<OrderResponse>>
 {
     public async Task<ICollection<OrderResponse>> Handle(GetCompletedOrdersQuery request, CancellationToken cancellationToken)
     {
@@ -28,6 +30,8 @@ public class GetCompletedOrdersQueryHandler(
             
             var pendingOrder = await pendingOrderRepository.GetPendingOrderByOrderId(order.Id, cancellationToken);
             var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
+            var payment = await paymentRepository.GetPaymentsByOrderId(order.Id, cancellationToken)
+                          ?? throw new PaymentNotFoundException($"Payment for order with id {order.Id} not found");
             
             response.Add(new OrderResponse
             {
@@ -44,7 +48,7 @@ public class GetCompletedOrdersQueryHandler(
                 Confirmed = confirmedOrder?.Date,
                 Cancelled = null,
                 Completed = completedOrder.Date,
-                TotalPrice = await pricingService.CalculatePriceForOrder(order, cancellationToken)
+                TotalPrice = payment.Amount
             });
         }
 
