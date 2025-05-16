@@ -11,13 +11,19 @@ namespace HotelManagementApp.API.Controllers;
 
 [Route("api/blacklist")]
 [ApiController]
-[Authorize(Roles = "Manager, Admin")]
+[Authorize]
 public class BlacklistController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Adds a guest to the blacklist (manager and above).
+    /// Adds a guest to the blacklist (manager or above)
     /// </summary>
+    /// <response code="204">User added to blacklist successfully</response>
+    /// <response code="401">User not authenticated</response>
+    /// <response code="403">User does not have required permissions</response>
+    /// <response code="404">User with provided id not found</response>
+    /// <response code="409">User is already blacklisted</response>
     [HttpPatch("add/{userId}")]
+    [Authorize(Roles = "Manager, Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -30,9 +36,15 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Removes a guest from the blacklist (manager and above).
+    /// Removes a guest from the blacklist (manager or above)
     /// </summary>
+    /// <response code="204">User removed from blacklist successfully</response>
+    /// <response code="401">User not authenticated</response>
+    /// <response code="403">User does not have required permissions</response>
+    /// <response code="404">User with provided id not found</response>
+    /// <response code="409">User is not blacklisted</response>
     [HttpPatch("remove/{userId}")]
+    [Authorize(Roles = "Manager, Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,9 +57,13 @@ public class BlacklistController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Returns all blacklisted users (manager and above).
+    /// Returns all blacklisted users (staff or above)
     /// </summary>
+    /// <response code="200">Returns list of blacklisted users</response>
+    /// <response code="401">User not authenticated</response>
+    /// <response code="403">User does not have required permissions</response>
     [HttpGet("all")]
+    [Authorize(Roles = "Staff, Manager, Admin")]
     [ProducesResponseType(typeof(ICollection<AccountResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

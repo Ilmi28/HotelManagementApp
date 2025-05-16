@@ -7,7 +7,6 @@ using HotelManagementApp.Application.CQRS.HotelOps.Update;
 using HotelManagementApp.Application.CQRS.HotelOps.UpdateHotelImages;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,10 +18,11 @@ namespace HotelManagementApp.API.Controllers;
 public class HotelController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Get all hotels
+    /// Returns all hotels in the system 
     /// </summary>
+    /// <response code="200">Returns list of all hotels</response>
+    /// <response code="401">User is not authenticated (when authorization is required)</response>
     [HttpGet("get-all")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(ICollection<HotelResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllHotels(CancellationToken ct)
@@ -31,14 +31,17 @@ public class HotelController(IMediator mediator) : ControllerBase
         return Ok(hotels);
     }
 
-
     /// <summary>
-    /// Add hotel (staff and above)
+    /// Adds a new hotel to the system (manager or above)
     /// </summary>
+    /// <response code="201">Hotel created successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to add hotels</response>
     [HttpPost]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddHotel(AddHotelCommand cmd)
     {
         await mediator.Send(cmd);
@@ -46,12 +49,17 @@ public class HotelController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Delete hotel by id (staff and above)
+    /// Deletes a hotel by its ID  (manager or above)
     /// </summary>
+    /// <response code="204">Hotel deleted successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to delete hotels</response>
+    /// <response code="404">Hotel not found</response>
     [HttpDelete("{hotelId}")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveHotel(int hotelId, CancellationToken ct)
     {
@@ -60,10 +68,12 @@ public class HotelController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get hotel by id
+    /// Returns a specific hotel by its ID
     /// </summary>
+    /// <response code="200">Returns the requested hotel</response>
+    /// <response code="401">User is not authenticated (when authorization is required)</response>
+    /// <response code="404">Hotel not found</response>
     [HttpGet("{hotelId}")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(HotelResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -74,12 +84,17 @@ public class HotelController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Update hotel (staff and above)
+    /// Updates an existing hotel's information (manager or above)
     /// </summary>
+    /// <response code="204">Hotel updated successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to update hotels</response>
+    /// <response code="404">Hotel not found</response>
     [HttpPut]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateHotel([FromBody] UpdateHotelCommand cmd, CancellationToken ct)
     {
@@ -88,21 +103,33 @@ public class HotelController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Updates hotel images (staff and above)
+    /// Updates the images for a specific hotel (manager or above)
     /// </summary>
+    /// <response code="204">Hotel images updated successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to update hotel images</response>
+    /// <response code="404">Hotel not found</response>
     [HttpPut("images")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateHotelImages([FromForm] UpdateHotelImagesCommand cmd, CancellationToken ct)
     {
         await mediator.Send(cmd, ct);
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns weather information for a specific hotel location
+    /// </summary>
+    /// <response code="200">Returns weather data for the hotel location</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="404">Hotel not found</response>
     [HttpGet("weather/{hotelId}")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(WeatherResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWeatherByHotelId(int hotelId, CancellationToken ct)
     {
         var response = await mediator.Send(new GetWeatherByHotelIdQuery { HotelId = hotelId }, ct);

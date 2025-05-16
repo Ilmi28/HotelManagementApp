@@ -5,10 +5,8 @@ using HotelManagementApp.Application.CQRS.HotelRoomOps.GetRoomTypes;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.Remove;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.Update;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.UpdateRoomImages;
-using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Application.Responses.RoomResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,12 +18,18 @@ namespace HotelManagementApp.API.Controllers;
 public class HotelRoomController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Add room (staff and above)
+    /// Adds a new room to the hotel system (manager or above)
     /// </summary>
+    /// <response code="201">Room created successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to add rooms</response>
+    /// <response code="404">Hotel not found</response>
     [HttpPost]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddRoom([FromBody] AddRoomCommand cmd, CancellationToken ct)
     {
         await mediator.Send(cmd, ct);
@@ -33,8 +37,10 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get all room types
+    /// Returns all available room types in the system
     /// </summary>
+    /// <response code="200">Returns list of room types</response>
+    /// <response code="401">User is not authenticated</response>
     [HttpGet("get-room-types")]
     [ProducesResponseType(typeof(ICollection<RoomTypeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -45,12 +51,17 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Update room (staff and above)
+    /// Updates an existing room's information (manager or above)
     /// </summary>
+    /// <response code="204">Room updated successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to update rooms</response>
+    /// <response code="404">Room not found</response>
     [HttpPut]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRoom([FromBody] UpdateRoomCommand cmd, CancellationToken ct)
     {
@@ -59,12 +70,17 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Delete room by id (staff and above)
+    /// Deletes a room by its ID (manager or above)
     /// </summary>
+    /// <response code="204">Room deleted successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to delete rooms</response>
+    /// <response code="404">Room not found</response>
     [HttpDelete("{roomId}")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveRoom(int roomId, CancellationToken ct)
     {
@@ -73,10 +89,13 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get room by id
+    /// Returns a specific room by its ID 
     /// </summary>
+    /// <response code="200">Returns the requested room</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="404">Room not found</response>
     [HttpGet("{roomId}")]
-    [ProducesResponseType(typeof(HotelResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RoomResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRoomById(int roomId, CancellationToken ct)
@@ -86,8 +105,10 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Get all rooms
+    /// Returns all rooms in the system
     /// </summary>
+    /// <response code="200">Returns list of all rooms</response>
+    /// <response code="401">User is not authenticated</response>
     [HttpGet("get-all")]
     [ProducesResponseType(typeof(ICollection<RoomResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -98,12 +119,18 @@ public class HotelRoomController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Updates room images (staff and above)
+    /// Updates the images for a specific room (manager or above)
     /// </summary>
+    /// <response code="204">Room images updated successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is unauthorized to update room images</response>
+    /// <response code="404">Room not found</response>
     [HttpPut("images")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
+    [Authorize(Roles = "Admin, Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRoomImages([FromForm] UpdateRoomImagesCommand cmd, CancellationToken ct)
     {
         await mediator.Send(cmd, ct);

@@ -22,7 +22,14 @@ namespace HotelManagementApp.API.Controllers;
 [ApiController]
 public class DiscountController(IMediator mediator) : ControllerBase
 {
+    
+    /// <summary>
+    /// Adds a new discount for a hotel (manager or above)
+    /// </summary>
+    /// <response code="204">Discount added successfully</response>
+    /// <response code="403">User is unauthorized to add discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpPost("hotel")]
     public async Task<IActionResult> AddHotelDiscount([FromBody] AddHotelDiscountCommand command, CancellationToken ct)
     {
@@ -30,7 +37,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Adds a new discount for a room (manager or above)
+    /// </summary>
+    /// <response code="204">Discount added successfully</response>
+    /// <response code="403">User is unauthorized to add discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpPost("room")]
     public async Task<IActionResult> AddRoomDiscount([FromBody] AddRoomDiscountCommand command, CancellationToken ct)
     {
@@ -38,7 +51,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Adds a new discount for a parking spot (manager or above)
+    /// </summary>
+    /// <response code="204">Discount added successfully</response>
+    /// <response code="403">User is unauthorized to add discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpPost("parking")]
     public async Task<IActionResult> AddParkingDiscount([FromBody] AddParkingDiscountCommand command, CancellationToken ct)
     {
@@ -46,7 +65,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Adds a new discount for a service (manager or above)
+    /// </summary>
+    /// <response code="204">Discount added successfully</response>
+    /// <response code="403">User is unauthorized to add discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpPost("service")]
     public async Task<IActionResult> AddServiceDiscount([FromBody] AddServiceDiscountCommand command, CancellationToken ct)
     {
@@ -54,7 +79,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns all discounts for a specific hotel (manager or above)
+    /// </summary>
+    /// <response code="200">Returns list of hotel discounts</response>
+    /// <response code="403">User is unauthorized to view discounts</response>
     [ProducesResponseType(typeof(ICollection<HotelDiscountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpGet("hotel/{id}")]
     public async Task<IActionResult> GetHotelDiscount(int id, CancellationToken ct)
     {
@@ -62,7 +93,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Returns all discounts for a specific room (manager or above)
+    /// </summary>
+    /// <response code="200">Returns list of room discounts</response>
+    /// <response code="403">User is unauthorized to view discounts</response>
     [ProducesResponseType(typeof(ICollection<RoomDiscountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpGet("room/{id}")]
     public async Task<IActionResult> GetRoomDiscount(int id, CancellationToken ct)
     {
@@ -70,7 +107,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Returns all discounts for a specific parking spot (manager or above)
+    /// </summary>
+    /// <response code="200">Returns list of parking discounts</response>
+    /// <response code="403">User is unauthorized to view discounts</response>
     [ProducesResponseType(typeof(ICollection<ParkingDiscountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpGet("parking/{id}")]
     public async Task<IActionResult> GetParkingDiscount(int id, CancellationToken ct)
     {
@@ -78,7 +121,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Returns all discounts for a specific service (manager or above)
+    /// </summary>
+    /// <response code="200">Returns list of service discounts</response>
+    /// <response code="403">User is unauthorized to view discounts</response>
     [ProducesResponseType(typeof(ICollection<ServiceDiscountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpGet("service/{id}")]
     public async Task<IActionResult> GetServiceDiscount(int id, CancellationToken ct)
     {
@@ -86,7 +135,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Deletes a hotel discount (manager or above)
+    /// </summary>
+    /// <response code="204">Discount deleted successfully</response>
+    /// <response code="403">User is unauthorized to delete discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpDelete("hotel/{id}")]
     public async Task<IActionResult> DeleteHotelDiscount(int id, CancellationToken ct)
     {
@@ -94,7 +149,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deletes a room discount (manager or above)
+    /// </summary>
+    /// <response code="204">Discount deleted successfully</response>
+    /// <response code="403">User is unauthorized to delete discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpDelete("room/{id}")]
     public async Task<IActionResult> DeleteRoomDiscount(int id, CancellationToken ct)
     {
@@ -102,7 +163,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deletes a parking discount (manager or above)
+    /// </summary>
+    /// <response code="204">Discount deleted successfully</response>
+    /// <response code="403">User is unauthorized to delete discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpDelete("parking/{id}")]
     public async Task<IActionResult> DeleteParkingDiscount(int id, CancellationToken ct)
     {
@@ -110,7 +177,13 @@ public class DiscountController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deletes a service discount (manager or above)
+    /// </summary>
+    /// <response code="204">Discount deleted successfully</response>
+    /// <response code="403">User is unauthorized to delete discounts</response>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [HttpDelete("service/{id}")]
     public async Task<IActionResult> DeleteServiceDiscount(int id, CancellationToken ct)
     {

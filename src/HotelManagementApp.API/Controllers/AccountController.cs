@@ -27,7 +27,7 @@ namespace HotelManagementApp.API.Controllers;
 public class AccountController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Creates a new account without any roles
+    /// Creates a new account without any roles (staff or above)
     /// </summary>
     /// <response code="201">Account created successfully</response>
     /// <response code="403">User is not authorized to create accounts</response>
@@ -48,7 +48,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Returns all accounts without any roles
+    /// Returns all accounts without any roles (staff or above)
     /// </summary>
     /// <response code="200">Returns list of accounts without roles</response>
     /// <response code="403">User is not authorized to view accounts</response>
@@ -63,7 +63,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Updates base account information
+    /// Updates base account information (owner or above)
     /// </summary>
     /// <response code="204">Account updated successfully</response>
     /// <response code="403">User is not authorized to update this account</response>
@@ -82,7 +82,7 @@ public class AccountController(IMediator mediator) : ControllerBase
 
 
     /// <summary>
-    /// Deletes an account
+    /// Deletes an account (owner or above)
     /// </summary>
     /// <response code="204">Account deleted successfully</response>
     /// <response code="403">User is not authorized to delete this account</response>
@@ -100,7 +100,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Returns account information by ID
+    /// Returns account information by ID (owner or above)
     /// </summary>
     /// <response code="200">Returns the requested account</response>
     /// <response code="403">User is not authorized to view this account</response>

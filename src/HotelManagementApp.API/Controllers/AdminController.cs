@@ -12,7 +12,7 @@ namespace HotelManagementApp.API.Controllers;
 public class AdminController(IMediator mediator) : ControllerBase
 {
     /// <summary>
-    /// Removes a user from the Admin role
+    /// Removes a user from the Admin role (admin)
     /// </summary>
     /// <response code="204">User removed from Admin role successfully</response>
     /// <response code="401">User is not authenticated</response>
@@ -37,7 +37,7 @@ public class AdminController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Adds a user to the Admin role
+    /// Adds a user to the Admin role (admin)
     /// </summary>
     /// <response code="204">User added to Admin role successfully</response>
     /// <response code="401">User is not authenticated</response>
