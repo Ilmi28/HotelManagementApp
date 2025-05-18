@@ -3,7 +3,6 @@ using HotelManagementApp.Application.CQRS.Blacklist.GetAll;
 using HotelManagementApp.Application.CQRS.Blacklist.Remove;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

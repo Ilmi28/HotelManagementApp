@@ -3,7 +3,7 @@ using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.OrderOps.CreateOrder;
 
-public class CreateOrderCommand : IRequest
+public class CreateOrderCommand : IRequest<int>
 {
     [Required]
     public required string UserId { get; set; }

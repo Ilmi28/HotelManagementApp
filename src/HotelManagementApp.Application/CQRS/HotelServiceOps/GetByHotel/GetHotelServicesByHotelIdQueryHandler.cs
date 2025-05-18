@@ -1,6 +1,5 @@
 ﻿using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
@@ -10,7 +9,7 @@ namespace HotelManagementApp.Application.CQRS.HotelServiceOps.GetByHotel;
 public class GetHotelServicesByHotelIdQueryHandler(
     IHotelRepository hotelRepository, 
     IHotelServiceRepository hotelServiceRepository,
-    IServiceDiscountService discountService) 
+    IPricingService pricingService) 
     : IRequestHandler<GetHotelServicesByHotelIdQuery, ICollection<HotelServiceResponse>>
 {
     public async Task<ICollection<HotelServiceResponse>> Handle(GetHotelServicesByHotelIdQuery request, CancellationToken cancellationToken)
@@ -21,7 +20,7 @@ public class GetHotelServicesByHotelIdQueryHandler(
         var response = new List<HotelServiceResponse>();
         foreach (var hotelService in hotelServices)
         {
-            var discount = await discountService.CalculateDiscount(hotelService, cancellationToken);
+            var finalPrice = await pricingService.CalculatePriceForService(hotelService, cancellationToken);
             response.Add(new HotelServiceResponse
             {
                 Id = hotelService.Id,
@@ -29,8 +28,8 @@ public class GetHotelServicesByHotelIdQueryHandler(
                 Description = hotelService.Description,
                 Price = hotelService.Price,
                 HotelId = hotelService.Hotel.Id,
-                Discount = discount,
-                FinalPrice = hotelService.Price - (discount * hotelService.Price / 100)
+                Discount = 100 - (100 * finalPrice / hotelService.Price),
+                FinalPrice = finalPrice
             });
         }
         return response;

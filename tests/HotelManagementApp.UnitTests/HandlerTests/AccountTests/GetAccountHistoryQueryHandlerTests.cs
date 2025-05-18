@@ -1,12 +1,11 @@
 using HotelManagementApp.Application.CQRS.Account.History;
-using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using HotelManagementApp.Core.Models.AccountModels;
 using Moq;
-using Xunit;
+
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class GetAccountHistoryQueryHandlerTests
 {

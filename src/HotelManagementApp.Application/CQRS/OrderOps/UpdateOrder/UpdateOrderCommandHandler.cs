@@ -1,8 +1,6 @@
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
-using HotelManagementApp.Core.Models.OrderModels;
-using HotelManagementApp.Core.Exceptions;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using MediatR;
 

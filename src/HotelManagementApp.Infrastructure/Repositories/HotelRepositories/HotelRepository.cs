@@ -13,11 +13,10 @@ public class HotelRepository(AppDbContext context) : IHotelRepository
         await context.SaveChangesAsync(ct);
     }
 
-    public async Task RemoveHotel(int id, CancellationToken ct)
+    public async Task RemoveHotel(Hotel hotel, CancellationToken ct)
     {
-        await context.Hotels
-            .Where(h => h.Id == id)
-            .ExecuteDeleteAsync(ct);
+        context.Hotels.Remove(hotel);
+        await context.SaveChangesAsync(ct);
     }
 
     public async Task<ICollection<Hotel>> GetAllHotels(CancellationToken ct)

@@ -1,5 +1,3 @@
-using HotelManagementApp.Core.Models.OrderModels;
-
 namespace HotelManagementApp.Core.Models.PaymentModels;
 
 public class CreditCardPayment

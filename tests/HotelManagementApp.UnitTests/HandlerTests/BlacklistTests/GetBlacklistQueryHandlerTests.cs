@@ -1,5 +1,4 @@
 using HotelManagementApp.Application.CQRS.Blacklist.GetAll;
-using HotelManagementApp.Application.Responses.AccountResponses;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.AccountRepositories;
@@ -7,9 +6,8 @@ using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.AccountModels;
 using HotelManagementApp.Core.Models.GuestModels;
-using Microsoft.Extensions.Configuration;
 using Moq;
-using Xunit;
+
 namespace HotelManagementApp.UnitTests.HandlerTests.BlacklistTests;
 public class GetBlacklistQueryHandlerTests
 {

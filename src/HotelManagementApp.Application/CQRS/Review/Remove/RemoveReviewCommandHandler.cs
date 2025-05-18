@@ -1,5 +1,4 @@
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using MediatR;
 

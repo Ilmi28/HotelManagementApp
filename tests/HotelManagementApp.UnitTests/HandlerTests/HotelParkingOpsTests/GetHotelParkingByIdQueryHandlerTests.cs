@@ -10,14 +10,14 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelParkingOpsTests
     public class GetHotelParkingByIdQueryHandlerTests
     {
         private readonly Mock<IHotelParkingRepository> _parkingRepositoryMock = new();
-        private readonly Mock<IParkingDiscountService> _discountServiceMock = new();
+        private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetHotelParkingByIdQueryHandler _handler;
 
         public GetHotelParkingByIdQueryHandlerTests()
         {
             _handler = new GetHotelParkingByIdQueryHandler(
                 _parkingRepositoryMock.Object,
-                _discountServiceMock.Object
+                _pricingServiceMock.Object
             );
         }
 
@@ -55,9 +55,9 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelParkingOpsTests
             _parkingRepositoryMock
                 .Setup(repo => repo.GetHotelParkingById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(parking);
-            _discountServiceMock
-                .Setup(service => service.CalculateDiscount(parking, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(10);
+            _pricingServiceMock
+                .Setup(service => service.CalculatePriceForParking(parking, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(90);
 
             var result = await _handler.Handle(new GetHotelParkingByIdQuery { ParkingId = 1 }, CancellationToken.None);
 

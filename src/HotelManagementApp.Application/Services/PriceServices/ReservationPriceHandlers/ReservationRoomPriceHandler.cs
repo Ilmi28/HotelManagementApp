@@ -15,7 +15,8 @@ public class ReservationRoomPriceHandler(
         var room = await roomRepository.GetRoomById(reservation.Room.Id, ct)
             ?? throw new RoomNotFoundException($"Room with id {reservation.Room.Id} not found");
         var roomDiscount = await roomDiscountService.CalculateDiscount(room, ct);
-        price += room.Price - (room.Price * roomDiscount / 100m);
+        var roomPrice = room.Price - (room.Price * roomDiscount / 100m);
+        price += roomPrice;
         return price;
     }
 }

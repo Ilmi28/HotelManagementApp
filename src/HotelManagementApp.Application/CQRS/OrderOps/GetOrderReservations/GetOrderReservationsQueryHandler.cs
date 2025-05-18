@@ -1,10 +1,7 @@
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
-using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.OrderOps.GetOrderReservations;

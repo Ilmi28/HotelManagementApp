@@ -1,14 +1,8 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.GetRoomTypes;
-using HotelManagementApp.Application.Responses.RoomResponses;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
 {

@@ -8,9 +8,7 @@ using HotelManagementApp.Application.CQRS.ReservationOps.GetReservationServices;
 using HotelManagementApp.Application.CQRS.ReservationOps.RemoveReservation;
 using HotelManagementApp.Application.CQRS.ReservationOps.RemoveReservationService;
 using HotelManagementApp.Application.Responses.OrderResponses;
-using HotelManagementApp.Core.Models.OrderModels;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,7 +38,7 @@ public class ReservationController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Adds a new reservation to an order.
     /// </summary>
-    /// <response code="204">Added successfully</response>
+    /// <response code="200">Added successfully and returns reservation id</response>
     /// <response code="403">Access denied</response>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -49,8 +47,8 @@ public class ReservationController(IMediator mediator) : ControllerBase
     {
         var orderPolicy = await authService.AuthorizeAsync(User, cmd.OrderId, "OrderAccess");
         if (!orderPolicy.Succeeded) return Forbid();
-        await mediator.Send(cmd, ct);
-        return NoContent();
+        var response = await mediator.Send(cmd, ct);
+        return Ok(new { ReservationId = response });
     }
 
     /// <summary>
@@ -109,7 +107,7 @@ public class ReservationController(IMediator mediator) : ControllerBase
     /// </summary>
     /// <response code="204">Added successfully</response>
     /// <response code="403">Access denied</response>
-    [HttpPost("service")]
+    [HttpPost("service/add")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddReservationService([FromBody] AddReservationServiceCommand cmd,

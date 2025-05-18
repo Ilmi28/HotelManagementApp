@@ -1,12 +1,8 @@
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.LoyaltyPointsOps.GetRewardById;
-using HotelManagementApp.Application.Responses.LoyaltyPointsResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositories;
 using HotelManagementApp.Core.Models.LoyaltyPointsModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.LoyaltyPointsOpsTests
 {

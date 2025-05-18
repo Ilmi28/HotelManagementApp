@@ -3,7 +3,6 @@ using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
-using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
 
 namespace HotelManagementApp.Application.CQRS.OrderOps.GetCompletedOrders;
@@ -21,7 +20,7 @@ public class GetCompletedOrdersQueryHandler(
         
         foreach (var completedOrder in completedOrders)
         {
-            var order = await orderRepository.GetOrderById(completedOrder.Order.Id, cancellationToken);
+            var order = await orderRepository.GetOrderById(completedOrder.OrderId, cancellationToken);
             if (order == null) continue;
             
             var orderStatuses = await orderStatusService.GetOrderStatusesAsync(order, cancellationToken);

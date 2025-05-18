@@ -677,6 +677,32 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.ToTable("Orders");
                 });
 
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderBillProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderProducts");
+                });
+
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderDetails", b =>
                 {
                     b.Property<int>("Id")
@@ -810,6 +836,9 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                     b.Property<int>("HotelParkingId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("ReservationId")
                         .HasColumnType("INTEGER");
 
@@ -829,6 +858,9 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("HotelServiceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Quantity")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("ReservationId")
@@ -1395,6 +1427,17 @@ namespace HotelManagementApp.Infrastructure.Database.Migrations
                 });
 
             modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.ConfirmedOrder", b =>
+                {
+                    b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HotelManagementApp.Core.Models.OrderModels.OrderBillProduct", b =>
                 {
                     b.HasOne("HotelManagementApp.Core.Models.OrderModels.Order", "Order")
                         .WithMany()

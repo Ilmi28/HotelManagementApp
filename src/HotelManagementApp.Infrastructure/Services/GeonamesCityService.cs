@@ -1,10 +1,6 @@
-﻿using HotelManagementApp.Core.Interfaces.Repositories;
-using HotelManagementApp.Core.Interfaces.Services;
+﻿using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
-using Microsoft.EntityFrameworkCore;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace HotelManagementApp.Infrastructure.Services;

@@ -1,5 +1,4 @@
-﻿using HotelManagementApp.Core.Models.HotelModels;
-using MediatR;
+﻿using MediatR;
 using System.ComponentModel.DataAnnotations;
 
 namespace HotelManagementApp.Application.CQRS.HotelParkingOps.Add;

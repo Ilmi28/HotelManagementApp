@@ -19,8 +19,8 @@ public class ReservationRepository(AppDbContext context) : IReservationRepositor
     {
         return await context.Reservations
             .AsNoTracking()
-            .Include(x => x.ReservationParkings)
-            .Include(x => x.ReservationServices)
+            .Include(x => x.ReservationParkings).ThenInclude(x => x.HotelParking)
+            .Include(x => x.ReservationServices).ThenInclude(x => x.HotelService)
             .Include(x => x.Order)
             .Include(x => x.Room)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken: ct);

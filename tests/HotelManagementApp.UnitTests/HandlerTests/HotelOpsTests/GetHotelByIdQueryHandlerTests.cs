@@ -1,11 +1,9 @@
 using HotelManagementApp.Application.CQRS.HotelOps.GetById;
-using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelOpsTests;
 public class GetHotelByIdQueryHandlerTests

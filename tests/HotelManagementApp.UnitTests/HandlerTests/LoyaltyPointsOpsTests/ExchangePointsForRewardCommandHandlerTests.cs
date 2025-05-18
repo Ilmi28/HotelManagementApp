@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.LoyaltyPointsOps.ExchangePointsForReward;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -9,7 +5,6 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositories;
 using HotelManagementApp.Core.Models.LoyaltyPointsModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.LoyaltyPointsOpsTests
 {

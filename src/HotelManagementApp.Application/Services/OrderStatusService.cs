@@ -13,7 +13,7 @@ public class OrderStatusService(
 {
     public async Task<OrderStatusesDto> GetOrderStatusesAsync(Order order, CancellationToken cancellationToken)
     {
-        var pendingOrder = await pendingOrderRepository.GetPendingOrderById(order.Id, cancellationToken);
+        var pendingOrder = await pendingOrderRepository.GetPendingOrderByOrderId(order.Id, cancellationToken);
         var confirmedOrder = await confirmedOrderRepository.GetConfirmedOrderByOrderId(order.Id, cancellationToken);
         var cancelledOrder = await cancelledOrderRepository.GetCancelledOrderByOrderId(order.Id, cancellationToken);
         var completedOrder = await completedOrderRepository.GetCompletedOrderByOrderId(order.Id, cancellationToken);

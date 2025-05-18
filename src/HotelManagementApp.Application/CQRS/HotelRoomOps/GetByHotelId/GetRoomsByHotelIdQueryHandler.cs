@@ -1,6 +1,5 @@
 ﻿using HotelManagementApp.Application.Responses.RoomResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
@@ -12,7 +11,7 @@ public class GetRoomsByHotelIdQueryHandler(
     IHotelRepository hotelRepository,
     IRoomImageRepository imageRepository,
     IFileService fileService,
-    IRoomDiscountService discountService)
+    IPricingService pricingService)
     : IRequestHandler<GetRoomsByHotelIdQuery, ICollection<RoomResponse>>
 {
     public async Task<ICollection<RoomResponse>> Handle(GetRoomsByHotelIdQuery request, CancellationToken cancellationToken)
@@ -23,7 +22,7 @@ public class GetRoomsByHotelIdQueryHandler(
         var response = new List<RoomResponse>();
         foreach (var room in roomModels)
         {
-            var discount = await discountService.CalculateDiscount(room, cancellationToken);
+            var finalPrice = await pricingService.CalculatePriceForRoom(room, cancellationToken);
             var roomResponse = new RoomResponse
             {
                 Id = room.Id,
@@ -33,8 +32,8 @@ public class GetRoomsByHotelIdQueryHandler(
                 HotelId = room.Hotel.Id,
                 RoomImages = (await imageRepository.GetRoomImagesByRoomId(room.Id, cancellationToken))
                     .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList(),
-                DiscountPercent = discount,
-                FinalPrice = room.Price - (room.Price * discount / 100),
+                DiscountPercent = 100 - (100 * finalPrice / room.Price),
+                FinalPrice = finalPrice,
             };
             response.Add(roomResponse);
         }

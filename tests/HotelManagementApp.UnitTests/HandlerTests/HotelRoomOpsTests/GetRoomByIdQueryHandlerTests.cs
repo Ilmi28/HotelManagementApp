@@ -1,16 +1,10 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.GetById;
-using HotelManagementApp.Application.Responses.RoomResponses;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
 {
@@ -19,7 +13,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
         private readonly Mock<IRoomRepository> _roomRepositoryMock = new();
         private readonly Mock<IRoomImageRepository> _roomImageRepositoryMock = new();
         private readonly Mock<IFileService> _fileServiceMock = new();
-        private readonly Mock<IRoomDiscountService> _roomDiscountServiceMock = new();
+        private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetRoomByIdQueryHandler _handler;
 
         public GetRoomByIdQueryHandlerTests()
@@ -28,7 +22,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
                 _roomRepositoryMock.Object,
                 _roomImageRepositoryMock.Object,
                 _fileServiceMock.Object,
-                _roomDiscountServiceMock.Object);
+                _pricingServiceMock.Object);
         }
 
         [Fact]
@@ -54,7 +48,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
                 Description = "Desc"
             };
             _roomRepositoryMock.Setup(r => r.GetRoomById(1, It.IsAny<CancellationToken>())).ReturnsAsync(room);
-            _roomDiscountServiceMock.Setup(r => r.CalculateDiscount(room, It.IsAny<CancellationToken>())).ReturnsAsync(15);
+            _pricingServiceMock.Setup(r => r.CalculatePriceForRoom(room, It.IsAny<CancellationToken>())).ReturnsAsync(85);
             _roomImageRepositoryMock.Setup(r => r.GetRoomImagesByRoomId(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HotelRoomImage>
                 {

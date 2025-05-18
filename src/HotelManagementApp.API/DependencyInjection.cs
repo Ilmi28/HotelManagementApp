@@ -10,7 +10,6 @@ using HotelManagementApp.API.Policies.OrderAccessPolicy;
 using HotelManagementApp.API.Policies.PaymentAccessPolicy;
 using HotelManagementApp.API.Policies.ReservationAccessPolicy;
 using HotelManagementApp.API.Policies.ReviewAccessPolicy;
-using HotelManagementApp.Core.Models.PaymentModels;
 
 namespace HotelManagementApp.API;
 

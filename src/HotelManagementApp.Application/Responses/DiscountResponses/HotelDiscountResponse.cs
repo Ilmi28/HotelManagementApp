@@ -1,6 +1,4 @@
-﻿using HotelManagementApp.Core.Models.HotelModels;
-
-namespace HotelManagementApp.Application.Responses.DiscountResponses;
+﻿namespace HotelManagementApp.Application.Responses.DiscountResponses;
 
 public class HotelDiscountResponse
 {

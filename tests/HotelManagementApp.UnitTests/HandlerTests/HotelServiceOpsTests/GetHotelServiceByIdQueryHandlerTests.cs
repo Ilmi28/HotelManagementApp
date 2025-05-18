@@ -1,27 +1,23 @@
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.HotelServiceOps.GetById;
-using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelServiceOpsTests
 {
     public class GetHotelServiceByIdQueryHandlerTests
     {
         private readonly Mock<IHotelServiceRepository> _serviceRepositoryMock = new();
-        private readonly Mock<IServiceDiscountService> _discountServiceMock = new();
+        private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetHotelServiceByIdQueryHandler _handler;
 
         public GetHotelServiceByIdQueryHandlerTests()
         {
             _handler = new GetHotelServiceByIdQueryHandler(
                 _serviceRepositoryMock.Object,
-                _discountServiceMock.Object);
+                _pricingServiceMock.Object);
         }
 
         [Fact]
@@ -47,7 +43,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.HotelServiceOpsTests
             };
 
             _serviceRepositoryMock.Setup(r => r.GetHotelServiceById(1, It.IsAny<CancellationToken>())).ReturnsAsync(service);
-            _discountServiceMock.Setup(d => d.CalculateDiscount(service, It.IsAny<CancellationToken>())).ReturnsAsync(10);
+            _pricingServiceMock.Setup(d => d.CalculatePriceForService(service, It.IsAny<CancellationToken>())).ReturnsAsync(180);
 
             var query = new GetHotelServiceByIdQuery { ServiceId = 1 };
 

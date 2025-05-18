@@ -1,6 +1,5 @@
 ﻿using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;
@@ -10,7 +9,7 @@ namespace HotelManagementApp.Application.CQRS.HotelParkingOps.GetByHotelId;
 public class GetHotelParkingsByHotelIdQueryHandler(
     IHotelRepository hotelRepository,
     IHotelParkingRepository parkingRepository,
-    IParkingDiscountService discountService) 
+    IPricingService pricingService) 
     : IRequestHandler<GetHotelParkingsByHotelIdQuery, ICollection<HotelParkingResponse>>
 {
     public async Task<ICollection<HotelParkingResponse>> Handle(GetHotelParkingsByHotelIdQuery request, CancellationToken cancellationToken)
@@ -21,7 +20,7 @@ public class GetHotelParkingsByHotelIdQueryHandler(
         var response = new List<HotelParkingResponse>();
         foreach (var parking in parkings)
         {
-            var discount = await discountService.CalculateDiscount(parking, cancellationToken);
+            var finalPrice = await pricingService.CalculatePriceForParking(parking, cancellationToken);
             response.Add(new HotelParkingResponse
             {
                 Id = parking.Id,
@@ -29,8 +28,8 @@ public class GetHotelParkingsByHotelIdQueryHandler(
                 Description = parking.Description,
                 Price = parking.Price,
                 HotelId = parking.Hotel.Id,
-                DiscountPercent = discount,
-                FinalPrice = parking.Price - ((discount / 100m) * parking.Price),
+                DiscountPercent = 100 - (100 * finalPrice / parking.Price),
+                FinalPrice = finalPrice,
             });
         }
 

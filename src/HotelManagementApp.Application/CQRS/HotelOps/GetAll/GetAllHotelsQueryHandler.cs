@@ -1,5 +1,4 @@
 ﻿using HotelManagementApp.Application.Responses.HotelResponses;
-using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using MediatR;

@@ -1,4 +1,3 @@
-using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using HotelManagementApp.Core.Models.PaymentModels;
 using HotelManagementApp.Infrastructure.Database;
@@ -21,7 +20,7 @@ public class PaymentRepository(AppDbContext context) : IPaymentRepository
         return await context.Payments
             .AsNoTracking()
             .Include(x => x.Order)
-            .FirstOrDefaultAsync(x => x.Order.Id == orderId, ct);
+            .FirstOrDefaultAsync(x => x.Order!.Id == orderId, ct);
     }
     
     public async Task<ICollection<Payment>> GetPayments(CancellationToken ct)
@@ -34,7 +33,6 @@ public class PaymentRepository(AppDbContext context) : IPaymentRepository
     
     public async Task AddPayment(Payment payment, CancellationToken ct)
     {
-        context.Attach(payment.Order);
         await context.Payments.AddAsync(payment, ct);
         await context.SaveChangesAsync(ct);
     }
@@ -44,7 +42,7 @@ public class PaymentRepository(AppDbContext context) : IPaymentRepository
         return await context.Payments
             .AsNoTracking()
             .Include(x => x.Order)
-            .Where(x => x.Order.UserId == guestId)
+            .Where(x => x.Order!.UserId == guestId)
             .ToListAsync(ct);
     }
 

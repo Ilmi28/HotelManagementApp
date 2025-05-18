@@ -1,7 +1,5 @@
-using HotelManagementApp.Application.Responses.HotelResponses;
 using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using MediatR;
 

@@ -1,6 +1,4 @@
-﻿using HotelManagementApp.Core.Models.HotelModels;
-
-namespace HotelManagementApp.Core.Models.OrderModels;
+﻿namespace HotelManagementApp.Core.Models.OrderModels;
 
 public class OrderDetails
 {

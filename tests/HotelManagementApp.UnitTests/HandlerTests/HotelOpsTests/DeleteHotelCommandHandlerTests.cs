@@ -3,7 +3,6 @@ using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.HotelModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelOpsTests;
 public class DeleteHotelCommandHandlerTests
@@ -42,7 +41,7 @@ public class DeleteHotelCommandHandlerTests
 
         await _handler.Handle(command, default);
 
-        _hotelRepositoryMock.Verify(m => m.RemoveHotel(command.HotelId, default), Times.Once);
+        _hotelRepositoryMock.Verify(m => m.RemoveHotel(hotel, default), Times.Once);
     }
 
     [Fact]

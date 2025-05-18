@@ -3,7 +3,6 @@ using HotelManagementApp.Core.Interfaces.Repositories.DiscountRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Models.DiscountModels;
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace HotelManagementApp.Application.CQRS.Discount.AddRoomDiscount;
 

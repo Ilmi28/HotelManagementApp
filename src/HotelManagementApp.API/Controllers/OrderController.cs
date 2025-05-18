@@ -1,6 +1,7 @@
 using HotelManagementApp.Application.CQRS.OrderOps.CancelOrder;
 using HotelManagementApp.Application.CQRS.OrderOps.ConfirmOrder;
 using HotelManagementApp.Application.CQRS.OrderOps.CreateOrder;
+using HotelManagementApp.Application.CQRS.OrderOps.GetBillPdf;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrderById;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrdersByGuest;
 using HotelManagementApp.Application.CQRS.OrderOps.UpdateOrder;
@@ -9,9 +10,7 @@ using HotelManagementApp.Application.CQRS.OrderOps.GetConfirmedOrders;
 using HotelManagementApp.Application.CQRS.OrderOps.GetCompletedOrders;
 using HotelManagementApp.Application.CQRS.OrderOps.GetCancelledOrders;
 using HotelManagementApp.Application.Responses.OrderResponses;
-using HotelManagementApp.Core.Models.OrderModels;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,11 +24,11 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Creates a new order
     /// </summary>
-    /// <response code="204">Order created successfully</response>
+    /// <response code="200">Order created successfully and returns order id</response>
     /// <response code="403">User is not authorized to create this order</response>
     [HttpPost]
     [Authorize(Policy = "EmailConfirmed")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddOrder([FromBody] CreateOrderCommand cmd, IAuthorizationService authService, CancellationToken ct)
     {
@@ -37,8 +36,8 @@ public class OrderController(IMediator mediator) : ControllerBase
         var managerPolicy = await authService.AuthorizeAsync(User, cmd.UserId, "RoleHierarchy");
         if (!ownerPolicy.Succeeded && !managerPolicy.Succeeded)
             return Forbid();
-        await mediator.Send(cmd, ct);
-        return NoContent();
+        var response = await mediator.Send(cmd, ct);
+        return Ok(new { OrderId = response });
     }
 
     /// <summary>
@@ -116,7 +115,9 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// Gets all pending orders
     /// </summary>
     /// <response code="200">Returns list of pending orders</response>
+    /// <response code="403">User is not authorized for viewing orders</response>
     [HttpGet("pending")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPendingOrders(CancellationToken ct)
     {
@@ -128,7 +129,9 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// Gets all confirmed orders
     /// </summary>
     /// <response code="200">Returns list of confirmed orders</response>
+    /// <response code="403">User is not authorized for viewing orders</response>
     [HttpGet("confirmed")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetConfirmedOrders(CancellationToken ct)
     {
@@ -140,7 +143,9 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// Gets all completed orders
     /// </summary>
     /// <response code="200">Returns list of completed orders</response>
+    /// <response code="403">User is not authorized for viewing orders</response>
     [HttpGet("completed")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCompletedOrders(CancellationToken ct)
     {
@@ -152,11 +157,27 @@ public class OrderController(IMediator mediator) : ControllerBase
     /// Gets all cancelled orders
     /// </summary>
     /// <response code="200">Returns list of cancelled orders</response>
+    /// <response code="403">User is not authorized for viewing orders</response>
     [HttpGet("cancelled")]
+    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(typeof(IEnumerable<OrderResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCancelledOrders(CancellationToken ct)
     {
         var response = await mediator.Send(new GetCancelledOrdersQuery(), ct);
         return Ok(response);
+    }
+    
+    /// <summary>
+    /// Returns bill for order in pdf format
+    /// </summary>
+    /// <response code="200">Returns bill for order</response>
+    [HttpGet("{orderId}/bill")]
+    [ProducesResponseType(typeof(File), StatusCodes.Status200OK, "application/pdf")]
+    public async Task<IActionResult> GetBill(int orderId, IAuthorizationService authService, CancellationToken ct)
+    {
+        var orderPolicy = await authService.AuthorizeAsync(User, orderId, "OrderAccess");
+        if (!orderPolicy.Succeeded) return Forbid();
+        var response = await mediator.Send(new GetOrderBillPdfQuery { OrderId = orderId }, ct);
+        return File(response, "application/pdf", $"Faktura_Zamowienie{orderId}.pdf");
     }
 }

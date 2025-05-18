@@ -1,3 +1,4 @@
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
@@ -14,17 +15,18 @@ public class PayWithCashCommandHandler(
     IPaymentRepository paymentRepository,
     ICashPaymentRepository cashPaymentRepository,
     IPricingService pricingService,
-    ICompletedOrderRepository completedOrderRepository) : IRequestHandler<PayWithCashCommand>
+    ICompletedOrderRepository completedOrderRepository,
+    IBillProductService billProductService) : IRequestHandler<PayWithCashCommand>
 {
     public async Task Handle(PayWithCashCommand request, CancellationToken cancellationToken)
     {
         var order = await orderRepository.GetOrderById(request.OrderId, cancellationToken)
                     ?? throw new OrderNotFoundException($"Order with id: {request.OrderId} not found.");
         if (order.Status is OrderStatusEnum.Pending or OrderStatusEnum.Cancelled or OrderStatusEnum.Completed)
-            throw new InvalidOperationException($"Order status should be confirmed to perform payment. Current status: {order.Status}");
+            throw new InvalidOperationException($"Order {order.Id} status should be confirmed to perform payment. Current status: {order.Status}");
         var payment = new Payment
         {
-            Order = order,
+            OrderId = request.OrderId,
             PaymentMethod = PaymentMethodEnum.Cash,
             Amount = await pricingService.CalculatePriceForOrder(order, cancellationToken)
         };
@@ -36,6 +38,7 @@ public class PayWithCashCommandHandler(
         await cashPaymentRepository.AddCashPayment(cashPayment, cancellationToken);
         order.Status = OrderStatusEnum.Completed;
         await orderRepository.UpdateOrder(order, cancellationToken);
-        await completedOrderRepository.AddCompletedOrder(new CompletedOrder { Order = order }, cancellationToken);
+        await completedOrderRepository.AddCompletedOrder(new CompletedOrder { OrderId = order.Id }, cancellationToken);
+        await billProductService.AddBillProductsForOrder(order, cancellationToken);
     }
 }

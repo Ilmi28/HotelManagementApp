@@ -1,6 +1,4 @@
-using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Application.Responses.PaymentResponses;
-using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using MediatR;
 
@@ -20,7 +18,7 @@ public class GetAllPaymentsQueryHandler(IPaymentRepository paymentRepository)
             {
                 Id = payment.Id,
                 PaymentMethod = payment.PaymentMethod.ToString().ToUpper(),
-                OrderId = payment.Order.Id,
+                OrderId = payment.OrderId,
                 Amount = payment.Amount,
                 Date = payment.Date
             });

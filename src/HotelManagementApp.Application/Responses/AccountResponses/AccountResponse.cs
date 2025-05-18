@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-
-namespace HotelManagementApp.Application.Responses.AccountResponses;
+﻿namespace HotelManagementApp.Application.Responses.AccountResponses;
 
 public class AccountResponse()
 {

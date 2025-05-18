@@ -1,7 +1,5 @@
 ﻿using HotelManagementApp.Core.Enums;
-using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Models.OrderModels;
 using MediatR;
@@ -11,9 +9,9 @@ namespace HotelManagementApp.Application.CQRS.OrderOps.CreateOrder;
 public class CreateOrderCommandHandler(
     IUserManager userManager, 
     IOrderRepository orderRepository,
-    IPendingOrderRepository pendingOrderRepository) : IRequestHandler<CreateOrderCommand>
+    IPendingOrderRepository pendingOrderRepository) : IRequestHandler<CreateOrderCommand, int>
 {
-    public async Task Handle(CreateOrderCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(request.UserId)
             ?? throw new UnauthorizedAccessException();
@@ -37,6 +35,6 @@ public class CreateOrderCommandHandler(
         orderDetails.Order = order;
         await orderRepository.AddOrder(order, cancellationToken);
         await pendingOrderRepository.AddPendingOrder(new PendingOrder {Order = order}, cancellationToken);
-
+        return order.Id;
     }
 }

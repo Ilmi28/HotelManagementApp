@@ -1,3 +1,4 @@
+using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
@@ -20,12 +21,15 @@ public class AddReservationServiceCommandHandler(
             ?? throw new HotelServiceNotFoundException($"Hotel service with id {request.ServiceId} not found");
         var room = await roomRepository.GetRoomById(reservation.Room.Id, cancellationToken) 
             ?? throw new RoomNotFoundException($"Room with id {reservation.Room.Id} not found");
+        if (reservation.Order.Status is OrderStatusEnum.Cancelled or OrderStatusEnum.Confirmed)
+            throw new InvalidOperationException($"Order with id {reservation.Order.Id} is cancelled or confirmed. You can't modify a reservation for it.");
         if (service.Hotel.Id != room.Hotel.Id)
             throw new InvalidOperationException("Hotel service and reservation must be from the same hotel");
         var reservationService = new ReservationService
         {
             Reservation = reservation,
-            HotelService = service
+            HotelService = service,
+            Quantity = request.Quantity
         };
         await reservationServiceRepository.AddReservationService(reservationService, cancellationToken);
     }

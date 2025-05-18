@@ -1,5 +1,3 @@
-using HotelManagementApp.Application.Responses.HotelResponses;
-
 namespace HotelManagementApp.Application.Responses.OrderResponses;
 
 public class ReservationResponse

@@ -2,7 +2,6 @@
 using HotelManagementApp.Core.Interfaces.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 
 namespace HotelManagementApp.Infrastructure.Database.Identity;
 

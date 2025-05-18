@@ -1,6 +1,5 @@
+using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using MediatR;
 
@@ -15,6 +14,8 @@ public class RemoveReservationCommandHandler(
     {
         var reservation = await reservationRepository.GetReservationById(request.ReservationId, cancellationToken)
             ?? throw new ReservationNotFoundException($"Reservation with id {request.ReservationId} not found");
+        if (reservation.Order.Status is OrderStatusEnum.Cancelled or OrderStatusEnum.Confirmed)
+            throw new InvalidOperationException($"Order with id {reservation.Order.Id} is cancelled or confirmed. You can't modify a reservation for it.");
         await reservationRepository.DeleteReservation(reservation, cancellationToken);
         foreach (var reservationParking in reservation.ReservationParkings)
             await reservationParkingRepository.RemoveReservationParking(reservationParking, cancellationToken);

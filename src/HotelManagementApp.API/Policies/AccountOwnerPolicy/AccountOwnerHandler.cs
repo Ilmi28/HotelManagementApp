@@ -1,5 +1,4 @@
-﻿using HotelManagementApp.Core.Dtos;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 namespace HotelManagementApp.API.Policies.AccountOwnerPolicy;

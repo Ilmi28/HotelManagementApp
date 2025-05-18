@@ -1,17 +1,8 @@
 ﻿using HotelManagementApp.Application.CQRS.VIP.Add;
 using HotelManagementApp.Core.Exceptions.Forbidden;
 using HotelManagementApp.Core.Interfaces.Identity;
-using HotelManagementApp.Core.Interfaces.Repositories;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
 using HotelManagementApp.Core.Dtos;
-using System.Diagnostics;
-using HotelManagementApp.Infrastructure.Database.Identity;
 using HotelManagementApp.Core.Exceptions.Conflict;
 using HotelManagementApp.Core.Interfaces.Repositories.GuestRepositories;
 

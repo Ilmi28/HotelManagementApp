@@ -1,7 +1,6 @@
 using HotelManagementApp.Application.CQRS.Cities.GetCountries;
 using HotelManagementApp.Core.Interfaces.Repositories.HotelRepositories;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.CitiesTests;
 public class GetCountriesQueryHandlerTests

@@ -1,12 +1,7 @@
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.LoyaltyPointsOps.GetLoyaltyPointsOfGuests;
-using HotelManagementApp.Application.Responses.LoyaltyPointsResponses;
 using HotelManagementApp.Core.Interfaces.Repositories.LoyaltyPointsRepositories;
 using HotelManagementApp.Core.Models.LoyaltyPointsModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.LoyaltyPointsOpsTests
 {

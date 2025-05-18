@@ -23,11 +23,13 @@ public static class DependencyInjection
         builder.Services.AddScoped<IReservationPriceHandler, ReservationServicePriceHandler>();
         builder.Services.AddScoped<IReservationPricePipeline, ReservationPricePipeline>();
         
+        
         builder.Services.AddScoped<IRoomDiscountService, RoomDiscountService>();
         builder.Services.AddScoped<IParkingDiscountService, ParkingDiscountService>();
         builder.Services.AddScoped<IServiceDiscountService, ServiceDiscountService>();
         builder.Services.AddScoped<IPricingService, OrderPricingService>();
         builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
+        builder.Services.AddScoped<IBillProductService, BillProductService>();
         
         return builder;
     }

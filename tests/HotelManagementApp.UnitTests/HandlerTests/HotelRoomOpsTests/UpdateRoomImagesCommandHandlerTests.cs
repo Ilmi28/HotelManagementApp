@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.HotelRoomOps.UpdateRoomImages;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -10,7 +6,6 @@ using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.HotelModels;
 using Microsoft.AspNetCore.Http;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.HotelRoomOpsTests
 {

@@ -12,7 +12,6 @@ using HotelManagementApp.Infrastructure.Database.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace HotelManagementApp.Infrastructure.Database;
 
@@ -58,6 +57,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<User>(op
     public DbSet<ParkingDiscount> ParkingDiscounts { get; set; }
     public DbSet<ReservationParking> ReservationParkings { get; set; }
     public DbSet<ReservationService> ReservationServices { get; set; }
+    public DbSet<OrderBillProduct> OrderProducts { get; set; } 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

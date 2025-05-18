@@ -7,4 +7,5 @@ public class ReservationParking
     public int Id { get; set; }
     public required Reservation Reservation { get; set; }
     public required HotelParking HotelParking { get; set; }
+    public int Quantity { get; set; } = 1;
 }

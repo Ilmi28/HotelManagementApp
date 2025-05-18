@@ -5,7 +5,6 @@ using HotelManagementApp.Core.Models.DiscountModels;
 using HotelManagementApp.Core.Models.HotelModels;
 using MediatR;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.DiscountTests;
 

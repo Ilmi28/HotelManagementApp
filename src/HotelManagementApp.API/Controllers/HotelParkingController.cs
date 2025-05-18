@@ -5,7 +5,6 @@ using HotelManagementApp.Application.CQRS.HotelParkingOps.GetByid;
 using HotelManagementApp.Application.CQRS.HotelParkingOps.Update;
 using HotelManagementApp.Application.Responses.HotelResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

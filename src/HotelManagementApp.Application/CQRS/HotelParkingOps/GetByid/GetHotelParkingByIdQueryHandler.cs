@@ -8,7 +8,7 @@ namespace HotelManagementApp.Application.CQRS.HotelParkingOps.GetByid;
 
 public class GetHotelParkingByIdQueryHandler(
     IHotelParkingRepository parkingRepository,
-    IParkingDiscountService discountService) 
+    IPricingService pricingService) 
     : IRequestHandler<GetHotelParkingByIdQuery, HotelParkingResponse>
 {
     public async Task<HotelParkingResponse> Handle(GetHotelParkingByIdQuery request, CancellationToken cancellationToken)
@@ -16,7 +16,7 @@ public class GetHotelParkingByIdQueryHandler(
         var parking = await parkingRepository.GetHotelParkingById(request.ParkingId, cancellationToken)
             ?? throw new HotelParkingNotFoundException($"Hotel parking with id {request.ParkingId} not found");
             
-        var discount = await discountService.CalculateDiscount(parking, cancellationToken);
+        var finalPrice = await pricingService.CalculatePriceForParking(parking, cancellationToken);
         
         return new HotelParkingResponse
         {
@@ -25,8 +25,8 @@ public class GetHotelParkingByIdQueryHandler(
             Description = parking.Description,
             Price = parking.Price,
             HotelId = parking.Hotel.Id,
-            DiscountPercent = discount,
-            FinalPrice = parking.Price - ((discount / 100m) * parking.Price),
+            DiscountPercent = 100 - (100 * finalPrice / parking.Price),
+            FinalPrice = finalPrice,
         };
     }
 }

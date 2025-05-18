@@ -1,6 +1,4 @@
-using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Application.Responses.PaymentResponses;
-using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using MediatR;
 

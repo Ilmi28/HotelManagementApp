@@ -5,7 +5,7 @@ using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Loggers;
 using Moq;
-using Xunit;
+
 namespace HotelManagementApp.UnitTests.HandlerTests.AccountTests;
 public class DeleteWithoutPasswordCommandHandlerTests
 {

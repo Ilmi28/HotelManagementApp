@@ -43,7 +43,21 @@ public class OrderRepository(AppDbContext context) : IOrderRepository
 
     public async Task UpdateOrder(Order order, CancellationToken ct = default)
     {
-        context.Orders.Update(order);
+        var trackedEntity = context.ChangeTracker.Entries<Order>()
+            .FirstOrDefault(e => e.Entity.Id == order.Id);
+        if (trackedEntity != null)
+        {
+            context.Entry(trackedEntity.Entity).State = EntityState.Detached;
+        }
+
+        // Reload fresh from DB without tracking
+        var freshOrder = await context.Orders.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == order.Id, ct);
+        if (freshOrder == null)
+            throw new InvalidOperationException("Order not found");
+
+        // Apply updates manually if needed, or just attach order
+        context.Attach(order).State = EntityState.Modified;
         await context.SaveChangesAsync(ct);
     }
 

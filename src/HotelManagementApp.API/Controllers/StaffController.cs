@@ -3,7 +3,6 @@ using HotelManagementApp.Application.CQRS.Role.GetAll;
 using HotelManagementApp.Application.CQRS.Role.Remove;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

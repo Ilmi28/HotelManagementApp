@@ -14,7 +14,6 @@ using HotelManagementApp.Application.CQRS.Account.Update;
 using HotelManagementApp.Application.CQRS.Account.UpdateProfilePicture;
 using HotelManagementApp.Application.Responses.AccountResponses;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

@@ -1,7 +1,5 @@
-using HotelManagementApp.Application.Responses.OrderResponses;
 using HotelManagementApp.Application.Responses.PaymentResponses;
 using HotelManagementApp.Core.Exceptions.NotFound;
-using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
 using MediatR;
 
@@ -19,7 +17,7 @@ public class GetPaymentByIdQueryHandler(IPaymentRepository paymentRepository) : 
             PaymentMethod = payment.PaymentMethod.ToString().ToUpper(),
             Date = payment.Date,
             Amount = payment.Amount,
-            OrderId = payment.Order.Id
+            OrderId = payment.OrderId
         };
     }
 }

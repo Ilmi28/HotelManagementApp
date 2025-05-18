@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace HotelManagementApp.Core.Enums;
+﻿namespace HotelManagementApp.Core.Enums;
 
 public enum PaymentMethodEnum
 {

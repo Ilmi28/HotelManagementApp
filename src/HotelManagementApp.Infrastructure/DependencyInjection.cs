@@ -31,6 +31,7 @@ using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using HotelManagementApp.Infrastructure.Repositories.PaymentRepositories;
 using HotelManagementApp.Infrastructure.Repositories.ReservationRepositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using QuestPDF.Infrastructure;
 
 namespace HotelManagementApp.Infrastructure;
 
@@ -42,7 +43,11 @@ public static class DependencyInjection
 
         var dbPath = Path.Combine(Directory.GetCurrentDirectory(), configuration.GetValue<string>("SQLiteDbPath") ?? String.Empty);
         var fullPath = Path.GetFullPath(dbPath);
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data source={fullPath}"));
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlite($"Data source={fullPath}");
+            options.EnableSensitiveDataLogging();
+        });
 
         builder.Services.AddIdentity<User, IdentityRole>()
             .AddEntityFrameworkStores<AppDbContext>();
@@ -111,7 +116,10 @@ public static class DependencyInjection
         builder.Services.AddScoped<IHotelReviewImageRepository, HotelReviewImageRepository>();
         builder.Services.AddScoped<ILoyaltyRewardsRepository, LoyaltyRewardRepository>();
         builder.Services.AddScoped<ILoyaltyRewardUserRepository, LoyaltyRewardUserRepository>();
+        builder.Services.AddScoped<IOrderBillProductRepository, OrderBillProductRepository>();
 
+        QuestPDF.Settings.License = LicenseType.Community;
+        
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
         builder.Services.AddScoped<IFileService, LocalFileService>();
@@ -119,7 +127,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICreditCardPaymentService, FakeCreditCardPaymentService>();
         builder.Services.AddHttpClient<ICityService, GeonamesCityService>();
         builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>();
-
+        builder.Services.AddScoped<IBillDocumentService, BillPdfService>();
+        
         return builder;
     }
 }

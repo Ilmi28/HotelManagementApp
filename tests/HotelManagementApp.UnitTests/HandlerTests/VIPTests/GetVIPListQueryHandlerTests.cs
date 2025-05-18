@@ -1,15 +1,6 @@
 ﻿using HotelManagementApp.Application.CQRS.VIP.GetAll;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Moq;
-using Xunit;
-using HotelManagementApp.Core.Interfaces.Repositories;
-using Microsoft.AspNetCore.Identity;
 using HotelManagementApp.Core.Interfaces.Identity;
-using Microsoft.Extensions.Configuration;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.AccountModels;

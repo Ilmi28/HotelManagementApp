@@ -11,6 +11,6 @@ public class DeleteHotelCommandHandler(IHotelRepository hotelRepository) : IRequ
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotelModel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
             ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
-        await hotelRepository.RemoveHotel(request.HotelId, cancellationToken);
+        await hotelRepository.RemoveHotel(hotelModel, cancellationToken);
     }
 }

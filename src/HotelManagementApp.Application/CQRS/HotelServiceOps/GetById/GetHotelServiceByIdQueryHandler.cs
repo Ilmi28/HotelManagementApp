@@ -8,7 +8,7 @@ namespace HotelManagementApp.Application.CQRS.HotelServiceOps.GetById;
 
 public class GetHotelServiceByIdQueryHandler(
     IHotelServiceRepository serviceRepository,
-    IServiceDiscountService discountService)
+    IPricingService pricingService)
     : IRequestHandler<GetHotelServiceByIdQuery, HotelServiceResponse>
 {
     public async Task<HotelServiceResponse> Handle(GetHotelServiceByIdQuery request, CancellationToken cancellationToken)
@@ -16,7 +16,7 @@ public class GetHotelServiceByIdQueryHandler(
         var service = await serviceRepository.GetHotelServiceById(request.ServiceId, cancellationToken)
             ?? throw new HotelServiceNotFoundException($"Hotel service with id {request.ServiceId} not found");
             
-        var discount = await discountService.CalculateDiscount(service, cancellationToken);
+        var finalPrice = await pricingService.CalculatePriceForService(service, cancellationToken);
         
         return new HotelServiceResponse
         {
@@ -25,8 +25,8 @@ public class GetHotelServiceByIdQueryHandler(
             Description = service.Description,
             Price = service.Price,
             HotelId = service.Hotel.Id,
-            Discount = discount,
-            FinalPrice = service.Price - ((discount / 100m) * service.Price)
+            Discount = 100 - (100 * finalPrice / service.Price),
+            FinalPrice = finalPrice
         };
     }
 }
