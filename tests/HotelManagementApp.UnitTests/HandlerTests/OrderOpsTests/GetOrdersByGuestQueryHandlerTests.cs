@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrdersByGuest;
-using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Dtos;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -15,17 +11,13 @@ using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using HotelManagementApp.Core.Models.PaymentModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {
     public class GetOrdersByGuestQueryHandlerTests
     {
         private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
-        private readonly Mock<IPendingOrderRepository> _pendingOrderRepositoryMock = new();
-        private readonly Mock<ICompletedOrderRepository> _completedOrderRepositoryMock = new();
-        private readonly Mock<IConfirmedOrderRepository> _confirmedOrderRepositoryMock = new();
-        private readonly Mock<ICancelledOrderRepository> _cancelledOrderRepositoryMock = new();
+        private readonly Mock<IOrderStatusService> _orderStatusServiceMock = new();
         private readonly Mock<IUserManager> _userManagerMock = new();
         private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly Mock<IPaymentRepository> _paymentRepositoryMock = new();
@@ -35,13 +27,10 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
         {
             _handler = new GetOrdersByGuestQueryHandler(
                 _orderRepositoryMock.Object,
-                _pendingOrderRepositoryMock.Object,
-                _completedOrderRepositoryMock.Object,
-                _confirmedOrderRepositoryMock.Object,
-                _cancelledOrderRepositoryMock.Object,
                 _userManagerMock.Object,
                 _pricingServiceMock.Object,
-                _paymentRepositoryMock.Object);
+                _paymentRepositoryMock.Object,
+                _orderStatusServiceMock.Object);
         }
 
         [Fact]
@@ -70,19 +59,16 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                     PhoneNumber = "123456789"
                 }
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1
+            };
             _userManagerMock.Setup(u => u.FindByIdAsync("123"))
                 .ReturnsAsync(user);
             _orderRepositoryMock.Setup(r => r.GetOrdersByGuestId("123", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<Order> { order });
-            _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrderById(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PendingOrder?)null);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((ConfirmedOrder?)null);
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CancelledOrder?)null);
-            _completedOrderRepositoryMock.Setup(r => r.GetCompletedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CompletedOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _paymentRepositoryMock.Setup(r => r.GetPaymentsByOrderId(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Payment?)null);
             _pricingServiceMock.Setup(p => p.CalculatePriceForOrder(order, It.IsAny<CancellationToken>()))

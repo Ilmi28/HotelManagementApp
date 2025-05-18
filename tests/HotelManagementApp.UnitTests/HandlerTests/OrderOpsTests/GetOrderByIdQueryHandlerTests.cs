@@ -1,8 +1,6 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrderById;
-using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Dtos;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Exceptions.NotFound;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Repositories.PaymentRepositories;
@@ -10,17 +8,13 @@ using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using HotelManagementApp.Core.Models.PaymentModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {
     public class GetOrderByIdQueryHandlerTests
     {
         private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
-        private readonly Mock<IPendingOrderRepository> _pendingOrderRepositoryMock = new();
-        private readonly Mock<ICompletedOrderRepository> _completedOrderRepositoryMock = new();
-        private readonly Mock<IConfirmedOrderRepository> _confirmedOrderRepositoryMock = new();
-        private readonly Mock<ICancelledOrderRepository> _cancelledOrderRepositoryMock = new();
+        private readonly Mock<IOrderStatusService> _orderStatusServiceMock = new();
         private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly Mock<IPaymentRepository> _paymentRepositoryMock = new();
         private readonly GetOrderByIdQueryHandler _handler;
@@ -29,10 +23,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
         {
             _handler = new GetOrderByIdQueryHandler(
                 _orderRepositoryMock.Object,
-                _pendingOrderRepositoryMock.Object,
-                _completedOrderRepositoryMock.Object,
-                _confirmedOrderRepositoryMock.Object,
-                _cancelledOrderRepositoryMock.Object,
+                _orderStatusServiceMock.Object,
                 _pricingServiceMock.Object,
                 _paymentRepositoryMock.Object);
         }
@@ -55,49 +46,26 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                     Country = "Polska"
                 }
             };
-            var pendingOrder = new PendingOrder
-            {
-                Id = 1,
-                Order = order,
-                Date = new DateTime(2025, 1, 1)
-            };
-            var confirmedOrder = new ConfirmedOrder
-            {
-                Id = 1,
-                Order = order,
-                Date = new DateTime(2025, 1, 2)
-            };
-            var cancelledOrder = new CancelledOrder
-            {
-                Id = 1,
-                Order = order,
-                Date = new DateTime(2025, 1, 3)
-            };
-            var completedOrder = new CompletedOrder
-            {
-                Id = 1,
-                Order = order,
-                Date = new DateTime(2025, 1, 4)
-            };
             var payment = new Payment
             {
                 Id = 1,
                 Order = order,
+                OrderId = 1,
                 Amount = 123.45m,
                 PaymentMethod = Core.Enums.PaymentMethodEnum.Cash,
                 Date = new DateTime(2025, 1, 5)
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1,
+                CreatedDate = new DateTime(2025, 1, 1),
+                ConfirmedDate = new DateTime(2025, 1, 2),
+                CompletedDate = new DateTime(2025, 1, 3)
+            };
             _orderRepositoryMock.Setup(r => r.GetOrderById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrderById(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(pendingOrder);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(confirmedOrder);
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(cancelledOrder);
-            _completedOrderRepositoryMock.Setup(r => r.GetCompletedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(completedOrder);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _paymentRepositoryMock.Setup(r => r.GetPaymentsByOrderId(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(payment);
 
@@ -117,8 +85,8 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
             Assert.Equal("Polska", result.Country);
             Assert.Equal(new DateTime(2025, 1, 1), result.Created);
             Assert.Equal(new DateTime(2025, 1, 2), result.Confirmed);
-            Assert.Equal(new DateTime(2025, 1, 3), result.Cancelled);
-            Assert.Equal(new DateTime(2025, 1, 4), result.Completed);
+            Assert.Equal(new DateTime(2025, 1, 3), result.Completed);
+            Assert.Equal(null!, result.Cancelled);
             Assert.Equal(123.45m, result.TotalPrice);
         }
 
@@ -136,21 +104,18 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                     LastName = "Nowak",
                     PhoneNumber = "987654321",
                     Address = "Testowa",
-                    City = "Kraków",
+                    City = "Krakï¿½w",
                     Country = "Polska"
                 }
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 2,
+            };
             _orderRepositoryMock.Setup(r => r.GetOrderById(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrderById(2, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PendingOrder?)null);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(2, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((ConfirmedOrder?)null);
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(2, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CancelledOrder?)null);
-            _completedOrderRepositoryMock.Setup(r => r.GetCompletedOrderByOrderId(2, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CompletedOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _paymentRepositoryMock.Setup(r => r.GetPaymentsByOrderId(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Payment?)null);
             _pricingServiceMock.Setup(p => p.CalculatePriceForOrder(order, It.IsAny<CancellationToken>()))
@@ -168,7 +133,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
             Assert.Equal("Nowak", result.LastName);
             Assert.Equal("987654321", result.PhoneNumber);
             Assert.Equal("Testowa", result.Address);
-            Assert.Equal("Kraków", result.City);
+            Assert.Equal("Krakï¿½w", result.City);
             Assert.Equal("Polska", result.Country);
             Assert.Null(result.Created);
             Assert.Null(result.Confirmed);

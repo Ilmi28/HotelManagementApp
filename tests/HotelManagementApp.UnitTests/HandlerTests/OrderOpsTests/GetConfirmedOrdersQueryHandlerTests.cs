@@ -1,23 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetConfirmedOrders;
-using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Dtos;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {
     public class GetConfirmedOrdersQueryHandlerTests
     {
         private readonly Mock<IConfirmedOrderRepository> _confirmedOrderRepositoryMock = new();
-        private readonly Mock<IPendingOrderRepository> _pendingOrderRepositoryMock = new();
-        private readonly Mock<ICompletedOrderRepository> _completedOrderRepositoryMock = new();
-        private readonly Mock<ICancelledOrderRepository> _cancelledOrderRepositoryMock = new();
+        private readonly Mock<IOrderStatusService> _orderStatusServiceMock = new();
         private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
         private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetConfirmedOrdersQueryHandler _handler;
@@ -26,9 +20,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
         {
             _handler = new GetConfirmedOrdersQueryHandler(
                 _confirmedOrderRepositoryMock.Object,
-                _pendingOrderRepositoryMock.Object,
-                _completedOrderRepositoryMock.Object,
-                _cancelledOrderRepositoryMock.Object,
+                _orderStatusServiceMock.Object,
                 _orderRepositoryMock.Object,
                 _pricingServiceMock.Object);
         }
@@ -57,17 +49,18 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                 Order = order,
                 Date = new DateTime(2024, 1, 1)
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1,
+                CreatedDate = new DateTime(2025, 1, 1),
+                ConfirmedDate = new DateTime(2025, 1, 2),
+            };
             _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrders(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<ConfirmedOrder> { confirmedOrder });
             _orderRepositoryMock.Setup(r => r.GetOrderById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CancelledOrder?)null);
-            _completedOrderRepositoryMock.Setup(r => r.GetCompletedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CompletedOrder?)null);
-            _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PendingOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _pricingServiceMock.Setup(p => p.CalculatePriceForOrder(order, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(123.45m);
 
@@ -86,7 +79,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
             Assert.Equal("Testowa", response.Address);
             Assert.Equal("Warszawa", response.City);
             Assert.Equal("Polska", response.Country);
-            Assert.Equal(new DateTime(2024, 1, 1), response.Confirmed);
+            Assert.Equal(new DateTime(2025, 1, 2), response.Confirmed);
             Assert.Equal(123.45m, response.TotalPrice);
         }
 

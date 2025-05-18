@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.CreateOrder;
 using HotelManagementApp.Core.Dtos;
 using HotelManagementApp.Core.Enums;
@@ -9,7 +5,6 @@ using HotelManagementApp.Core.Interfaces.Identity;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Models.OrderModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {

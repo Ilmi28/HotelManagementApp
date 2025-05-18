@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetOrderReservations;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Exceptions.NotFound;
@@ -11,7 +6,6 @@ using HotelManagementApp.Core.Interfaces.Repositories.ReservationRepositores;
 using HotelManagementApp.Core.Models.HotelModels;
 using HotelManagementApp.Core.Models.OrderModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {

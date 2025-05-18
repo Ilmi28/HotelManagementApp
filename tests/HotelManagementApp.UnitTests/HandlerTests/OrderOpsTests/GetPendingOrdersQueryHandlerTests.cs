@@ -1,24 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetPendingOrders;
-using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Dtos;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Enums;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {
     public class GetPendingOrdersQueryHandlerTests
     {
         private readonly Mock<IPendingOrderRepository> _pendingOrderRepositoryMock = new();
-        private readonly Mock<IConfirmedOrderRepository> _confirmedOrderRepositoryMock = new();
-        private readonly Mock<ICancelledOrderRepository> _cancelledOrderRepositoryMock = new();
+        private readonly Mock<IOrderStatusService> _orderStatusServiceMock = new();
         private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
         private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetPendingOrdersQueryHandler _handler;
@@ -27,8 +21,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
         {
             _handler = new GetPendingOrdersQueryHandler(
                 _pendingOrderRepositoryMock.Object,
-                _confirmedOrderRepositoryMock.Object,
-                _cancelledOrderRepositoryMock.Object,
+                _orderStatusServiceMock.Object,
                 _orderRepositoryMock.Object,
                 _pricingServiceMock.Object);
         }
@@ -58,15 +51,17 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                 Date = new DateTime(2024, 1, 1),
                 Order = order
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1,
+                CreatedDate = new DateTime(2024, 1, 1)
+            };
             _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrders(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<PendingOrder> { pendingOrder });
             _orderRepositoryMock.Setup(r => r.GetOrderById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((ConfirmedOrder?)null);
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CancelledOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _pricingServiceMock.Setup(p => p.CalculatePriceForOrder(order, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(100m);
 
@@ -164,15 +159,18 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                 Date = new DateTime(2024, 1, 1),
                 Order = order
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1,
+                CreatedDate = new DateTime(2024, 1, 1),
+                ConfirmedDate = new DateTime(2024, 1, 2)
+            };
             _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrders(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<PendingOrder> { pendingOrder });
             _orderRepositoryMock.Setup(r => r.GetOrderById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ConfirmedOrder());
-            _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CancelledOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
 
             var query = new GetPendingOrdersQuery();
 

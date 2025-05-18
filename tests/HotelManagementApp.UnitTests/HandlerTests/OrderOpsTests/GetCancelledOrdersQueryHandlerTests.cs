@@ -1,23 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using HotelManagementApp.Application.CQRS.OrderOps.GetCancelledOrders;
-using HotelManagementApp.Application.Responses.OrderResponses;
+using HotelManagementApp.Application.Dtos;
+using HotelManagementApp.Application.Interfaces;
 using HotelManagementApp.Core.Interfaces.Repositories.OrderRepositories;
 using HotelManagementApp.Core.Interfaces.Services;
 using HotelManagementApp.Core.Models.OrderModels;
 using Moq;
-using Xunit;
 
 namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
 {
     public class GetCancelledOrdersQueryHandlerTests
     {
         private readonly Mock<ICancelledOrderRepository> _cancelledOrderRepositoryMock = new();
-        private readonly Mock<IPendingOrderRepository> _pendingOrderRepositoryMock = new();
-        private readonly Mock<IConfirmedOrderRepository> _confirmedOrderRepositoryMock = new();
-        private readonly Mock<ICompletedOrderRepository> _completedOrderRepositoryMock = new();
+        private readonly Mock<IOrderStatusService> _orderStatusServiceMock = new();
         private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
         private readonly Mock<IPricingService> _pricingServiceMock = new();
         private readonly GetCancelledOrdersQueryHandler _handler;
@@ -26,9 +20,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
         {
             _handler = new GetCancelledOrdersQueryHandler(
                 _cancelledOrderRepositoryMock.Object,
-                _pendingOrderRepositoryMock.Object,
-                _confirmedOrderRepositoryMock.Object,
-                _completedOrderRepositoryMock.Object,
+                _orderStatusServiceMock.Object,
                 _orderRepositoryMock.Object,
                 _pricingServiceMock.Object);
         }
@@ -57,17 +49,17 @@ namespace HotelManagementApp.UnitTests.HandlerTests.OrderOpsTests
                 Order = order,
                 Date = new DateTime(2024, 1, 1)
             };
-
+            var orderStatuses = new OrderStatusesDto
+            {
+                OrderId = 1,
+                CancelledDate = new DateTime(2024, 1, 1)
+            };
             _cancelledOrderRepositoryMock.Setup(r => r.GetCancelledOrders(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<CancelledOrder> { cancelledOrder });
             _orderRepositoryMock.Setup(r => r.GetOrderById(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(order);
-            _pendingOrderRepositoryMock.Setup(r => r.GetPendingOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((PendingOrder?)null);
-            _confirmedOrderRepositoryMock.Setup(r => r.GetConfirmedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((ConfirmedOrder?)null);
-            _completedOrderRepositoryMock.Setup(r => r.GetCompletedOrderByOrderId(1, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((CompletedOrder?)null);
+            _orderStatusServiceMock.Setup(r => r.GetOrderStatusesAsync(order, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(orderStatuses);
             _pricingServiceMock.Setup(p => p.CalculatePriceForOrder(order, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(123.45m);
 
