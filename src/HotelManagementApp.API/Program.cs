@@ -12,8 +12,6 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         
-        builder.WebHost.UseUrls("http://*:5000");
-        
         builder
                 .AddApiServices()
                 .AddInfrastructureServices()
