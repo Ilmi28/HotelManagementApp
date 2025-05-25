@@ -25,8 +25,6 @@ public class LoginUserCommandHandler(ITokenService tokenService,
         };
         _ = await userManager.FindByIdAsync(userDto.Id)
             ?? throw new UnauthorizedAccessException();
-        if (userDto == null)
-            return false;
         var lastToken = await tokenRepository.GetTokenByUser(userDto.Id, ct);
         if (lastToken != null)
             await tokenRepository.DeleteToken(lastToken, ct);

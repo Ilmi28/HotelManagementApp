@@ -16,14 +16,14 @@ public class AddReservationCommandHandler(
 {
     public async Task<int> Handle(AddReservationCommand request, CancellationToken cancellationToken)
     {
+        var room = await roomRepository.GetRoomById(request.RoomId, cancellationToken)
+                   ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
         if (request.From < DateOnly.FromDateTime(DateTime.Today) || request.From > request.To)
             throw new InvalidOperationException("Invalid date chosen, date should be in present and to date should sooner than from date");
         var order = await orderRepository.GetOrderById(request.OrderId, cancellationToken)
             ?? throw new OrderNotFoundException($"Order with id {request.OrderId} not found");
         if (order.Status is OrderStatusEnum.Completed or OrderStatusEnum.Cancelled or OrderStatusEnum.Confirmed)
             throw new InvalidOperationException($"Order with id {request.OrderId} has invalid status. Status: {order.Status}");
-        var room = await roomRepository.GetRoomById(request.RoomId, cancellationToken)
-            ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
         var isRoomAvailable = await IsRoomAvailable(request.RoomId, request.From, request.To, cancellationToken);
         if (!isRoomAvailable)
             throw new ReservationConflictException($"Room with id {request.RoomId} is not available for the period of {request.From} - {request.To} ");
@@ -46,7 +46,8 @@ public class AddReservationCommandHandler(
         var reservations = await reservationRepository.GetReservationsByRoomId(roomId, cancellationToken);
         foreach (var reservation in reservations)
         {
-            if (reservation.From <= to && reservation.To >= from)
+            if (reservation.Order.Status is OrderStatusEnum.Cancelled or OrderStatusEnum.Pending 
+                || reservation.From <= to && reservation.To >= from)
             {
                 result = false;
                 break;
