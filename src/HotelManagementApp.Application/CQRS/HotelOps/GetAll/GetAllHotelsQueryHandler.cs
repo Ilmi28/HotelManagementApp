@@ -14,19 +14,24 @@ public class GetAllHotelsQueryHandler(
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotelModels = await hotelRepository.GetAllHotels(cancellationToken);
-        var response = await Task.WhenAll(hotelModels.Select(async h => new HotelResponse
+        var response = new List<HotelResponse>();
+        foreach (var hotelModel in hotelModels)
         {
-            Id = h.Id,
-            Name = h.Name,
-            Address = h.Address,
-            City = h.City.Name,
-            Country = h.City.Country,
-            Description = h.Description,
-            PhoneNumber = h.PhoneNumber,
-            Email = h.Email,
-            Images = (await imageRepository.GetHotelImagesByHotelId(h.Id, cancellationToken))
-                .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList()
-        }).ToList());
+            response.Add(new HotelResponse
+            {
+                Id = hotelModel.Id,
+                Name = hotelModel.Name,
+                Address = hotelModel.Address,
+                City = hotelModel.City.Name,
+                Country = hotelModel.City.Country,
+                Description = hotelModel.Description,
+                PhoneNumber = hotelModel.PhoneNumber,
+                Email = hotelModel.Email,
+                Images = (await imageRepository.GetHotelImagesByHotelId(hotelModel.Id, cancellationToken))
+                    .Select(i => fileService.GetFileUrl("images", i.FileName)).ToList()
+            });
+        }
+
         return response;
     }
 }

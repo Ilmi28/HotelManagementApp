@@ -46,8 +46,8 @@ public class AddReservationCommandHandler(
         var reservations = await reservationRepository.GetReservationsByRoomId(roomId, cancellationToken);
         foreach (var reservation in reservations)
         {
-            if (reservation.Order.Status is OrderStatusEnum.Cancelled or OrderStatusEnum.Pending 
-                || reservation.From <= to && reservation.To >= from)
+            if (reservation.Order.Status is OrderStatusEnum.Confirmed or OrderStatusEnum.Completed 
+                && reservation.From <= to && reservation.To >= from)
             {
                 result = false;
                 break;
