@@ -14,7 +14,7 @@ Modern hotel management system built with .NET 8 and Blazor WebAssembly.
 - .NET 8, ASP.NET Core API
 - Blazor WebAssembly
 - Entity Framework
-- SQL Server/SQLite
+- SQLite
 
 ## Quick Start
 
