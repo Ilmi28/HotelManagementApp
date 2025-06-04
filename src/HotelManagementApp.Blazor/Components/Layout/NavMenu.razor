@@ -1,30 +1,191 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">HotelManagementApp.Blazor</a>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+@inject HotelManagementApp.Blazor.Auth.ITokenService TokenService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="">
+            <img src="images/hotel-logo.png" alt="Hotel Logo" width="30" height="30" class="d-inline-block align-text-top">
+            Hotel Management
+        </a>
+        
+        <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="@NavMenuCssClass navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="bi bi-house"></i> Strona główna
+                    </NavLink>
+                </li>
+                
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="hotels">
+                        <i class="bi bi-building"></i> Hotele
+                    </NavLink>
+                </li>
+                
+                <AuthorizeView Roles="Staff,Manager,Admin">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="staffDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-badge"></i> Panel pracownika
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="staffDropdown">
+                            <li>
+                                <NavLink class="dropdown-item" href="staff-dashboard">
+                                    <i class="bi bi-speedometer"></i> Panel
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="staff/reservations">
+                                    <i class="bi bi-calendar-check"></i> Rezerwacje
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="staff/guests">
+                                    <i class="bi bi-people"></i> Goście
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="staff/payments">
+                                    <i class="bi bi-credit-card"></i> Płatności
+                                </NavLink>
+                            </li>
+                        </ul>
+                    </li>
+                </AuthorizeView>
+                
+                <AuthorizeView Roles="Manager,Admin">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="managerDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-briefcase"></i> Panel menedżera
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="managerDropdown">
+                            <li>
+                                <NavLink class="dropdown-item" href="manager-dashboard">
+                                    <i class="bi bi-graph-up"></i> Statystyki
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/staff">
+                                    <i class="bi bi-people"></i> Personel
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/hotel">
+                                    <i class="bi bi-building"></i> Zarządzanie hotelem
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/rooms">
+                                    <i class="bi bi-door-open"></i> Pokoje
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/services">
+                                    <i class="bi bi-list-check"></i> Usługi
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/parking">
+                                    <i class="bi bi-p-square"></i> Parkingi
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="manager/discounts">
+                                    <i class="bi bi-percent"></i> Zniżki
+                                </NavLink>
+                            </li>
+                        </ul>
+                    </li>
+                </AuthorizeView>
+                
+                <AuthorizeView Roles="Admin">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-lock"></i> Panel administratora
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                            <li>
+                                <NavLink class="dropdown-item" href="admin-dashboard">
+                                    <i class="bi bi-speedometer2"></i> Panel główny
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="admin/users">
+                                    <i class="bi bi-people"></i> Użytkownicy
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="admin/managers">
+                                    <i class="bi bi-person-badge"></i> Menedżerowie
+                                </NavLink>
+                            </li>
+                        </ul>
+                    </li>
+                </AuthorizeView>
+            </ul>
+            
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex align-items-center">
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="images/user-avatar.jpg" alt="User Avatar" class="rounded-circle me-2" width="32" height="32">
+                                <span>@context.User.Identity?.Name</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <NavLink class="dropdown-item" href="user/dashboard">
+                                        <i class="bi bi-person-circle"></i> Panel użytkownika
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink class="dropdown-item" href="reservations">
+                                        <i class="bi bi-journal-text"></i> Moje rezerwacje
+                                    </NavLink>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item" @onclick="BeginLogout">
+                                        <i class="bi bi-box-arrow-right"></i> Wyloguj
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex">
+                        <NavLink class="btn btn-outline-primary me-2" href="login">
+                            Zaloguj
+                        </NavLink>
+                        <NavLink class="btn btn-primary" href="register">
+                            Zarejestruj
+                        </NavLink>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
     </div>
-</div>
+</nav>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+@code {
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
+    private async Task BeginLogout()
+    {
+        await TokenService.RemoveTokensAsync();
+        ((HotelManagementApp.Blazor.Auth.CustomAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+        NavigationManager.NavigateTo("/");
+    }
+}

@@ -1,10 +1,16 @@
 ﻿@using System.Net.Http
-@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
-@using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Microsoft.AspNetCore.Components.Web // Ważne dla HeadOutlet i innych
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.JSInterop
-@using HotelManagementApp.Blazor
-@using HotelManagementApp.Blazor.Components
+@using HotelManagementApp.Blazor // Główny namespace projektu
+@using HotelManagementApp.Blazor.Components // Namespace dla komponentów
+@using HotelManagementApp.Blazor.Components.Layout // Namespace dla layoutu
+@using HotelManagementApp.Blazor.Components.Pages // Namespace dla stron (jeśli tam są)
+@using HotelManagementApp.Blazor.Services // Namespace dla serwisów
+@using HotelManagementApp.Blazor.Auth     // Namespace dla logiki Auth
+
+// Dodaj inne globalne usingi, jeśli potrzebne

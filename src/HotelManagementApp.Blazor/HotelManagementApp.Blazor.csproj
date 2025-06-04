@@ -6,4 +6,25 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="8.0.15" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\AdminDashboard.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\BlacklistManagement.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\CreateAccount.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\HotelManagement.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\ManagerManagement.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\StaffManagement.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\Admin\VipManagement.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\User\DashboardPage.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\User\LoyaltyAvailableRewardsPage.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\User\LoyaltyMyRewardsPage.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\User\LoyaltyPointsHistoryPage.razor" />
+    <_ContentIncludedByDefault Remove="Components\Pages\User\UserOrderDetailPage.razor" />
+  </ItemGroup>
+
 </Project>

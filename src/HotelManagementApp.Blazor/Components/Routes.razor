@@ -1,6 +1,29 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+@using HotelManagementApp.Blazor.Components.Layout
+
+<Router AppAssembly="typeof(Program).Assembly">
+	<Found Context="routeData">
+		@* Użycie AuthorizeRouteView do obsługi autoryzacji na stronach *@
+		<AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+			<NotAuthorized>
+				@* Opcjonalnie: Przekieruj na stronę logowania lub pokaż komunikat *@
+				<h1>Brak autoryzacji</h1>
+				<p>Nie masz uprawnień, aby zobaczyć tę stronę.</p>
+				@* Możesz tu dodać komponent logowania lub link *@
+			</NotAuthorized>
+			<Authorizing>
+				@* Opcjonalnie: Pokaż wskaźnik ładowania podczas sprawdzania autoryzacji *@
+				<p>Sprawdzanie autoryzacji...</p>
+			</Authorizing>
+		</AuthorizeRouteView>
+		<FocusOnNavigate RouteData="routeData" Selector="h1" />
+	</Found>
+	<NotFound>
+		@* Strona wyświetlana, gdy żaden rout nie pasuje *@
+		<PageTitle>Nie znaleziono</PageTitle>
+		<LayoutView Layout="typeof(MainLayout)">
+			<p role="alert">Przepraszamy, nic tu nie ma pod tym adresem.</p>
+		</LayoutView>
+	</NotFound>
 </Router>
