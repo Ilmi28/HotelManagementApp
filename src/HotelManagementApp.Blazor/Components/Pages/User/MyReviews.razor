@@ -1,0 +1,499 @@
+@page "/my-reviews"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Moje opinie</PageTitle>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">
+                    <i class="bi bi-chat-quote"></i> Moje opinie
+                </h1>
+                <button class="btn btn-primary" @onclick="ShowAddReviewForm" disabled="@(!reservedHotels?.Any() == true)">
+                    <i class="bi bi-plus-circle"></i> Dodaj opinię
+                </button>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                </div>
+            }
+            else if (reviews?.Any() == true)
+            {
+                <div class="row">
+                    @foreach (var review in reviews)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@review.HotelName</h6>
+                                    <div class="text-warning">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">@review.ReviewText</p>
+                                    <small class="text-muted">@review.Date</small>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="btn-group w-100" role="group">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => EditReview(review)">
+                                            <i class="bi bi-pencil"></i> Edytuj
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteReview(review.ReviewId)">
+                                            <i class="bi bi-trash"></i> Usuń
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Nie masz jeszcze żadnych opinii.
+                    </div>
+                    @if (reservedHotels?.Any() == true)
+                    {
+                        <p class="text-muted">Możesz dodać opinię o hotelach, które zarezerwowałeś.</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Aby dodać opinię, najpierw dokonaj rezerwacji w jednym z naszych hoteli.</p>
+                        <a href="/hotels" class="btn btn-outline-primary">
+                            <i class="bi bi-building"></i> Przeglądaj hotele
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Modal dodawania/edycji opinii -->
+    @if (showReviewForm)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(editingReview != null ? "Edytuj opinię" : "Dodaj opinię")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseReviewForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @onsubmit="SubmitReview" @onsubmit:preventDefault="true">
+                            @if (editingReview == null)
+                            {
+                                <div class="mb-3">
+                                    <label for="hotelSelect" class="form-label">Hotel (tylko te, które zarezerwowałeś):</label>
+                                    <select @bind="newReview.HotelId" class="form-select" id="hotelSelect" required>
+                                        <option value="0">Wybierz hotel...</option>
+                                        @if (reservedHotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in reservedHotels)
+                                            {
+                                                <option value="@hotel.HotelId">@hotel.HotelName</option>
+                                            }
+                                        }
+                                    </select>
+                                    @if (reservedHotels?.Any() != true)
+                                    {
+                                        <div class="form-text text-muted">
+                                            Nie masz żadnych rezerwacji. <a href="/hotels">Zarezerwuj pobyt</a>, aby móc dodać opinię.
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Ocena:</label>
+                                <select @bind="newReview.Rating" class="form-select" id="rating" required>
+                                    <option value="0">Wybierz ocenę...</option>
+                                    <option value="1">⭐ 1 gwiazdka - Bardzo słabo</option>
+                                    <option value="2">⭐⭐ 2 gwiazdki - Słabo</option>
+                                    <option value="3">⭐⭐⭐ 3 gwiazdki - Średnio</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 gwiazdki - Dobrze</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 gwiazdek - Doskonale</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reviewText" class="form-label">Opinia:</label>
+                                <textarea @bind="newReview.Review" class="form-control" id="reviewText" rows="4" 
+                                          placeholder="Podziel się swoimi wrażeniami z pobytu..." required></textarea>
+                                <div class="form-text">
+                                    Opisz swoje wrażenia z pobytu, jakość obsługi, czystość pokoju, lokalizację itp.
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseReviewForm">Anuluj</button>
+                        <button type="button" class="btn btn-primary" @onclick="SubmitReview" 
+                                disabled="@(newReview.HotelId == 0 || newReview.Rating == 0 || string.IsNullOrWhiteSpace(newReview.Review))">
+                            @(editingReview != null ? "Zaktualizuj" : "Dodaj") opinię
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Review>? reviews;
+    private List<ReservedHotel>? reservedHotels;
+    private bool isLoading = true;
+    private bool showReviewForm = false;
+    private Review? editingReview;
+    private ReviewRequest newReview = new();
+    private string? currentUserId;
+    private string? currentUserName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUser();
+        await LoadReviews();
+        await LoadReservedHotels();
+    }
+
+    private async Task GetCurrentUser()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                currentUserId = session?.Id;
+                currentUserName = session?.UserName;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania danych użytkownika: {ex.Message}");
+        }
+    }
+
+    private async Task LoadReviews()
+    {
+        isLoading = true;
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/review/guest/{currentUserId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    reviews = JsonSerializer.Deserialize<List<Review>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania opinii: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadReservedHotels()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/order/get-by-guest/{currentUserId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var orders = JsonSerializer.Deserialize<List<Order>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    // Wyciągnij unikalne hotele z zamówień (tylko te potwierdzone/zakończone)
+                    reservedHotels = orders?
+                        .Where(o => o.Status?.ToLower() is "confirmed" or "completed")
+                        .GroupBy(o => o.HotelId)
+                        .Select(g => new ReservedHotel 
+                        { 
+                            HotelId = g.Key, 
+                            HotelName = g.First().HotelName ?? "Nieznany hotel"
+                        })
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania zarezerwowanych hoteli: {ex.Message}");
+        }
+    }
+
+    private void ShowAddReviewForm()
+    {
+        if (reservedHotels?.Any() != true)
+        {
+            JSRuntime.InvokeVoidAsync("alert", "Aby dodać opinię, najpierw dokonaj rezerwacji w jednym z naszych hoteli.");
+            return;
+        }
+        
+        editingReview = null;
+        newReview = new ReviewRequest();
+        showReviewForm = true;
+    }
+
+    private void EditReview(Review review)
+    {
+        editingReview = review;
+        newReview = new ReviewRequest
+        {
+            ReviewId = review.ReviewId,
+            Rating = review.Rating,
+            Review = review.ReviewText,
+            UserName = currentUserName ?? ""
+        };
+        showReviewForm = true;
+    }
+
+    private void CloseReviewForm()
+    {
+        showReviewForm = false;
+        editingReview = null;
+        newReview = new ReviewRequest();
+    }
+
+    private async Task SubmitReview()
+    {
+        // Walidacja
+        if (editingReview == null && newReview.HotelId == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę wybrać hotel.");
+            return;
+        }
+        
+        if (newReview.Rating == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę wybrać ocenę.");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(newReview.Review))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę napisać opinię.");
+            return;
+        }
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            if (editingReview != null)
+            {
+                // Edycja istniejącej opinii
+                var updateRequest = new
+                {
+                    reviewId = newReview.ReviewId,
+                    userName = newReview.UserName,
+                    rating = newReview.Rating,
+                    review = newReview.Review
+                };
+                
+                var json = JsonSerializer.Serialize(updateRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await authenticatedClient.PutAsync("api/review", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została zaktualizowana!");
+                    await LoadReviews();
+                    CloseReviewForm();
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji opinii: {response.StatusCode}");
+                }
+            }
+            else
+            {
+                // Dodanie nowej opinii
+                var addRequest = new
+                {
+                    userName = currentUserName,
+                    userId = currentUserId,
+                    rating = newReview.Rating,
+                    review = newReview.Review,
+                    hotelId = newReview.HotelId
+                };
+                
+                var json = JsonSerializer.Serialize(addRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await authenticatedClient.PostAsync("api/review", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została dodana!");
+                    await LoadReviews();
+                    CloseReviewForm();
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania opinii: {response.StatusCode}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zapisywania opinii: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania opinii.");
+        }
+    }
+
+    private async Task DeleteReview(int reviewId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz usunąć tę opinię?"))
+        {
+            try
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.DeleteAsync($"api/review/{reviewId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została usunięta!");
+                    await LoadReviews();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania opinii: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania opinii: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania opinii.");
+            }
+        }
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            HttpClient.DefaultRequestHeaders.Authorization = null;
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return HttpClient;
+    }
+
+    public class UserSession
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    public class Review
+    {
+        public int ReviewId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string ReviewText { get; set; } = string.Empty;
+        public string Date { get; set; } = string.Empty;
+    }
+
+    public class ReviewRequest
+    {
+        public int ReviewId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string Review { get; set; } = string.Empty;
+        public int HotelId { get; set; }
+    }
+
+    public class Order
+    {
+        public int Id { get; set; }
+        public int HotelId { get; set; }
+        public string? HotelName { get; set; }
+        public string? Status { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public decimal? TotalAmount { get; set; }
+    }
+
+    public class ReservedHotel
+    {
+        public int HotelId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+    }
+}

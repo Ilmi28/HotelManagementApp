@@ -14,7 +14,11 @@
                 <p class="lead">Odkryj nowy poziom komfortu i wygody. Zarządzaj rezerwacjami, gośćmi i usługami w jednym miejscu.</p>
                 <div class="d-grid gap-2 d-md-flex justify-content-md-start">
                     <button class="btn btn-primary btn-lg px-4 me-md-2" @onclick="GoToHotels">Przeglądaj hotele</button>
-                    <button class="btn btn-outline-secondary btn-lg px-4" @onclick="GoToRegister">Dołącz teraz</button>
+                    <AuthorizeView>
+                        <NotAuthorized>
+                            <button class="btn btn-outline-secondary btn-lg px-4" @onclick="GoToRegister">Dołącz teraz</button>
+                        </NotAuthorized>
+                    </AuthorizeView>
                 </div>
             </div>
             <div class="col-md-6 d-none d-md-block">

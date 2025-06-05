@@ -1,0 +1,458 @@
+@page "/loyalty-program"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Program lojalnościowy</PageTitle>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2 mb-4">
+                <i class="bi bi-star-fill text-warning"></i> Program lojalnościowy
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Saldo punktów -->
+        <div class="col-md-4 mb-4">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="bi bi-star-fill text-warning" style="font-size: 3rem;"></i>
+                    <h3 class="card-title text-warning">@loyaltyPoints</h3>
+                    <p class="card-text">Twoje punkty lojalnościowe</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dostępne nagrody -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gift"></i> Dostępne nagrody
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoadingRewards)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Ładowanie...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (availableRewards?.Any() == true)
+                    {
+                        <div class="row">
+                            @foreach (var reward in availableRewards)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@reward.Name</h6>
+                                            <p class="card-text small">@reward.Description</p>
+                                            <p class="card-text">
+                                                <strong class="text-warning">@reward.PointsCost <i class="bi bi-star-fill"></i></strong>
+                                            </p>
+                                            <button class="btn btn-sm @(loyaltyPoints >= reward.PointsCost ? "btn-primary" : "btn-secondary")" 
+                                                    @onclick="() => ExchangePoints(reward.Id)" 
+                                                    disabled="@(loyaltyPoints < reward.PointsCost)">
+                                                @(loyaltyPoints >= reward.PointsCost ? "Wymień" : "Za mało punktów")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Brak dostępnych nagród.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Historia punktów -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Historia punktów
+                    </h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    @if (isLoadingHistory)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Ładowanie...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (pointsHistory?.Any() == true)
+                    {
+                        @foreach (var entry in pointsHistory)
+                        {
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <div class="fw-bold">@entry.Description</div>
+                                    <small class="text-muted">@entry.Date</small>
+                                </div>
+                                <div class="@(entry.Points > 0 ? "text-success" : "text-danger")">
+                                    @(entry.Points > 0 ? "+" : "")@entry.Points
+                                    <i class="bi bi-star-fill"></i>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Brak historii punktów.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Zdobyte nagrody -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-trophy"></i> Zdobyte nagrody
+                    </h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    @if (isLoadingAcquiredRewards)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Ładowanie...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (acquiredRewards?.Any() == true)
+                    {
+                        @foreach (var reward in acquiredRewards)
+                        {
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <div class="fw-bold">@reward.Name</div>
+                                    <small class="text-muted">Zdobyte: @reward.AcquiredDate</small>
+                                </div>
+                                <div class="text-warning">
+                                    <i class="bi bi-trophy-fill"></i>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Nie zdobyłeś jeszcze żadnych nagród.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informacje o programie -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-info-circle"></i> Jak działa program lojalnościowy?
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-star"></i> Zdobywaj punkty</h6>
+                            <p class="small">Otrzymuj punkty za każdą rezerwację i pobyt w naszych hotelach.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-gift"></i> Wymieniaj na nagrody</h6>
+                            <p class="small">Wykorzystaj zebrane punkty na zniżki, darmowe noclegi i dodatkowe usługi.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><i class="bi bi-heart"></i> Ciesz się korzyściami</h6>
+                            <p class="small">Im więcej zostaniesz z nami, tym więcej zyskujesz!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int loyaltyPoints = 0;
+    private List<Reward>? availableRewards;
+    private List<PointsHistoryEntry>? pointsHistory;
+    private List<AcquiredReward>? acquiredRewards;
+    private bool isLoadingRewards = true;
+    private bool isLoadingHistory = true;
+    private bool isLoadingAcquiredRewards = true;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserId();
+        await LoadLoyaltyPoints();
+        await LoadRewards();
+        await LoadPointsHistory();
+        await LoadAcquiredRewards();
+    }
+
+    private async Task GetCurrentUserId()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                currentUserId = session?.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania ID użytkownika: {ex.Message}");
+        }
+    }
+
+    private async Task LoadLoyaltyPoints()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/loyalty-points/guests/{currentUserId}/points");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var pointsData = JsonSerializer.Deserialize<LoyaltyPointsResponse>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    loyaltyPoints = pointsData?.Points ?? 0;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania punktów lojalnościowych: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRewards()
+    {
+        isLoadingRewards = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/loyalty-points/rewards");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                availableRewards = JsonSerializer.Deserialize<List<Reward>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania nagród: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingRewards = false;
+        }
+    }
+
+    private async Task LoadPointsHistory()
+    {
+        isLoadingHistory = true;
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/loyalty-points/guests/{currentUserId}/history");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    pointsHistory = JsonSerializer.Deserialize<List<PointsHistoryEntry>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania historii punktów: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingHistory = false;
+        }
+    }
+
+    private async Task LoadAcquiredRewards()
+    {
+        isLoadingAcquiredRewards = true;
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/loyalty-points/guests/{currentUserId}/acquired-rewards");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    acquiredRewards = JsonSerializer.Deserialize<List<AcquiredReward>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania zdobytych nagród: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingAcquiredRewards = false;
+        }
+    }
+
+    private async Task ExchangePoints(int rewardId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz wymienić punkty na tę nagrodę?"))
+        {
+            try
+            {
+                var request = new
+                {
+                    guestId = currentUserId,
+                    rewardId = rewardId
+                };
+                
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.PostAsync("api/loyalty-points/exchange", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Punkty zostały wymienione na nagrodę!");
+                    await LoadLoyaltyPoints();
+                    await LoadPointsHistory();
+                    await LoadAcquiredRewards();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas wymiany punktów: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas wymiany punktów.");
+            }
+        }
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            HttpClient.DefaultRequestHeaders.Authorization = null;
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return HttpClient;
+    }
+
+    public class UserSession
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    public class LoyaltyPointsResponse
+    {
+        public int Points { get; set; }
+    }
+
+    public class Reward
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int PointsCost { get; set; }
+    }
+
+    public class PointsHistoryEntry
+    {
+        public string Description { get; set; } = string.Empty;
+        public int Points { get; set; }
+        public string Date { get; set; } = string.Empty;
+    }
+
+    public class AcquiredReward
+    {
+        public string Name { get; set; } = string.Empty;
+        public string AcquiredDate { get; set; } = string.Empty;
+    }
+}
