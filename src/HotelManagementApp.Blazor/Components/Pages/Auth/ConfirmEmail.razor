@@ -1,114 +1,290 @@
 @page "/account/confirm-email"
-@inject IHttpClientFactory HttpClientFactory
-@inject NavigationManager NavigationManager
-@inject ITokenService TokenService
+@using System.Net.Http.Headers
+@using System.Text.Json
 @using System.Net
-@using System.Net.Http.Json
+@using System.Web
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
 
+<PageTitle>Potwierdzenie adresu email</PageTitle>
 
-<h3>Potwierdzenie Adresu Email</h3>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">
+                        <i class="bi bi-envelope-check"></i> Potwierdzenie adresu email
+                    </h3>
 
-@if (isProcessing)
-{
-	<p><em>Przetwarzanie...</em> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></p>
-}
-else if (!string.IsNullOrEmpty(message))
-{
-	<div class="@(isSuccess ? "alert alert-success" : "alert alert-danger")" role="alert">
-		@message
-	</div>
-	@if (isSuccess)
-	{
-		<button class="btn btn-primary" @onclick="GoToLogin">Przejdź do logowania</button>
-	}
-	else
-	{
-		<button class="btn btn-info" @onclick="GoToHome">Powrót na stronę główną</button>
-	}
-}
+                    @if (isProcessing)
+                    {
+                        <div class="my-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Przetwarzanie...</span>
+                            </div>
+                            <p class="mt-3">Przetwarzanie potwierdzenia...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(message))
+                    {
+                        <div class="@(isSuccess ? "alert alert-success" : "alert alert-danger")" role="alert">
+                            <i class="bi @(isSuccess ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill")"></i>
+                            @message
+                        </div>
+                        
+                        <div class="mt-3">
+                            @if (isSuccess)
+                            {
+                                <button class="btn btn-primary me-2" @onclick="GoToLogin">
+                                    <i class="bi bi-box-arrow-in-right"></i> Przejdź do logowania
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="GoToHome">
+                                    <i class="bi bi-house"></i> Strona główna
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-info me-2" @onclick="GoToHome">
+                                    <i class="bi bi-house"></i> Powrót na stronę główną
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="RetryConfirmation">
+                                    <i class="bi bi-arrow-clockwise"></i> Spróbuj ponownie
+                                </button>
+                            }
+                        </div>
+
+                        @if (!isSuccess && hasRetried)
+                        {
+                            <div class="mt-4">
+                                <hr>
+                                <h6>Potrzebujesz pomocy?</h6>
+                                <p class="text-muted small">
+                                    Jeśli nadal masz problemy z potwierdzeniem emaila, skontaktuj się z naszym zespołem wsparcia.
+                                </p>
+                                <button class="btn btn-outline-info btn-sm" @onclick="ContactSupport">
+                                    <i class="bi bi-envelope"></i> Skontaktuj się z pomocą
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-	[Parameter]
-	[SupplyParameterFromQuery(Name = "userId")]
-	public string UserId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "userId")]
+    public string? UserId { get; set; }
 
-	[Parameter]
-	[SupplyParameterFromQuery(Name = "token")]
-	public string Token { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
 
-	private string message;
-	private bool isProcessing = true;
-	private bool isSuccess = false;
+    private string message = string.Empty;
+    private bool isProcessing = true;
+    private bool isSuccess = false;
+    private bool hasRetried = false;
 
-	protected override async Task OnInitializedAsync()
-	{
-		isProcessing = true;
+    protected override async Task OnInitializedAsync()
+    {
+        await ConfirmEmailAsync();
+    }
 
-		if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
-		{
-			message = "Brak wymaganych parametrów (userId lub token) do potwierdzenia emaila. Sprawdź link z wiadomości email.";
-			isSuccess = false;
-			isProcessing = false;
-			return;
-		}
+    private async Task ConfirmEmailAsync()
+    {
+        isProcessing = true;
+        message = string.Empty;
+        isSuccess = false;
 
-		try
-		{
-			var client = HttpClientFactory.CreateClient("HotelApi");
-			var command = new { UserId, Token };
-            Console.WriteLine(UserId);
-            Console.WriteLine(Token);
-			var response = await client.PostAsJsonAsync("api/account/confirm-email", command);
+        // Walidacja parametrów
+        if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
+        {
+            message = "Brak wymaganych parametrów do potwierdzenia emaila. Sprawdź link z wiadomości email.";
+            isSuccess = false;
+            isProcessing = false;
+            return;
+        }
 
-			if (response.StatusCode == HttpStatusCode.Found)
-			{
-				isSuccess = true;
-				message = "Adres email został pomyślnie potwierdzony! Możesz się teraz zalogować.";
-			}
-			else if (response.StatusCode == HttpStatusCode.BadRequest)
-			{
-				isSuccess = false;
-				var errorContent = await response.Content.ReadAsStringAsync();
-				message = "Błąd podczas potwierdzania emaila: Nieprawidłowy token, token mógł wygasnąć lub użytkownik nie został znaleziony.";
-				if (!string.IsNullOrWhiteSpace(errorContent) && !errorContent.Contains("html"))
-				{
-					message += $" Szczegóły serwera: {errorContent}";
-				}
-			}
-			else
-			{
-				isSuccess = false;
-				var errorContent = await response.Content.ReadAsStringAsync();
-				message = $"Wystąpił nieoczekiwany błąd podczas potwierdzania emaila. Kod błędu: {(int)response.StatusCode}.";
-				if (!string.IsNullOrWhiteSpace(errorContent) && !errorContent.Contains("html"))
-				{
-					message += $" Szczegóły: {errorContent}";
-				}
-			}
-		}
-		catch (HttpRequestException httpEx)
-		{
-			isSuccess = false;
-			message = $"Wystąpił błąd połączenia podczas próby potwierdzenia emaila: {httpEx.Message}";
-		}
-		catch (Exception ex)
-		{
-			isSuccess = false;
-			message = $"Wystąpił wewnętrzny błąd aplikacji: {ex.Message}";
-		}
-		finally
-		{
-			isProcessing = false;
-		}
-	}
+        try
+        {
+            // Dekodowanie parametrów URL (na wypadek gdyby były zakodowane)
+            var decodedUserId = Uri.UnescapeDataString(UserId);
+            var decodedToken = Uri.UnescapeDataString(Token);
+            var tokenx = "l6/ALyagwMCyVFr15cgZjpqmlQ/dlZUYnY7N+HOmuDPfcILk2NaAWvO0/AgUcS5FStipBpcvHBC1mL7SxdY+bJRBq2R5yfaN2Thb9u1iMxRA5mJjwixDN7MiKQ3W89gPPhivIdP06lPRdWARdTUdHvnXuZOSQEcgRQhvAakIRYXTO/SkC7vsJO6q+gwF9LKwDgxTxaNiZ/kBfcnKbnxuGPYwOCL1S0VCFl+nqgfpv6mwZOdlZ4nrsvtu/j+7xibpJZFMlm76Cxr2LBQYEV8AdyMUctvbJL0lZrUM4ZEK0/FZ+kYinFs5q+OztVoSSW/M/FPPgmqD63IygM7s5u+r6HwtGML7kKmUX5+VkDWLQrKXXWhwAJIr3aqHOCt3zuvkYZXIEKpSgYsyVvQ47buk3Ly3EX6ZZswr9yPLCJmLAM7qTtq3KvlGYYRRZCdxrsjgNjmiXNcz3mJXHO5pcJSHypOvU4kjA0X9Q1aKjWWdt5mtYTyvRVS+lQaBkpvS0CgE+hFgydOYAfs3POe0a59ZiyIBQfKGwss2UFQCks2mo4MLgjApaorDN3r/Iu2K380fc/e68oJ2mZ34VuLc64egfIGm7olEvQy6AyFdPKsye0EYmNNnSBLqkHQJc6cqs+p+H7uwZJ5ECBI50MtHfQT1mMniu6lxj1SjGDnB0OqlRnE=";
+            Console.WriteLine($"Confirming email for userId: {decodedUserId}");
+            Console.WriteLine($"Token length: {decodedToken?.Length}");
+            Console.WriteLine($"Token: {decodedToken}");
+            Console.WriteLine($"Token: {tokenx}");
+            Console.WriteLine($"Test: {tokenx == decodedToken}");
 
-	private void GoToLogin()
-	{
-		NavigationManager.NavigateTo("/login");
-	}
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            var command = new { 
+                UserId = decodedUserId, 
+                Token = decodedToken 
+            };
 
-	private void GoToHome()
-	{
-		NavigationManager.NavigateTo("/");
-	}
+            var response = await authenticatedClient.PostAsJsonAsync("api/account/confirm-email", command);
+
+            Console.WriteLine($"Response status: {response.StatusCode}");
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Found: // 302 - sukces z przekierowaniem
+                case HttpStatusCode.OK:    // 200 - alternatywny sukces
+                case HttpStatusCode.NoContent: // 204 - sukces bez zawartości
+                    isSuccess = true;
+                    message = "Adres email został pomyślnie potwierdzony! Możesz się teraz zalogować.";
+                    break;
+
+                case HttpStatusCode.BadRequest: // 400
+                    isSuccess = false;
+                    try
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"Error content: {errorContent}");
+                        
+                        // Sprawdź czy to JSON z details
+                        if (errorContent.Contains("\"detail\"") || errorContent.Contains("\"title\""))
+                        {
+                            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                            message = $"Błąd podczas potwierdzania emaila: {errorResponse?.Detail ?? errorResponse?.Title ?? "Nieprawidłowy token lub token wygasł."}";
+                        }
+                        else
+                        {
+                            message = "Błąd podczas potwierdzania emaila: Nieprawidłowy token lub token wygasł.";
+                        }
+                    }
+                    catch
+                    {
+                        message = "Błąd podczas potwierdzania emaila: Nieprawidłowy token lub token wygasł.";
+                    }
+                    break;
+
+                case HttpStatusCode.Unauthorized: // 401
+                    isSuccess = false;
+                    message = "Brak autoryzacji. Zaloguj się ponownie i spróbuj potwierdzić email.";
+                    break;
+
+                case HttpStatusCode.Forbidden: // 403
+                    isSuccess = false;
+                    message = "Brak uprawnień do potwierdzenia tego emaila.";
+                    break;
+
+                case HttpStatusCode.NotFound: // 404
+                    isSuccess = false;
+                    message = "Użytkownik nie został znaleziony. Sprawdź poprawność linku.";
+                    break;
+
+                case HttpStatusCode.Conflict: // 409
+                    isSuccess = false;
+                    message = "Email został już wcześniej potwierdzony.";
+                    break;
+
+                default:
+                    isSuccess = false;
+                    var content = await response.Content.ReadAsStringAsync();
+                    message = $"Wystąpił nieoczekiwany błąd podczas potwierdzania emaila (kod: {(int)response.StatusCode}).";
+                    Console.WriteLine($"Unexpected response: {content}");
+                    break;
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            isSuccess = false;
+            message = $"Błąd połączenia z serwerem: {httpEx.Message}";
+            Console.WriteLine($"HTTP exception: {httpEx}");
+        }
+        catch (Exception ex)
+        {
+            isSuccess = false;
+            message = $"Wystąpił błąd aplikacji: {ex.Message}";
+            Console.WriteLine($"General exception: {ex}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RetryConfirmation()
+    {
+        hasRetried = true;
+        await ConfirmEmailAsync();
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private void GoToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void ContactSupport()
+    {
+        // Tutaj możesz dodać logikę kontaktu z pomocą techniczną
+        // Na przykład przekierowanie na stronę kontaktową lub otwarcie maila
+        NavigationManager.NavigateTo("/contact");
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            HttpClient.DefaultRequestHeaders.Authorization = null;
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return HttpClient;
+    }
+
+    public class ErrorResponse
+    {
+        public string? Type { get; set; }
+        public string? Title { get; set; }
+        public int Status { get; set; }
+        public string? Detail { get; set; }
+        public string? Instance { get; set; }
+    }
 }
