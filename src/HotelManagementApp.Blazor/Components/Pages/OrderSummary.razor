@@ -1,0 +1,1448 @@
+@page "/order/{orderId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+
+<PageTitle>@pageTitle</PageTitle>
+
+<div class="container mt-4">
+    @try
+    {
+        <!-- Loading state -->
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie szczegółów zamówienia...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" @onclick="GoToHotels">
+                            Powrót do hoteli
+                        </button>
+                        <button class="btn btn-sm btn-secondary ms-2" @onclick="LoadOrderData">
+                            Spróbuj ponownie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!isEmailConfirmed && emailVerificationChecked)
+        {
+            <!-- Email not confirmed warning -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-lg-8">
+                    <div class="alert alert-warning border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-envelope-exclamation me-3" style="font-size: 2rem;"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading mb-2">
+                                    <i class="bi bi-exclamation-triangle"></i> Potwierdź swój adres email
+                                </h5>
+                                <p class="mb-2">
+                                    Aby zarządzać zamówieniem, musisz najpierw potwierdzić swój adres email.
+                                    Sprawdź swoją skrzynkę pocztową i kliknij w link potwierdzający.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (order != null)
+        {
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/hotels" class="text-decoration-none">
+                            <i class="bi bi-house-door"></i> Hotele
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Podsumowanie zamówienia #@OrderId
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Order header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h1 class="display-6 fw-bold text-primary mb-2">
+                                        <i class="bi bi-cart3"></i> Podsumowanie zamówienia
+                                    </h1>
+                                    <p class="text-muted mb-2">
+                                        <strong>Numer zamówienia:</strong> #@OrderId
+                                    </p>
+                                    <p class="text-muted mb-0">
+                                        <strong>Data utworzenia:</strong> @GetFormattedDate(order.Created)
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="status-badge">
+                                        <span class="badge @GetStatusBadgeClass() fs-6 p-2">
+                                            <i class="bi @GetStatusIcon()"></i> @GetStatusText()
+                                        </span>
+                                    </div>
+                                    <div class="h4 text-primary mt-2">
+                                        @order.TotalPrice.ToString("C", polishCulture)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left column - Order details -->
+                <div class="col-lg-8">
+                    <!-- Customer information -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person text-primary"></i> Dane klienta
+                                </h5>
+                                @if (CanEditOrder())
+                                {
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="ToggleEditMode">
+                                        <i class="bi @(isEditMode ? "bi-x" : "bi-pencil")"></i>
+                                        @(isEditMode ? "Anuluj" : "Edytuj")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (isEditMode)
+                            {
+                                <EditForm Model="@editModel" OnValidSubmit="@UpdateOrder">
+                                    <DataAnnotationsValidator />
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="firstName" class="form-label">Imię</label>
+                                            <InputText id="firstName" class="form-control" @bind-Value="editModel.FirstName" />
+                                            <ValidationMessage For="@(() => editModel.FirstName)" class="text-danger" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="lastName" class="form-label">Nazwisko</label>
+                                            <InputText id="lastName" class="form-control" @bind-Value="editModel.LastName" />
+                                            <ValidationMessage For="@(() => editModel.LastName)" class="text-danger" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="phoneNumber" class="form-label">Telefon</label>
+                                            <InputText id="phoneNumber" class="form-control" @bind-Value="editModel.PhoneNumber" />
+                                            <ValidationMessage For="@(() => editModel.PhoneNumber)" class="text-danger" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="country" class="form-label">Kraj</label>
+                                            <InputText id="country" class="form-control" @bind-Value="editModel.Country" />
+                                            <ValidationMessage For="@(() => editModel.Country)" class="text-danger" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label for="address" class="form-label">Adres</label>
+                                            <InputText id="address" class="form-control" @bind-Value="editModel.Address" />
+                                            <ValidationMessage For="@(() => editModel.Address)" class="text-danger" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="city" class="form-label">Miasto</label>
+                                            <InputText id="city" class="form-control" @bind-Value="editModel.City" />
+                                            <ValidationMessage For="@(() => editModel.City)" class="text-danger" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-success" disabled="@isUpdating">
+                                            @if (isUpdating)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Zapisywanie...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-check"></i>
+                                                <span>Zapisz zmiany</span>
+                                            }
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">
+                                            <i class="bi bi-x"></i> Anuluj
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            }
+                            else
+                            {
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <strong>Imię i nazwisko:</strong><br />
+                                            @GetSafeFirstName() @GetSafeLastName()
+                                        </p>
+                                        <p class="mb-2">
+                                            <strong>Telefon:</strong><br />
+                                            @GetSafePhoneNumber()
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <strong>Adres:</strong><br />
+                                            @GetSafeAddress()<br />
+                                            @GetSafeCity(), @GetSafeCountry()
+                                        </p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Reservation details -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-event text-primary"></i> Szczegóły rezerwacji
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (reservations?.Any() == true)
+                            {
+                                @foreach (var reservation in reservations)
+                                {
+                                    <div class="reservation-item border rounded p-3 mb-3">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <h6 class="mb-2">
+                                                    <i class="bi bi-door-open"></i> 
+                                                    @if (loadingRoomNames.Contains(reservation.RoomId))
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                        <span>Ładowanie nazwy pokoju...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        @GetRoomName(reservation.RoomId)
+                                                    }
+                                                </h6>
+                                                <p class="text-muted mb-1">
+                                                    <i class="bi bi-calendar3"></i>
+                                                    @reservation.From.ToString("dd.MM.yyyy") - @reservation.To.ToString("dd.MM.yyyy")
+                                                    (@GetNightCount(reservation) @(GetNightCount(reservation) == 1 ? "noc" : GetNightCount(reservation) < 5 ? "noce" : "nocy"))
+                                                </p>
+                                                @if (!string.IsNullOrEmpty(reservation.SpecialRequests))
+                                                {
+                                                    <p class="text-muted mb-0">
+                                                        <i class="bi bi-chat-dots"></i> @reservation.SpecialRequests
+                                                    </p>
+                                                }
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <div class="h6 text-primary">
+                                                    @reservation.TotalPrice.ToString("C", polishCulture)
+                                                </div>
+                                                <small class="text-muted">za pobyt</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else if (loadingReservations)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Ładowanie rezerwacji...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted small">Wczytywanie szczegółów rezerwacji...</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Brak szczegółów rezerwacji.</p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Additional services -->
+                    @if (CanEditOrder() && reservations?.Any() == true)
+                    {
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-white border-0">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-plus-circle text-primary"></i> Dodatkowe usługi
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                @if (availableServices?.Any() == true)
+                                {
+                                    <div class="row g-3">
+                                        @foreach (var service in availableServices)
+                                        {
+                                            <div class="col-md-6">
+                                                <div class="card h-100 border-light">
+                                                    <div class="card-body p-3">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <h6 class="card-title mb-1">@service.Name</h6>
+                                                            <span class="badge bg-primary">@service.FinalPrice.ToString("C", polishCulture)</span>
+                                                        </div>
+                                                        <p class="card-text small text-muted mb-2">@service.Description</p>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <button class="btn btn-outline-danger btn-sm" 
+                                                                    @onclick="() => RemoveService(service.Id)"
+                                                                    disabled="@(!IsServiceAdded(service.Id) || updatingServices)">
+                                                                <i class="bi bi-dash"></i>
+                                                            </button>
+                                                            <span class="mx-2">@GetServiceQuantity(service.Id)</span>
+                                                            <button class="btn btn-outline-success btn-sm" 
+                                                                    @onclick="() => AddService(service.Id)"
+                                                                    disabled="@updatingServices">
+                                                                <i class="bi bi-plus"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (loadingServices)
+                                {
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Ładowanie usług...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted small">Wczytywanie dostępnych usług...</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">Brak dostępnych usług dodatkowych.</p>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Right column - Order summary -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-receipt"></i> Podsumowanie
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Price breakdown -->
+                            @if (reservations?.Any() == true)
+                            {
+                                @foreach (var reservation in reservations)
+                                {
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Pobyt (@GetNightCount(reservation) @(GetNightCount(reservation) == 1 ? "noc" : "nocy")):</span>
+                                        <strong>@reservation.TotalPrice.ToString("C", polishCulture)</strong>
+                                    </div>
+                                }
+                            }
+
+                            @if (reservationServices?.Any() == true)
+                            {
+                                <div class="border-top pt-2 mt-2">
+                                    <h6 class="mb-2">Usługi dodatkowe:</h6>
+                                    @foreach (var service in reservationServices)
+                                    {
+                                        <div class="d-flex justify-content-between mb-1 small">
+                                            <span>@service.ServiceName x@service.Quantity:</span>
+                                            <span>@(service.Price * service.Quantity).ToString("C", polishCulture)</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (reservationParkings?.Any() == true)
+                            {
+                                <div class="border-top pt-2 mt-2">
+                                    <h6 class="mb-2">Parking:</h6>
+                                    @foreach (var parking in reservationParkings)
+                                    {
+                                        <div class="d-flex justify-content-between mb-1 small">
+                                            <span>@parking.ParkingType x@parking.Quantity:</span>
+                                            <span>@(parking.Price * parking.Quantity).ToString("C", polishCulture)</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <hr>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="h5">Łączna kwota:</span>
+                                <strong class="h5 text-primary">@order.TotalPrice.ToString("C", polishCulture)</strong>
+                            </div>
+
+                            <!-- Action buttons -->
+                            @if (CanEditOrder())
+                            {
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success btn-lg" @onclick="ConfirmOrderAndProceedToPayment" disabled="@confirmingOrder">
+                                        @if (confirmingOrder)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            <span>Potwierdzam zamówienie...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-credit-card"></i>
+                                            <span>Potwierdź i przejdź do płatności</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-outline-danger" @onclick="CancelOrder" disabled="@cancellingOrder">
+                                        @if (cancellingOrder)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            <span>Anulowanie...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-x-circle"></i>
+                                            <span>Anuluj zamówienie</span>
+                                        }
+                                    </button>
+                                </div>
+                            }
+                            else if (order.Status?.ToLower() == "confirmed")
+                            {
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success btn-lg" @onclick="ProceedToPayment">
+                                        <i class="bi bi-credit-card"></i> Przejdź do płatności
+                                    </button>
+                                    @if (order.Status?.ToLower() != "completed" && order.Status?.ToLower() != "cancelled")
+                                    {
+                                        <button class="btn btn-outline-danger" @onclick="CancelOrder" disabled="@cancellingOrder">
+                                            @if (cancellingOrder)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Anulowanie...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-x-circle"></i>
+                                                <span>Anuluj zamówienie</span>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    <small>
+                                        <i class="bi bi-info-circle"></i>
+                                        Zamówienie ma status "@GetStatusText()" - nie można edytować.
+                                    </small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Empty state -->
+            <div class="text-center py-5">
+                <i class="bi bi-cart-x display-1 text-muted"></i>
+                <h3 class="mt-3">Brak danych zamówienia</h3>
+                <p class="text-muted">Nie udało się załadować informacji o zamówieniu.</p>
+                <button class="btn btn-primary" @onclick="LoadOrderData">
+                    <i class="bi bi-arrow-clockwise"></i> Spróbuj ponownie
+                </button>
+            </div>
+        }
+    }
+    catch (Exception ex)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="GoToHotels">
+                Powrót do hoteli
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .reservation-item:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease-in-out;
+    }
+    
+    .status-badge .badge {
+        font-size: 0.875rem !important;
+    }
+</style>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+
+    private OrderViewModel? order;
+    private List<ReservationResponse>? reservations;
+    private List<HotelServiceResponse>? availableServices;
+    private List<ReservationServiceResponse>? reservationServices;
+    private List<ReservationParkingResponse>? reservationParkings;
+    private OrderEditModel editModel = new();
+
+    // NOWE POLA - dla obsługi nazw pokoi
+    private Dictionary<int, string> roomNamesCache = new();
+    private HashSet<int> loadingRoomNames = new();
+
+    private bool isLoading = true;
+    private bool loadingReservations = false;
+    private bool loadingServices = false;
+    private bool isEditMode = false;
+    private bool isUpdating = false;
+    private bool updatingServices = false;
+    private bool confirmingOrder = false;
+    private bool cancellingOrder = false;
+    private string errorMessage = "";
+    private string pageTitle = "Podsumowanie zamówienia - Hotel Management System";
+    
+    private readonly CultureInfo polishCulture = new("pl-PL");
+    private HttpClient httpClient = null!;
+
+    private bool isEmailConfirmed = false;
+    private bool emailVerificationChecked = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            
+            // Inicjalizuj kolekcje
+            reservations = new List<ReservationResponse>();
+            availableServices = new List<HotelServiceResponse>();
+            reservationServices = new List<ReservationServiceResponse>();
+            reservationParkings = new List<ReservationParkingResponse>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (!authState.User.Identity.IsAuthenticated)
+                {
+                    NavigationManager.NavigateTo("/login");
+                    return;
+                }
+
+                await CheckEmailVerificationStatus();
+                await LoadOrderData();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task CheckEmailVerificationStatus()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessionData = await response.Content.ReadFromJsonAsync<SessionViewModel>();
+                isEmailConfirmed = sessionData?.IsEmailConfirmed ?? false;
+            }
+            else
+            {
+                isEmailConfirmed = false;
+            }
+            
+            emailVerificationChecked = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sprawdzania statusu weryfikacji email: {ex.Message}");
+            isEmailConfirmed = false;
+            emailVerificationChecked = true;
+        }
+    }
+
+    // NOWA METODA - pobiera nazwę pokoju z API /api/hotel-room/{roomId}
+    private async Task<string> LoadRoomName(int roomId)
+    {
+        // Sprawdź czy nazwa jest już w cache
+        if (roomNamesCache.ContainsKey(roomId))
+        {
+            return roomNamesCache[roomId];
+        }
+
+        // Sprawdź czy nie ładujemy już tej nazwy
+        if (loadingRoomNames.Contains(roomId))
+        {
+            return "Ładowanie...";
+        }
+
+        loadingRoomNames.Add(roomId);
+        StateHasChanged(); // Odśwież UI aby pokazać spinner
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/hotel-room/{roomId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var roomDetails = await response.Content.ReadFromJsonAsync<HotelRoomResponse>();
+                if (roomDetails != null && !string.IsNullOrEmpty(roomDetails.RoomName))
+                {
+                    roomNamesCache[roomId] = roomDetails.RoomName;
+                    Console.WriteLine($"Załadowano nazwę pokoju {roomId}: {roomDetails.RoomName}");
+                    return roomDetails.RoomName;
+                }
+                else
+                {
+                    roomNamesCache[roomId] = $"Pokój #{roomId}";
+                    return $"Pokój #{roomId}";
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"Pokój {roomId} nie został znaleziony");
+                roomNamesCache[roomId] = $"Pokój #{roomId} (nie znaleziono)";
+                return $"Pokój #{roomId} (nie znaleziono)";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Console.WriteLine($"Brak autoryzacji do pobrania szczegółów pokoju {roomId}");
+                roomNamesCache[roomId] = $"Pokój #{roomId} (brak dostępu)";
+                return $"Pokój #{roomId} (brak dostępu)";
+            }
+            else
+            {
+                Console.WriteLine($"Błąd pobierania szczegółów pokoju {roomId}: {response.StatusCode}");
+                roomNamesCache[roomId] = $"Pokój #{roomId}";
+                return $"Pokój #{roomId}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania nazwy pokoju {roomId}: {ex.Message}");
+            roomNamesCache[roomId] = $"Pokój #{roomId}";
+            return $"Pokój #{roomId}";
+        }
+        finally
+        {
+            loadingRoomNames.Remove(roomId);
+            StateHasChanged(); // Odśwież UI aby ukryć spinner
+        }
+    }
+
+    // NOWA METODA - pomocnicza do pobierania nazwy pokoju (synchroniczna)
+    private string GetRoomName(int roomId)
+    {
+        if (roomNamesCache.ContainsKey(roomId))
+        {
+            return roomNamesCache[roomId];
+        }
+
+        // Jeśli nie ma w cache, rozpocznij ładowanie asynchroniczne
+        _ = Task.Run(async () => await LoadRoomName(roomId));
+        
+        return $"Pokój #{roomId}"; // Wartość domyślna podczas ładowania
+    }
+
+    // Bezpieczne metody do pobierania danych
+    private string GetSafeFirstName() => order?.FirstName ?? "";
+    private string GetSafeLastName() => order?.LastName ?? "";
+    private string GetSafePhoneNumber() => order?.PhoneNumber ?? "Brak";
+    private string GetSafeAddress() => order?.Address ?? "";
+    private string GetSafeCity() => order?.City ?? "";
+    private string GetSafeCountry() => order?.Country ?? "";
+    
+    private string GetFormattedDate(string dateString)
+    {
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("dd.MM.yyyy HH:mm", polishCulture);
+        }
+        return dateString ?? "Brak daty";
+    }
+    
+    private int GetNightCount(ReservationResponse reservation)
+    {
+        return (reservation.To - reservation.From).Days;
+    }
+    
+    private bool CanEditOrder()
+    {
+        return isEmailConfirmed && (order?.Status?.ToLower() == "pending" || order?.Status?.ToLower() == "created");
+    }
+    
+    private string GetStatusText()
+    {
+        return order?.Status?.ToLower() switch
+        {
+            "pending" => "Oczekuje",
+            "confirmed" => "Potwierdzone",
+            "completed" => "Zakończone",
+            "cancelled" => "Anulowane",
+            _ => order?.Status ?? "Nieznany"
+        };
+    }
+    
+    private string GetStatusBadgeClass()
+    {
+        return order?.Status?.ToLower() switch
+        {
+            "pending" => "bg-warning text-dark",
+            "confirmed" => "bg-success",
+            "completed" => "bg-primary",
+            "cancelled" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+    
+    private string GetStatusIcon()
+    {
+        return order?.Status?.ToLower() switch
+        {
+            "pending" => "bi-clock",
+            "confirmed" => "bi-check-circle",
+            "completed" => "bi-check2-all",
+            "cancelled" => "bi-x-circle",
+            _ => "bi-question-circle"
+        };
+    }
+    
+    private int GetServiceQuantity(int serviceId)
+    {
+        return reservationServices?.Where(rs => rs.ServiceId == serviceId).Sum(rs => rs.Quantity) ?? 0;
+    }
+    
+    private bool IsServiceAdded(int serviceId)
+    {
+        return GetServiceQuantity(serviceId) > 0;
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            httpClient.DefaultRequestHeaders.Authorization = null;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return httpClient;
+    }
+
+    private async Task LoadOrderData()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/order/{OrderId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                order = await response.Content.ReadFromJsonAsync<OrderViewModel>();
+                if (order != null)
+                {
+                    pageTitle = $"Zamówienie #{OrderId} - Hotel Management System";
+                    InitializeEditModel();
+                    
+                    // Załaduj powiązane dane z API
+                    await Task.WhenAll(
+                        LoadReservationData(),
+                        LoadReservationServices(),
+                        LoadReservationParkings()
+                    );
+                    
+                    // Załaduj usługi z hotelu pierwszej rezerwacji
+                    if (reservations?.Any() == true)
+                    {
+                        var firstReservation = reservations.First();
+                        await LoadAvailableServices(firstReservation.HotelId);
+                        
+                        // NOWE - Załaduj nazwy pokoi dla wszystkich rezerwacji
+                        await LoadRoomNamesForReservations();
+                    }
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania tego zamówienia.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                errorMessage = $"Zamówienie o ID {OrderId} nie zostało znalezione.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Błąd połączenia z serwerem: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił nieoczekiwany błąd: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // NOWA METODA - ładuje nazwy pokoi dla wszystkich rezerwacji
+    private async Task LoadRoomNamesForReservations()
+    {
+        if (reservations?.Any() != true) return;
+
+        var uniqueRoomIds = reservations.Select(r => r.RoomId).Distinct().ToList();
+        var tasks = uniqueRoomIds.Select(roomId => LoadRoomName(roomId)).ToArray();
+        
+        try
+        {
+            await Task.WhenAll(tasks);
+            Console.WriteLine($"Załadowano nazwy dla {uniqueRoomIds.Count} pokoi");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania nazw pokoi: {ex.Message}");
+        }
+    }
+
+    private void InitializeEditModel()
+    {
+        if (order != null)
+        {
+            editModel = new OrderEditModel
+            {
+                OrderId = order.Id,
+                UserId = order.UserId,
+                FirstName = order.FirstName,
+                LastName = order.LastName,
+                PhoneNumber = order.PhoneNumber,
+                Address = order.Address,
+                City = order.City,
+                Country = order.Country
+            };
+        }
+    }
+
+    // ZAKTUALIZOWANA METODA - pobiera rzeczywiste dane rezerwacji z API
+    private async Task LoadReservationData()
+    {
+        loadingReservations = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/reservation/{OrderId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                reservations = await response.Content.ReadFromJsonAsync<List<ReservationResponse>>() ?? new List<ReservationResponse>();
+                Console.WriteLine($"Loaded {reservations.Count} reservations for order {OrderId}");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                Console.WriteLine("Brak uprawnień do przeglądania rezerwacji tego zamówienia");
+                reservations = new List<ReservationResponse>();
+            }
+            else
+            {
+                Console.WriteLine($"Błąd ładowania rezerwacji: {response.StatusCode}");
+                reservations = new List<ReservationResponse>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania rezerwacji: {ex.Message}");
+            reservations = new List<ReservationResponse>();
+        }
+        finally
+        {
+            loadingReservations = false;
+            StateHasChanged();
+        }
+    }
+
+    // NOWA METODA - pobiera usługi rezerwacji z API
+    private async Task LoadReservationServices()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Pobierz usługi dla każdej rezerwacji
+            var allServices = new List<ReservationServiceResponse>();
+            
+            if (reservations?.Any() == true)
+            {
+                foreach (var reservation in reservations)
+                {
+                    try
+                    {
+                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/services");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var services = await response.Content.ReadFromJsonAsync<List<ReservationServiceResponse>>() ?? new List<ReservationServiceResponse>();
+                            allServices.AddRange(services);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Błąd ładowania usług dla rezerwacji {reservation.Id}: {ex.Message}");
+                    }
+                }
+            }
+            
+            reservationServices = allServices;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania usług rezerwacji: {ex.Message}");
+            reservationServices = new List<ReservationServiceResponse>();
+        }
+    }
+
+    // NOWA METODA - pobiera parking rezerwacji z API
+    private async Task LoadReservationParkings()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Pobierz parking dla każdej rezerwacji
+            var allParkings = new List<ReservationParkingResponse>();
+            
+            if (reservations?.Any() == true)
+            {
+                foreach (var reservation in reservations)
+                {
+                    try
+                    {
+                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/parkings");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var parkings = await response.Content.ReadFromJsonAsync<List<ReservationParkingResponse>>() ?? new List<ReservationParkingResponse>();
+                            allParkings.AddRange(parkings);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Błąd ładowania parkingu dla rezerwacji {reservation.Id}: {ex.Message}");
+                    }
+                }
+            }
+            
+            reservationParkings = allParkings;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania parkingu rezerwacji: {ex.Message}");
+            reservationParkings = new List<ReservationParkingResponse>();
+        }
+    }
+
+    // ZAKTUALIZOWANA METODA - pobiera rzeczywiste usługi hotelu z API
+    private async Task LoadAvailableServices(int hotelId)
+    {
+        loadingServices = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                availableServices = await response.Content.ReadFromJsonAsync<List<HotelServiceResponse>>() ?? new List<HotelServiceResponse>();
+                Console.WriteLine($"Loaded {availableServices.Count} services for hotel {hotelId}");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                Console.WriteLine($"Hotel {hotelId} nie został znaleziony");
+                availableServices = new List<HotelServiceResponse>();
+            }
+            else
+            {
+                Console.WriteLine($"Błąd ładowania usług hotelu: {response.StatusCode}");
+                availableServices = new List<HotelServiceResponse>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania usług hotelu: {ex.Message}");
+            availableServices = new List<HotelServiceResponse>();
+        }
+        finally
+        {
+            loadingServices = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleEditMode()
+    {
+        isEditMode = !isEditMode;
+        if (isEditMode)
+        {
+            InitializeEditModel();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditMode = false;
+        InitializeEditModel();
+    }
+
+    private async Task UpdateOrder()
+    {
+        if (!CanEditOrder()) return;
+        
+        isUpdating = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PutAsJsonAsync("api/order", editModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Aktualizuj lokalny model
+                if (order != null)
+                {
+                    order.FirstName = editModel.FirstName;
+                    order.LastName = editModel.LastName;
+                    order.PhoneNumber = editModel.PhoneNumber;
+                    order.Address = editModel.Address;
+                    order.City = editModel.City;
+                    order.Country = editModel.Country;
+                }
+                
+                isEditMode = false;
+                await JSRuntime.InvokeVoidAsync("alert", "Dane zostały zaktualizowane pomyślnie!");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do edycji tego zamówienia.";
+            }
+            else
+            {
+                errorMessage = $"Błąd aktualizacji zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas aktualizacji: {ex.Message}";
+        }
+        finally
+        {
+            isUpdating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddService(int serviceId)
+    {
+        if (!CanEditOrder() || reservations?.FirstOrDefault() == null) return;
+
+        updatingServices = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var requestData = new
+            {
+                reservationId = reservations.First().Id,
+                serviceId = serviceId,
+                quantity = 1
+            };
+
+            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/service/add", requestData);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Przeładuj usługi rezerwacji
+                await LoadReservationServices();
+                
+                // Przeładuj zamówienie aby uzyskać aktualną cenę
+                await LoadOrderData();
+                
+                Console.WriteLine($"Dodano usługę {serviceId} do rezerwacji {reservations.First().Id}");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do dodawania usług do tej rezerwacji.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd dodawania usługi: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd dodawania usługi: {ex.Message}");
+        }
+        finally
+        {
+            updatingServices = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveService(int serviceId)
+    {
+        if (!CanEditOrder() || reservations?.FirstOrDefault() == null) return;
+
+        updatingServices = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var requestData = new
+            {
+                reservationId = reservations.First().Id,
+                serviceId = serviceId
+            };
+
+            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/service/remove", requestData);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Przeładuj usługi rezerwacji
+                await LoadReservationServices();
+                
+                // Przeładuj zamówienie aby uzyskać aktualną cenę
+                await LoadOrderData();
+                
+                Console.WriteLine($"Usunięto usługę {serviceId} z rezerwacji {reservations.First().Id}");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do usuwania usług z tej rezerwacji.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania usługi: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania usługi: {ex.Message}");
+        }
+        finally
+        {
+            updatingServices = false;
+            StateHasChanged();
+        }
+    }
+
+    // NOWA METODA - potwierdzanie zamówienia i przejście do płatności
+    private async Task ConfirmOrderAndProceedToPayment()
+    {
+        if (!isEmailConfirmed)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić swój adres email przed przejściem do płatności.");
+            return;
+        }
+
+        if (order == null || !CanEditOrder())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Nie można potwierdzić tego zamówienia.");
+            return;
+        }
+
+        confirmingOrder = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PatchAsync($"api/order/confirm/{OrderId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Aktualizuj status zamówienia lokalnie
+                order.Status = "confirmed";
+                order.Confirmed = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+                
+                Console.WriteLine($"Zamówienie {OrderId} zostało potwierdzone");
+                
+                // Przejdź do płatności
+                NavigationManager.NavigateTo($"/payment/{OrderId}");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do potwierdzenia tego zamówienia.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zamówienie nie zostało znalezione.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd potwierdzania zamówienia: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas potwierdzania zamówienia: {ex.Message}");
+            Console.WriteLine($"Błąd potwierdzania zamówienia {OrderId}: {ex.Message}");
+        }
+        finally
+        {
+            confirmingOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    // NOWA METODA - bezpośrednie przejście do płatności dla potwierdzonego zamówienia
+    private async Task ProceedToPayment()
+    {
+        if (!isEmailConfirmed)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić swój adres email przed przejściem do płatności.");
+            return;
+        }
+        
+        NavigationManager.NavigateTo($"/payment/{OrderId}");
+    }
+
+    // ZAKTUALIZOWANA METODA - anulowanie zamówienia z użyciem API
+    private async Task CancelOrder()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz anulować to zamówienie? Ta operacja jest nieodwracalna.");
+        if (!confirmed) return;
+
+        if (order == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Błąd: dane zamówienia nie są dostępne.");
+            return;
+        }
+
+        cancellingOrder = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PatchAsync($"api/order/cancel/{OrderId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Aktualizuj status zamówienia lokalnie
+                order.Status = "cancelled";
+                order.Cancelled = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+                
+                Console.WriteLine($"Zamówienie {OrderId} zostało anulowane");
+                await JSRuntime.InvokeVoidAsync("alert", "Zamówienie zostało pomyślnie anulowane.");
+                
+                // Opcjonalnie przeładuj dane zamówienia
+                await LoadOrderData();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do anulowania tego zamówienia.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zamówienie nie zostało znalezione.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd anulowania zamówienia: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas anulowania zamówienia: {ex.Message}");
+            Console.WriteLine($"Błąd anulowania zamówienia {OrderId}: {ex.Message}");
+        }
+        finally
+        {
+            cancellingOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoToHotels()
+    {
+        NavigationManager.NavigateTo("/hotels");
+    }
+
+    // ZAKTUALIZOWANE MODELE - odpowiadają rzeczywistym responsom z API
+    public class OrderViewModel
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string Created { get; set; } = "";
+        public string Confirmed { get; set; } = "";
+        public string Completed { get; set; } = "";
+        public string Cancelled { get; set; } = "";
+        public decimal TotalPrice { get; set; }
+    }
+
+    public class OrderEditModel
+    {
+        public int OrderId { get; set; }
+        public string UserId { get; set; } = "";
+        
+        [Required(ErrorMessage = "Imię jest wymagane")]
+        public string FirstName { get; set; } = "";
+        
+        [Required(ErrorMessage = "Nazwisko jest wymagane")]
+        public string LastName { get; set; } = "";
+        
+        [Required(ErrorMessage = "Telefon jest wymagany")]
+        public string PhoneNumber { get; set; } = "";
+        
+        [Required(ErrorMessage = "Adres jest wymagany")]
+        public string Address { get; set; } = "";
+        
+        [Required(ErrorMessage = "Miasto jest wymagane")]
+        public string City { get; set; } = "";
+        
+        [Required(ErrorMessage = "Kraj jest wymagany")]
+        public string Country { get; set; } = "";
+    }
+
+    // NOWE MODELE - odpowiadają rzeczywistym responsom z API
+    public class ReservationResponse
+    {
+        public int Id { get; set; }
+        public int OrderId { get; set; }
+        public int RoomId { get; set; }
+        public int HotelId { get; set; }
+        public DateTime From { get; set; }
+        public DateTime To { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string SpecialRequests { get; set; } = "";
+    }
+
+    // NOWY MODEL - dla odpowiedzi z API /api/hotel-room/{roomId}
+    public class HotelRoomResponse
+    {
+        public int Id { get; set; }
+        public string RoomName { get; set; } = "";
+        public string RoomType { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal DiscountPercent { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int HotelId { get; set; }
+        public string[] RoomImages { get; set; } = Array.Empty<string>();
+    }
+
+    public class HotelServiceResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal Discount { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int HotelId { get; set; }
+    }
+
+    public class ReservationServiceResponse
+    {
+        public int ServiceId { get; set; }
+        public string ServiceName { get; set; } = "";
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+    }
+
+    public class ReservationParkingResponse
+    {
+        public int ParkingId { get; set; }
+        public string ParkingType { get; set; } = "";
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+    }
+    
+    public class SessionViewModel
+    {
+        public string Id { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = "";
+        public bool IsEmailConfirmed { get; set; }
+    }
+}

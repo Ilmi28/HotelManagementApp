@@ -1,0 +1,1169 @@
+@page "/reservation/{roomId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.Globalization
+@using System.Timers
+
+<PageTitle>@pageTitle</PageTitle>
+
+<div class="container mt-4">
+    @try
+    {
+        <!-- Loading state -->
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie informacji o pokoju...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" @onclick="GoToHotels">
+                            Powrót do hoteli
+                        </button>
+                        <button class="btn btn-sm btn-secondary ms-2" @onclick="LoadRoomData">
+                            Spróbuj ponownie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!isEmailConfirmed && emailVerificationChecked)
+        {
+            <!-- Email not confirmed warning -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-lg-8">
+                    <div class="alert alert-warning border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-envelope-exclamation me-3" style="font-size: 2rem;"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading mb-2">
+                                    <i class="bi bi-exclamation-triangle"></i> Potwierdź swój adres email
+                                </h5>
+                                <p class="mb-2">
+                                    Aby dokonać rezerwacji, musisz najpierw potwierdzić swój adres email.
+                                    Sprawdź swoją skrzynkę pocztową i kliknij w link potwierdzający.
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-warning" @onclick="SendVerificationEmail">
+                                        <i class="bi bi-envelope"></i> Wyślij ponownie link
+                                    </button>
+                                    <button class="btn btn-outline-secondary" @onclick="CheckEmailStatus">
+                                        <i class="bi bi-arrow-clockwise"></i> Sprawdź status
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (room != null)
+        {
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/hotels" class="text-decoration-none">
+                            <i class="bi bi-house-door"></i> Hotele
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/hotel/@room.HotelId" class="text-decoration-none">
+                            Hotel
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Rezerwacja - @GetSafeRoomName()
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Room info header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h1 class="display-6 fw-bold text-primary mb-2">
+                                        Rezerwacja pokoju
+                                    </h1>
+                                    <h3 class="mb-2">@GetSafeRoomName()</h3>
+                                    <p class="text-muted mb-3">
+                                        <i class="bi bi-door-open"></i> @GetSafeRoomType()
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="price-card p-3 bg-light rounded">
+                                        <h6 class="mb-2">Cena za noc</h6>
+                                        @if (room.DiscountPercent > 0)
+                                        {
+                                            <div class="h5 text-muted text-decoration-line-through">
+                                                @room.Price.ToString("C", polishCulture)
+                                            </div>
+                                            <div class="h4 text-success">
+                                                @room.FinalPrice.ToString("C", polishCulture)
+                                            </div>
+                                            <small class="badge bg-success">
+                                                -@room.DiscountPercent%
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <div class="h4 text-primary">
+                                                @room.Price.ToString("C", polishCulture)
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room images -->
+            @if (HasRoomImages())
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-images text-primary"></i> Zdjęcia pokoju
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    @foreach (var image in GetSafeRoomImages())
+                                    {
+                                        <div class="col-lg-4 col-md-6">
+                                            <img src="@image" class="img-fluid rounded shadow-sm" 
+                                                 alt="@GetSafeRoomName()" style="height: 200px; width: 100%; object-fit: cover;" />
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Reservation form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm @(isEmailConfirmed ? "" : "opacity-50")">
+                        <div class="card-header bg-white border-0">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-event text-primary"></i> Szczegóły rezerwacji
+                                @if (!isEmailConfirmed)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="bi bi-lock"></i> Wymagane potwierdzenie emaila
+                                    </span>
+                                }
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <EditForm Model="@reservationModel" OnValidSubmit="@HandleSubmit">
+                                <DataAnnotationsValidator />
+                                
+                                <!-- Date selection -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="checkInDate" class="form-label">
+                                            <i class="bi bi-calendar-plus"></i> Data zameldowania
+                                        </label>
+                                        <InputDate id="checkInDate" class="form-control" @bind-Value="reservationModel.CheckInDate" 
+                                                   min="@DateTime.Today.ToString("yyyy-MM-dd")" disabled="@(!isEmailConfirmed)" 
+                                                   @onchange="OnDateChanged" />
+                                        <ValidationMessage For="@(() => reservationModel.CheckInDate)" class="text-danger" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="checkOutDate" class="form-label">
+                                            <i class="bi bi-calendar-minus"></i> Data wymeldowania
+                                        </label>
+                                        <InputDate id="checkOutDate" class="form-control" @bind-Value="reservationModel.CheckOutDate" 
+                                                   min="@GetMinCheckOutDate()" disabled="@(!isEmailConfirmed)" 
+                                                   @onchange="OnDateChanged" />
+                                        <ValidationMessage For="@(() => reservationModel.CheckOutDate)" class="text-danger" />
+                                        @if (!string.IsNullOrEmpty(dateValidationMessage))
+                                        {
+                                            <div class="text-danger small mt-1">
+                                                <i class="bi bi-exclamation-triangle"></i> @dateValidationMessage
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Availability status indicator -->
+                                @if (isEmailConfirmed && IsValidDateRange())
+                                {
+                                    <div class="row mb-4">
+                                        <div class="col-12">
+                                            <div class="availability-status-card p-3 rounded border @GetAvailabilityStatusClass()">
+                                                @if (checkingAvailability)
+                                                {
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                                        <span>Sprawdzam dostępność pokoju...</span>
+                                                    </div>
+                                                }
+                                                else if (availabilityResult == AvailabilityStatus.Available)
+                                                {
+                                                    <div class="d-flex align-items-center text-success">
+                                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                                        <div>
+                                                            <strong>Pokój dostępny!</strong>
+                                                            <div class="small">Wybrane daty są dostępne dla tego pokoju</div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else if (availabilityResult == AvailabilityStatus.Unavailable)
+                                                {
+                                                    <div class="d-flex align-items-center text-danger">
+                                                        <i class="bi bi-x-circle-fill me-2"></i>
+                                                        <div>
+                                                            <strong>Pokój niedostępny</strong>
+                                                            <div class="small">Wybrane daty są już zajęte lub niedostępne</div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else if (availabilityResult == AvailabilityStatus.Error)
+                                                {
+                                                    <div class="d-flex align-items-center text-warning">
+                                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                        <div>
+                                                            <strong>Błąd sprawdzania dostępności</strong>
+                                                            <div class="small">Spróbuj ponownie lub zmień daty</div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Guest count -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="guestCount" class="form-label">
+                                            <i class="bi bi-people"></i> Liczba gości
+                                        </label>
+                                        <InputNumber id="guestCount" class="form-control" @bind-Value="reservationModel.GuestCount" 
+                                                     min="1" max="10" disabled="@(!isEmailConfirmed)" />
+                                        <ValidationMessage For="@(() => reservationModel.GuestCount)" class="text-danger" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Długość pobytu</label>
+                                        <div class="form-control-plaintext">
+                                            @if (GetStayDuration() > 0)
+                                            {
+                                                <strong>@GetStayDuration() @(GetStayDuration() == 1 ? "noc" : GetStayDuration() < 5 ? "noce" : "nocy")</strong>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Wybierz daty</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Special requests -->
+                                <div class="mb-4">
+                                    <label for="specialRequests" class="form-label">
+                                        <i class="bi bi-chat-dots"></i> Specjalne życzenia (opcjonalne)
+                                    </label>
+                                    <InputTextArea id="specialRequests" class="form-control" @bind-Value="reservationModel.SpecialRequests" 
+                                                   rows="3" placeholder="Np. łóżko dziecięce, pokój dla niepalących, wysoki piętro..." 
+                                                   disabled="@(!isEmailConfirmed)" />
+                                </div>
+
+                                <!-- Action buttons -->
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-outline-secondary me-md-2" @onclick="GoBack">
+                                        <i class="bi bi-arrow-left"></i> Cofnij
+                                    </button>
+                                    
+                                    @if (availabilityResult == AvailabilityStatus.Available)
+                                    {
+                                        <button type="submit" class="btn btn-success" disabled="@(!isEmailConfirmed || creatingOrder)">
+                                            @if (creatingOrder)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Tworzę zamówienie...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-credit-card"></i>
+                                                <span>Przejdź do płatności</span>
+                                            }
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-primary" disabled="@(!isEmailConfirmed || !IsValidDateRange() || checkingAvailability)" 
+                                                @onclick="CheckAvailabilityManually">
+                                            @if (checkingAvailability)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Sprawdzam dostępność...</span>
+                                            }
+                                            else if (!isEmailConfirmed)
+                                            {
+                                                <i class="bi bi-envelope-exclamation"></i>
+                                                <span>Potwierdź email aby kontynuować</span>
+                                            }
+                                            else if (!IsValidDateRange())
+                                            {
+                                                <i class="bi bi-calendar-x"></i>
+                                                <span>Wybierz prawidłowe daty</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-search"></i>
+                                                <span>Sprawdź dostępność</span>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price summary -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calculator"></i> Podsumowanie kosztów
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (GetStayDuration() > 0)
+                            {
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Cena za noc:</span>
+                                    <strong>@GetEffectivePrice().ToString("C", polishCulture)</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Liczba nocy:</span>
+                                    <strong>@GetStayDuration()</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Liczba gości:</span>
+                                    <strong>@reservationModel.GuestCount</strong>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="h6">Koszt noclegu:</span>
+                                    <strong class="h6 text-primary">@GetAccommodationCost().ToString("C", polishCulture)</strong>
+                                </div>
+                                
+                                @if (room.DiscountPercent > 0)
+                                {
+                                    <div class="alert alert-success">
+                                        <small>
+                                            <i class="bi bi-tag"></i> 
+                                            Oszczędzasz @GetSavingsAmount().ToString("C", polishCulture) 
+                                            dzięki zniżce @room.DiscountPercent%!
+                                        </small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center">
+                                    <i class="bi bi-calendar-x"></i><br />
+                                    Wybierz daty pobytu aby zobaczyć koszt
+                                </p>
+                            }
+
+                            @if (!isEmailConfirmed)
+                            {
+                                <div class="alert alert-warning">
+                                    <small>
+                                        <i class="bi bi-exclamation-triangle"></i> 
+                                        Potwierdź email aby móc dokonać rezerwacji
+                                    </small>
+                                </div>
+                            }
+                            
+                            @if (availabilityResult == AvailabilityStatus.Available)
+                            {
+                                <div class="alert alert-success">
+                                    <small>
+                                        <i class="bi bi-check-circle"></i> 
+                                        Pokój dostępny w wybranych datach!
+                                    </small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Empty state -->
+            <div class="text-center py-5">
+                <i class="bi bi-door-closed display-1 text-muted"></i>
+                <h3 class="mt-3">Brak danych pokoju</h3>
+                <p class="text-muted">Nie udało się załadować informacji o pokoju.</p>
+                <button class="btn btn-primary" @onclick="LoadRoomData">
+                    <i class="bi bi-arrow-clockwise"></i> Spróbuj ponownie
+                </button>
+            </div>
+        }
+    }
+    catch (Exception ex)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="GoToHotels">
+                Powrót do hoteli
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .availability-status-card {
+        transition: all 0.3s ease;
+    }
+    
+    .availability-status-card.bg-light {
+        background-color: #f8f9fa !important;
+    }
+    
+    .availability-status-card.bg-success-light {
+        background-color: #d1e7dd !important;
+        border-color: #198754 !important;
+    }
+    
+    .availability-status-card.bg-danger-light {
+        background-color: #f8d7da !important;
+        border-color: #dc3545 !important;
+    }
+    
+    .availability-status-card.bg-warning-light {
+        background-color: #fff3cd !important;
+        border-color: #ffc107 !important;
+    }
+</style>
+
+@code {
+    [Parameter] public int RoomId { get; set; }
+
+    private RoomDetailsViewModel? room;
+    private ReservationModel reservationModel = new();
+    
+    // Nowe pola dla ulepszonej logiki dostępności
+    private enum AvailabilityStatus
+    {
+        Unknown,
+        Available,
+        Unavailable,
+        Error
+    }
+    
+    private AvailabilityStatus availabilityResult = AvailabilityStatus.Unknown;
+    private Timer? debounceTimer;
+    private Dictionary<string, AvailabilityStatus> availabilityCache = new();
+    private string dateValidationMessage = "";
+    
+    private bool isLoading = true;
+    private bool checkingAvailability = false;
+    private bool creatingOrder = false;
+    private bool isEmailConfirmed = false;
+    private bool emailVerificationChecked = false;
+    private string errorMessage = "";
+    private string pageTitle = "Rezerwacja pokoju - Hotel Management System";
+    
+    private readonly CultureInfo polishCulture = new("pl-PL");
+    private HttpClient httpClient = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            
+            // Ustaw domyślne daty
+            reservationModel.CheckInDate = DateTime.Today.AddDays(1);
+            reservationModel.CheckOutDate = DateTime.Today.AddDays(2);
+            reservationModel.GuestCount = 1;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (!authState.User.Identity.IsAuthenticated)
+                {
+                    NavigationManager.NavigateTo("/login");
+                    return;
+                }
+
+                await CheckEmailVerificationStatus();
+                await LoadRoomData();
+                
+                // Sprawdź dostępność dla domyślnych dat
+                if (isEmailConfirmed && IsValidDateRange())
+                {
+                    await CheckAvailabilityWithDebounce();
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // NOWA METODA - walidacja zakresu dat
+    private bool IsValidDateRange()
+    {
+        if (reservationModel.CheckInDate < DateTime.Today)
+        {
+            dateValidationMessage = "Data zameldowania nie może być wcześniejsza niż dzisiaj";
+            return false;
+        }
+        
+        if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+        {
+            dateValidationMessage = "Data wymeldowania musi być późniejsza niż data zameldowania";
+            return false;
+        }
+        
+        var stayDuration = (reservationModel.CheckOutDate - reservationModel.CheckInDate).Days;
+        if (stayDuration > 30)
+        {
+            dateValidationMessage = "Maksymalny okres pobytu to 30 dni";
+            return false;
+        }
+        
+        dateValidationMessage = "";
+        return true;
+    }
+
+    // NOWA METODA - obsługa zmiany dat z debouncing
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        // Anuluj poprzedni timer
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+        
+        // Reset stanu dostępności
+        availabilityResult = AvailabilityStatus.Unknown;
+        StateHasChanged();
+        
+        if (!isEmailConfirmed || !IsValidDateRange())
+        {
+            return;
+        }
+        
+        // Ustaw nowy timer na 800ms
+        debounceTimer = new Timer(800);
+        debounceTimer.Elapsed += async (sender, e) =>
+        {
+            debounceTimer.Stop();
+            await InvokeAsync(async () =>
+            {
+                await CheckAvailabilityWithDebounce();
+            });
+        };
+        debounceTimer.Start();
+    }
+
+    // NOWA METODA - sprawdzanie dostępności z cache
+    private async Task CheckAvailabilityWithDebounce()
+    {
+        if (!IsValidDateRange() || checkingAvailability)
+        {
+            return;
+        }
+
+        var cacheKey = GetCacheKey();
+        
+        // Sprawdź cache (ważny przez 5 minut)
+        if (availabilityCache.ContainsKey(cacheKey))
+        {
+            availabilityResult = availabilityCache[cacheKey];
+            StateHasChanged();
+            return;
+        }
+
+        await CheckAvailability();
+    }
+
+    // NOWA METODA - ręczne sprawdzenie dostępności
+    private async Task CheckAvailabilityManually()
+    {
+        if (!isEmailConfirmed || !IsValidDateRange())
+        {
+            return;
+        }
+        
+        // Wyczyść cache dla tej daty aby wymusić ponowne sprawdzenie
+        var cacheKey = GetCacheKey();
+        availabilityCache.Remove(cacheKey);
+        
+        await CheckAvailability();
+    }
+
+    // ULEPSZONA METODA - sprawdzanie dostępności
+    private async Task CheckAvailability()
+    {
+        if (room == null || !isEmailConfirmed || checkingAvailability) 
+        {
+            return;
+        }
+        
+        checkingAvailability = true;
+        availabilityResult = AvailabilityStatus.Unknown;
+        StateHasChanged();
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            var requestData = new
+            {
+                roomId = RoomId,
+                from = reservationModel.CheckInDate.ToString("yyyy-MM-dd"),
+                to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
+            };
+
+            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/get-available-days", requestData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var availableDays = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
+                
+                // Sprawdź czy wszystkie dni w zakresie są dostępne
+                var requiredDays = GetRequiredDays();
+                var isFullyAvailable = requiredDays.All(day => availableDays.Contains(day));
+                
+                availabilityResult = isFullyAvailable ? AvailabilityStatus.Available : AvailabilityStatus.Unavailable;
+                
+                // Zapisz w cache
+                var cacheKey = GetCacheKey();
+                availabilityCache[cacheKey] = availabilityResult;
+                
+                Console.WriteLine($"Availability check: {requiredDays.Count} required days, {availableDays.Count} available days, result: {availabilityResult}");
+            }
+            else
+            {
+                availabilityResult = AvailabilityStatus.Error;
+                Console.WriteLine($"Error checking availability: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            availabilityResult = AvailabilityStatus.Error;
+            Console.WriteLine($"Exception during availability check: {ex.Message}");
+        }
+        finally
+        {
+            checkingAvailability = false;
+            StateHasChanged();
+        }
+    }
+
+    // NOWA METODA - generuje listę wymaganych dni
+    private List<string> GetRequiredDays()
+    {
+        var days = new List<string>();
+        var current = reservationModel.CheckInDate;
+        
+        while (current < reservationModel.CheckOutDate)
+        {
+            days.Add(current.ToString("yyyy-MM-dd"));
+            current = current.AddDays(1);
+        }
+        
+        return days;
+    }
+
+    // NOWA METODA - generuje klucz cache
+    private string GetCacheKey()
+    {
+        return $"{RoomId}_{reservationModel.CheckInDate:yyyy-MM-dd}_{reservationModel.CheckOutDate:yyyy-MM-dd}";
+    }
+
+    // NOWA METODA - zwraca klasę CSS dla statusu dostępności
+    private string GetAvailabilityStatusClass()
+    {
+        return availabilityResult switch
+        {
+            AvailabilityStatus.Available => "bg-success-light",
+            AvailabilityStatus.Unavailable => "bg-danger-light",
+            AvailabilityStatus.Error => "bg-warning-light",
+            _ => "bg-light"
+        };
+    }
+
+    // NOWA METODA - obsługa submit formularza
+    private async Task HandleSubmit()
+    {
+        if (availabilityResult == AvailabilityStatus.Available)
+        {
+            await CreateOrderAndProceed();
+        }
+        else
+        {
+            await CheckAvailabilityManually();
+        }
+    }
+
+    // NOWA METODA - sprawdzanie statusu weryfikacji emaila
+    private async Task CheckEmailVerificationStatus()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessionData = await response.Content.ReadFromJsonAsync<SessionViewModel>();
+                isEmailConfirmed = sessionData?.IsEmailConfirmed ?? false;
+            }
+            else
+            {
+                isEmailConfirmed = false;
+            }
+            
+            emailVerificationChecked = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd sprawdzania statusu weryfikacji email: {ex.Message}");
+            isEmailConfirmed = false;
+            emailVerificationChecked = true;
+        }
+    }
+
+    // NOWA METODA - ponowne sprawdzenie statusu emaila
+    private async Task CheckEmailStatus()
+    {
+        await CheckEmailVerificationStatus();
+        StateHasChanged();
+        
+        if (isEmailConfirmed)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Email został potwierdzony! Możesz teraz dokonać rezerwacji.");
+            
+            // Sprawdź dostępność jeśli daty są prawidłowe
+            if (IsValidDateRange())
+            {
+                await CheckAvailabilityWithDebounce();
+            }
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Email nadal nie został potwierdzony. Sprawdź swoją skrzynkę pocztową.");
+        }
+    }
+
+    // NOWA METODA - wysyłanie linku weryfikacyjnego
+    private async Task SendVerificationEmail()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PostAsync("api/account/send-verification-email", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Link weryfikacyjny został wysłany na Twój adres email.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas wysyłania linku weryfikacyjnego.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd: {ex.Message}");
+        }
+    }
+
+    private async Task CreateOrderAndProceed()
+    {
+        if (room == null || availabilityResult != AvailabilityStatus.Available || !isEmailConfirmed) 
+        {
+            if (!isEmailConfirmed)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić swój adres email przed dokonaniem rezerwacji.");
+            }
+            else if (availabilityResult != AvailabilityStatus.Available)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Pokój nie jest dostępny w wybranych datach. Sprawdź dostępność ponownie.");
+            }
+            return;
+        }
+        
+        creatingOrder = true;
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Pobierz dane z session API
+            var userId = "";
+            try
+            {
+                var sessionResponse = await authenticatedClient.GetAsync("api/account/session");
+                if (sessionResponse.IsSuccessStatusCode)
+                {
+                    var sessionData = await sessionResponse.Content.ReadFromJsonAsync<SessionViewModel>();
+                    if (sessionData != null)
+                    {
+                        userId = sessionData.Id;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd pobierania session: {ex.Message}");
+            }
+
+            // Utwórz zamówienie
+            var orderData = new
+            {
+                userId = userId,
+                firstName = "x",
+                lastName = "x",
+                phoneNumber = "123456789",
+                address = "x",
+                city = "x",
+                country = "x"
+            };
+
+            var response = await authenticatedClient.PostAsJsonAsync("api/order", orderData);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                try
+                {
+                    var jsonDoc = System.Text.Json.JsonDocument.Parse(responseContent);
+                    var orderId = 0;
+                    
+                    if (jsonDoc.RootElement.TryGetProperty("orderId", out var orderIdProp))
+                    {
+                        orderId = orderIdProp.GetInt32();
+                    }
+                    else if (jsonDoc.RootElement.TryGetProperty("id", out var idProp))
+                    {
+                        orderId = idProp.GetInt32();
+                    }
+                    else if (int.TryParse(responseContent.Trim('"'), out var parsedId))
+                    {
+                        orderId = parsedId;
+                    }
+                    
+                    if (orderId > 0)
+                    {
+                        var reservationResult = await AddReservationToOrder(orderId, authenticatedClient);
+                        
+                        if (reservationResult.Success)
+                        {
+                            NavigationManager.NavigateTo($"/order/{orderId}");
+                        }
+                        else
+                        {
+                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
+                        }
+                    }
+                    else
+                    {
+                        errorMessage = "Nie udało się uzyskać ID zamówienia z odpowiedzi serwera.";
+                    }
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    if (int.TryParse(responseContent.Trim(), out var directId))
+                    {
+                        var reservationResult = await AddReservationToOrder(directId, authenticatedClient);
+                        
+                        if (reservationResult.Success)
+                        {
+                            NavigationManager.NavigateTo($"/order/{directId}");
+                        }
+                        else
+                        {
+                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
+                        }
+                    }
+                    else
+                    {
+                        errorMessage = $"Nieprawidłowa odpowiedź serwera: {responseContent}";
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = $"Błąd tworzenia zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd tworzenia zamówienia: {ex.Message}";
+        }
+        finally
+        {
+            creatingOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    // Model wyników dla rezerwacji
+    public class ReservationResult
+    {
+        public bool Success { get; set; }
+        public string ErrorMessage { get; set; } = "";
+        public int? ReservationId { get; set; }
+    }
+
+    // Model dla session API
+    public class SessionViewModel
+    {
+        public string Id { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = "";
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    private async Task<ReservationResult> AddReservationToOrder(int orderId, HttpClient client)
+    {
+        try
+        {
+            var reservationData = new
+            {
+                orderId = orderId,
+                roomId = RoomId,
+                from = reservationModel.CheckInDate.ToString("yyyy-MM-dd"),
+                to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
+            };
+
+            var response = await client.PostAsJsonAsync("api/reservation", reservationData);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                return new ReservationResult { Success = true };
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return new ReservationResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = $"Błąd serwera: {response.StatusCode}" 
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new ReservationResult 
+            { 
+                Success = false, 
+                ErrorMessage = $"Błąd połączenia: {ex.Message}" 
+            };
+        }
+    }
+
+    // Dispose timer przy niszczeniu komponentu
+    public void Dispose()
+    {
+        debounceTimer?.Stop();
+        debounceTimer?.Dispose();
+    }
+
+    // Pomocnicze metody pozostają bez zmian
+    private string GetSafeRoomName() => room?.RoomName ?? "Pokój";
+    private string GetSafeRoomType() => room?.RoomType ?? "Typ pokoju";
+    private bool HasRoomImages() => room?.RoomImages?.Any() == true;
+    private IEnumerable<string> GetSafeRoomImages() => room?.RoomImages?.Take(6) ?? Enumerable.Empty<string>();
+    private decimal GetEffectivePrice() => room?.FinalPrice ?? room?.Price ?? 0;
+    
+    private string GetMinCheckOutDate()
+    {
+        var minDate = reservationModel.CheckInDate.AddDays(1);
+        return minDate.ToString("yyyy-MM-dd");
+    }
+    
+    private int GetStayDuration()
+    {
+        if (reservationModel.CheckOutDate > reservationModel.CheckInDate)
+        {
+            return (reservationModel.CheckOutDate - reservationModel.CheckInDate).Days;
+        }
+        return 0;
+    }
+    
+    private decimal GetAccommodationCost()
+    {
+        return GetEffectivePrice() * GetStayDuration();
+    }
+    
+    private decimal GetSavingsAmount()
+    {
+        if (room == null) return 0;
+        return (room.Price - room.FinalPrice) * GetStayDuration();
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            httpClient.DefaultRequestHeaders.Authorization = null;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return httpClient;
+    }
+
+    private async Task LoadRoomData()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/hotel-room/{RoomId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                room = await response.Content.ReadFromJsonAsync<RoomDetailsViewModel>();
+                if (room != null)
+                {
+                    pageTitle = $"Rezerwacja - {GetSafeRoomName()} - Hotel Management System";
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                errorMessage = $"Pokój o ID {RoomId} nie został znaleziony.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania pokoju: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Błąd połączenia z serwerem: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił nieoczekiwany błąd: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        if (room != null)
+        {
+            NavigationManager.NavigateTo($"/hotel/{room.HotelId}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/hotels");
+        }
+    }
+
+    private void GoToHotels()
+    {
+        NavigationManager.NavigateTo("/hotels");
+    }
+
+    // Modele pozostają bez zmian
+    public class ReservationModel
+    {
+        public DateTime CheckInDate { get; set; } = DateTime.Today.AddDays(1);
+        public DateTime CheckOutDate { get; set; } = DateTime.Today.AddDays(2);
+        public int GuestCount { get; set; } = 1;
+        public string SpecialRequests { get; set; } = "";
+    }
+
+    public class RoomDetailsViewModel
+    {
+        public int Id { get; set; }
+        public int HotelId { get; set; }
+        public string RoomName { get; set; } = "";
+        public string RoomType { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int DiscountPercent { get; set; }
+        public List<string>? RoomImages { get; set; }
+    }
+}

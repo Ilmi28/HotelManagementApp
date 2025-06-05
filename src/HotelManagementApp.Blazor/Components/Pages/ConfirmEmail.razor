@@ -1,0 +1,114 @@
+@page "/account/confirm-email"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject ITokenService TokenService
+@using System.Net
+@using System.Net.Http.Json
+
+
+<h3>Potwierdzenie Adresu Email</h3>
+
+@if (isProcessing)
+{
+	<p><em>Przetwarzanie...</em> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></p>
+}
+else if (!string.IsNullOrEmpty(message))
+{
+	<div class="@(isSuccess ? "alert alert-success" : "alert alert-danger")" role="alert">
+		@message
+	</div>
+	@if (isSuccess)
+	{
+		<button class="btn btn-primary" @onclick="GoToLogin">Przejdź do logowania</button>
+	}
+	else
+	{
+		<button class="btn btn-info" @onclick="GoToHome">Powrót na stronę główną</button>
+	}
+}
+
+@code {
+	[Parameter]
+	[SupplyParameterFromQuery(Name = "userId")]
+	public string UserId { get; set; }
+
+	[Parameter]
+	[SupplyParameterFromQuery(Name = "token")]
+	public string Token { get; set; }
+
+	private string message;
+	private bool isProcessing = true;
+	private bool isSuccess = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		isProcessing = true;
+
+		if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
+		{
+			message = "Brak wymaganych parametrów (userId lub token) do potwierdzenia emaila. Sprawdź link z wiadomości email.";
+			isSuccess = false;
+			isProcessing = false;
+			return;
+		}
+
+		try
+		{
+			var client = HttpClientFactory.CreateClient("HotelApi");
+			var command = new { UserId, Token };
+            Console.WriteLine(UserId);
+            Console.WriteLine(Token);
+			var response = await client.PostAsJsonAsync("api/account/confirm-email", command);
+
+			if (response.StatusCode == HttpStatusCode.Found)
+			{
+				isSuccess = true;
+				message = "Adres email został pomyślnie potwierdzony! Możesz się teraz zalogować.";
+			}
+			else if (response.StatusCode == HttpStatusCode.BadRequest)
+			{
+				isSuccess = false;
+				var errorContent = await response.Content.ReadAsStringAsync();
+				message = "Błąd podczas potwierdzania emaila: Nieprawidłowy token, token mógł wygasnąć lub użytkownik nie został znaleziony.";
+				if (!string.IsNullOrWhiteSpace(errorContent) && !errorContent.Contains("html"))
+				{
+					message += $" Szczegóły serwera: {errorContent}";
+				}
+			}
+			else
+			{
+				isSuccess = false;
+				var errorContent = await response.Content.ReadAsStringAsync();
+				message = $"Wystąpił nieoczekiwany błąd podczas potwierdzania emaila. Kod błędu: {(int)response.StatusCode}.";
+				if (!string.IsNullOrWhiteSpace(errorContent) && !errorContent.Contains("html"))
+				{
+					message += $" Szczegóły: {errorContent}";
+				}
+			}
+		}
+		catch (HttpRequestException httpEx)
+		{
+			isSuccess = false;
+			message = $"Wystąpił błąd połączenia podczas próby potwierdzenia emaila: {httpEx.Message}";
+		}
+		catch (Exception ex)
+		{
+			isSuccess = false;
+			message = $"Wystąpił wewnętrzny błąd aplikacji: {ex.Message}";
+		}
+		finally
+		{
+			isProcessing = false;
+		}
+	}
+
+	private void GoToLogin()
+	{
+		NavigationManager.NavigateTo("/login");
+	}
+
+	private void GoToHome()
+	{
+		NavigationManager.NavigateTo("/");
+	}
+}

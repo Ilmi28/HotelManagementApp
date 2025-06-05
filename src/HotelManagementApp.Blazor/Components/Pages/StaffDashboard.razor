@@ -1,0 +1,1342 @@
+@page "/staff-dashboard"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.Globalization
+
+<PageTitle>Dashboard Personelu - Hotel Management System</PageTitle>
+
+<div class="container-fluid mt-4">
+    @try
+    {
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="display-6 fw-bold text-primary mb-2">
+                                    <i class="bi bi-speedometer2"></i> Dashboard Personelu
+                                </h1>
+                                <p class="text-muted mb-0">
+                                    Przegląd aktualnych zadań i zarządzanie operacjami hotelowymi
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="small text-muted">
+                                    Ostatnia aktualizacja: @lastUpdateTime.ToString("HH:mm:ss")
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm mt-2" @onclick="RefreshAllData" disabled="@isRefreshing">
+                                    @if (isRefreshing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Odświeżanie...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                        <span>Odśwież dane</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading state -->
+        @if (isInitialLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie danych dashboard...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    @if (errorMessage.Contains("Unauthorized") || errorMessage.Contains("autoryzacji") || errorMessage.Contains("403"))
+                    {
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" @onclick="GoToLogin">
+                                Przejdź do logowania
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-secondary" @onclick="RefreshAllData">
+                                Spróbuj ponownie
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-warning text-dark border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Oczekujące zamówienia</h6>
+                                    <h3 class="mb-0">@(pendingOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-warning-emphasis">
+                                    <i class="bi bi-clock-history display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-success text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Potwierdzone zamówienia</h6>
+                                    <h3 class="mb-0">@(confirmedOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-success-emphasis">
+                                    <i class="bi bi-check-circle display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-info text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Goście</h6>
+                                    <h3 class="mb-0">@(guests?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-info-emphasis">
+                                    <i class="bi bi-people display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-danger text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Czarna lista</h6>
+                                    <h3 class="mb-0">@(blacklistedUsers?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-danger-emphasis">
+                                    <i class="bi bi-person-x display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column - Orders -->
+                <div class="col-lg-8">
+                    <!-- Pending Orders -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history text-warning"></i> Oczekujące zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadPendingOrders" disabled="@loadingPendingOrders">
+                                    @if (loadingPendingOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingPendingOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie oczekujących zamówień...</p>
+                                </div>
+                            }
+                            else if (pendingOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 40px;"></th>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data utworzenia</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in pendingOrders.Take(10))
+                                            {
+                                                <tr class="order-row @(expandedOrderIds.Contains(order.Id) ? "table-active" : "")" 
+                                                    @onclick="() => ToggleOrderExpansion(order.Id)" 
+                                                    style="cursor: pointer;">
+                                                    <td class="text-center">
+                                                        <i class="bi @(expandedOrderIds.Contains(order.Id) ? "bi-chevron-down" : "bi-chevron-right") text-muted"></i>
+                                                    </td>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Email ?? "Brak")</td>
+                                                    <td class="text-primary fw-bold">@GetFormattedPrice(order.TotalPrice)</td>
+                                                    <td>@GetFormattedDateTime(order.Created)</td>
+                                                    <td @onclick:stopPropagation="true">
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewOrderDetails(order.Id)">
+                                                                <i class="bi bi-eye"></i> Zobacz
+                                                            </button>
+                                                            <button class="btn btn-outline-danger btn-sm" 
+                                                                    @onclick="() => ConfirmCancelOrder(order.Id)" 
+                                                                    disabled="@(cancellingOrderIds.Contains(order.Id))">
+                                                                @if (cancellingOrderIds.Contains(order.Id))
+                                                                {
+                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <i class="bi bi-x-circle"></i>
+                                                                }
+                                                                Anuluj
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                @if (expandedOrderIds.Contains(order.Id))
+                                                {
+                                                    <tr class="order-details-row">
+                                                        <td colspan="7" class="border-top-0">
+                                                            <div class="order-details-container p-3 bg-light border rounded">
+                                                                <div class="row">
+                                                                    <div class="col-md-6">
+                                                                        <h6 class="mb-2">
+                                                                            <i class="bi bi-person-circle"></i> Dane klienta
+                                                                        </h6>
+                                                                        <div class="mb-2">
+                                                                            <strong>Imię i nazwisko:</strong> @GetCustomerName(order)
+                                                                        </div>
+                                                                        <div class="mb-2">
+                                                                            <strong>Email:</strong> @(order.Email ?? "Brak")
+                                                                        </div>
+                                                                        <div class="mb-2">
+                                                                            <strong>Telefon:</strong> @(order.PhoneNumber ?? "Brak")
+                                                                        </div>
+                                                                        <div class="mb-2">
+                                                                            <strong>Adres:</strong> 
+                                                                            @if (!string.IsNullOrEmpty(order.Address))
+                                                                            {
+                                                                                <span>@order.Address, @order.City, @order.Country</span>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <span class="text-muted">Brak adresu</span>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <h6 class="mb-2">
+                                                                            <i class="bi bi-info-circle"></i> Szczegóły zamówienia
+                                                                        </h6>
+                                                                        <div class="mb-2">
+                                                                            <strong>Status:</strong> 
+                                                                            <span class="badge bg-warning text-dark">@GetStatusText(order.Status)</span>
+                                                                        </div>
+                                                                        <div class="mb-2">
+                                                                            <strong>Data utworzenia:</strong> @GetFormattedDateTime(order.Created)
+                                                                        </div>
+                                                                        @if (!string.IsNullOrEmpty(order.Updated))
+                                                                        {
+                                                                            <div class="mb-2">
+                                                                                <strong>Ostatnia modyfikacja:</strong> @GetFormattedDateTime(order.Updated)
+                                                                            </div>
+                                                                        }
+                                                                        <div class="mb-2">
+                                                                            <strong>Łączna kwota:</strong> 
+                                                                            <span class="h6 text-primary">@GetFormattedPrice(order.TotalPrice)</span>
+                                                                        </div>
+                                                                        
+                                                                        <!-- POPRAWIONA SEKCJA REZERWACJI -->
+                                                                        <div class="mt-3">
+                                                                            <h6 class="mb-2">
+                                                                                <i class="bi bi-calendar-event"></i> Rezerwacje pokoi
+                                                                            </h6>
+                                                                            
+                                                                            @if (loadingOrderReservations.Contains(order.Id))
+                                                                            {
+                                                                                <div class="d-flex align-items-center">
+                                                                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                                                                    <small class="text-muted">Ładowanie szczegółów rezerwacji...</small>
+                                                                                </div>
+                                                                            }
+                                                                            else if (orderReservations.ContainsKey(order.Id))
+                                                                            {
+                                                                                @if (orderReservations[order.Id].Any())
+                                                                                {
+                                                                                    @foreach (var reservation in orderReservations[order.Id])
+                                                                                    {
+                                                                                        <div class="small mb-2 p-3 bg-white border rounded">
+                                                                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                                                <div>
+                                                                                                    <i class="bi bi-door-open text-primary"></i> 
+                                                                                                    <strong>Pokój #@reservation.RoomId</strong>
+                                                                                                </div>
+                                                                                                <span class="badge bg-primary">ID: @reservation.Id</span>
+                                                                                            </div>
+                                                                                            <div class="mb-1">
+                                                                                                <i class="bi bi-calendar3"></i> 
+                                                                                                <strong>@reservation.From.ToString("dd.MM.yyyy") - @reservation.To.ToString("dd.MM.yyyy")</strong>
+                                                                                                <span class="text-muted">(@GetNightCount(reservation) @(GetNightCount(reservation) == 1 ? "noc" : "nocy"))</span>
+                                                                                            </div>
+                                                                                            <div class="text-muted">
+                                                                                                <i class="bi bi-person"></i> Użytkownik: @reservation.UserId[..8]...
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    }
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <div class="alert alert-info py-2 mb-0">
+                                                                                        <small>
+                                                                                            <i class="bi bi-info-circle"></i> 
+                                                                                            To zamówienie nie zawiera rezerwacji pokoi. 
+                                                                                            Może zawierać tylko usługi dodatkowe lub parking.
+                                                                                        </small>
+                                                                                    </div>
+                                                                                }
+                                                                            }
+                                                                            else if (reservationErrors.ContainsKey(order.Id))
+                                                                            {
+                                                                                <div class="alert alert-warning py-2 mb-0">
+                                                                                    <small>
+                                                                                        <i class="bi bi-exclamation-triangle"></i> 
+                                                                                        Błąd: @reservationErrors[order.Id]
+                                                                                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="() => LoadOrderReservations(order.Id)">
+                                                                                            Spróbuj ponownie
+                                                                                        </button>
+                                                                                    </small>
+                                                                                </div>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <div class="alert alert-secondary py-2 mb-0">
+                                                                                    <small>
+                                                                                        <i class="bi bi-info-circle"></i> 
+                                                                                        Szczegóły rezerwacji nie zostały jeszcze załadowane.
+                                                                                        <button class="btn btn-link btn-sm p-0 ms-2" @onclick="() => LoadOrderReservations(order.Id)">
+                                                                                            Załaduj teraz
+                                                                                        </button>
+                                                                                    </small>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="row mt-3 pt-3 border-top">
+                                                                    <div class="col-12">
+                                                                        <div class="d-flex gap-2 flex-wrap">
+                                                                            <button class="btn btn-primary btn-sm" @onclick="() => ViewOrderDetails(order.Id)">
+                                                                                <i class="bi bi-eye"></i> Zobacz pełne szczegóły
+                                                                            </button>
+                                                                            <button class="btn btn-success btn-sm" @onclick="() => ConfirmOrder(order.Id)" disabled="@(confirmingOrderIds.Contains(order.Id))">
+                                                                                @if (confirmingOrderIds.Contains(order.Id))
+                                                                                {
+                                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                                    <span>Potwierdzanie...</span>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <i class="bi bi-check-circle"></i>
+                                                                                    <span>Potwierdź zamówienie</span>
+                                                                                }
+                                                                            </button>
+                                                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmCancelOrder(order.Id)" disabled="@(cancellingOrderIds.Contains(order.Id))">
+                                                                                @if (cancellingOrderIds.Contains(order.Id))
+                                                                                {
+                                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                                    <span>Anulowanie...</span>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <i class="bi bi-x-circle"></i>
+                                                                                    <span>Anuluj zamówienie</span>
+                                                                                }
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (pendingOrders.Count > 10)
+                                {
+                                    <div class="card-footer bg-light text-center">
+                                        <small class="text-muted">Wyświetlono 10 z @pendingOrders.Count zamówień</small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-check-circle-fill text-success display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak oczekujących zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Confirmed Orders -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-check-circle text-success"></i> Potwierdzone zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadConfirmedOrders" disabled="@loadingConfirmedOrders">
+                                    @if (loadingConfirmedOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingConfirmedOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie potwierdzonych zamówień...</p>
+                                </div>
+                            }
+                            else if (confirmedOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data potwierdzenia</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in confirmedOrders.Take(10))
+                                            {
+                                                <tr>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Email ?? "Brak")</td>
+                                                    <td class="text-success fw-bold">@GetFormattedPrice(order.TotalPrice)</td>
+                                                    <td>@GetFormattedDateTime(order.Updated ?? order.Created)</td>
+                                                    <td>
+                                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewOrderDetails(order.Id)">
+                                                            <i class="bi bi-eye"></i> Zobacz
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (confirmedOrders.Count > 10)
+                                {
+                                    <div class="card-footer bg-light text-center">
+                                        <small class="text-muted">Wyświetlono 10 z @confirmedOrders.Count zamówień</small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-inbox text-muted display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak potwierdzonych zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Users Management -->
+                <div class="col-lg-4">
+                    <!-- Guests -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-people text-info"></i> Goście
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadGuests" disabled="@loadingGuests">
+                                    @if (loadingGuests)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (loadingGuests)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie gości...</p>
+                                </div>
+                            }
+                            else if (guests?.Any() == true)
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach (var guest in guests.Take(8))
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                                            <div>
+                                                <div class="fw-bold">@GetGuestName(guest)</div>
+                                                <small class="text-muted">@(guest.Email ?? "Brak email")</small>
+                                            </div>
+                                            <div>
+                                                @if (guest.IsEmailConfirmed == true)
+                                                {
+                                                    <span class="badge bg-success rounded-pill">
+                                                        <i class="bi bi-check-circle"></i> Zweryfikowany
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark rounded-pill">
+                                                        <i class="bi bi-exclamation-triangle"></i> Niezweryfikowany
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                @if (guests.Count > 8)
+                                {
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">I @(guests.Count - 8) więcej gości...</small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-3">
+                                    <i class="bi bi-people text-muted display-6"></i>
+                                    <p class="mt-2 mb-0 text-muted">Brak gości</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Blacklisted Users -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person-x text-danger"></i> Czarna lista
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadBlacklistedUsers" disabled="@loadingBlacklistedUsers">
+                                    @if (loadingBlacklistedUsers)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (loadingBlacklistedUsers)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie czarnej listy...</p>
+                                </div>
+                            }
+                            else if (blacklistedUsers?.Any() == true)
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach (var user in blacklistedUsers.Take(6))
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                                            <div>
+                                                <div class="fw-bold">@GetBlacklistedUserName(user)</div>
+                                                <small class="text-muted">@(user.Email ?? "Brak email")</small>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-danger rounded-pill">
+                                                    <i class="bi bi-ban"></i> Zablokowany
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                @if (blacklistedUsers.Count > 6)
+                                {
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">I @(blacklistedUsers.Count - 6) więcej użytkowników...</small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-3">
+                                    <i class="bi bi-shield-check text-success display-6"></i>
+                                    <p class="mt-2 mb-0 text-muted">Brak użytkowników na czarnej liście</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    catch (Exception ex)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="RefreshAllData">
+                Odśwież stronę
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Modals -->
+<!-- Cancel Order Confirmation Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning"></i> Potwierdź anulowanie
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz anulować zamówienie <strong>#@orderIdToCancel</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> Ta operacja jest nieodwracalna. Klient zostanie powiadomiony o anulowaniu.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-danger" @onclick="CancelOrder" disabled="@(cancellingOrderIds.Contains(orderIdToCancel))">
+                    @if (cancellingOrderIds.Contains(orderIdToCancel))
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Anulowanie...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-x-circle"></i>
+                        <span>Potwierdź anulowanie</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL - Powiadomienie o zakończeniu operacji -->
+<div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @if (operationSuccess)
+                    {
+                        <i class="bi bi-check-circle text-success"></i>
+                        <span>Operacja zakończona pomyślnie</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-exclamation-triangle text-danger"></i>
+                        <span>Błąd operacji</span>
+                    }
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="@(operationSuccess ? "alert alert-success" : "alert alert-danger")">
+                    <p class="mb-0">@operationMessage</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .order-row {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .order-row:hover {
+        background-color: rgba(0, 123, 255, 0.05) !important;
+    }
+    
+    .order-details-container {
+        opacity: 0;
+        transform: translateY(-10px);
+        animation: fadeInDown 0.3s ease-in-out forwards;
+    }
+    
+    .order-details-row {
+        background-color: #f8f9fa;
+    }
+    
+    .list-group-item {
+        transition: background-color 0.2s ease-in-out;
+    }
+    
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+</style>
+
+@code {
+    private List<OrderViewModel>? pendingOrders;
+    private List<OrderViewModel>? confirmedOrders;
+    private List<UserViewModel>? guests;
+    private List<UserViewModel>? blacklistedUsers;
+
+    private HashSet<int> expandedOrderIds = new();
+    private HashSet<int> loadingOrderReservations = new();
+    private Dictionary<int, List<ReservationResponse>> orderReservations = new();
+    private Dictionary<int, string> reservationErrors = new();
+    private HashSet<int> cancellingOrderIds = new();
+    private HashSet<int> confirmingOrderIds = new();
+    private int orderIdToCancel = 0;
+
+    private bool operationSuccess = false;
+    private string operationMessage = "";
+
+    private bool isInitialLoading = true;
+    private bool isRefreshing = false;
+    private bool loadingPendingOrders = false;
+    private bool loadingConfirmedOrders = false;
+    private bool loadingGuests = false;
+    private bool loadingBlacklistedUsers = false;
+    private string errorMessage = "";
+    private DateTime lastUpdateTime = DateTime.Now;
+
+    private readonly CultureInfo polishCulture = new("pl-PL");
+    private HttpClient httpClient = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            httpClient = HttpClientFactory.CreateClient("HotelApi");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (!authState.User.Identity.IsAuthenticated)
+                {
+                    NavigationManager.NavigateTo("/login");
+                    return;
+                }
+
+                await LoadAllData();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
+                isInitialLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ToggleOrderExpansion(int orderId)
+    {
+        if (expandedOrderIds.Contains(orderId))
+        {
+            expandedOrderIds.Remove(orderId);
+        }
+        else
+        {
+            expandedOrderIds.Add(orderId);
+            
+            // Jeśli nie ma jeszcze załadowanych rezerwacji dla tego zamówienia, załaduj je
+            if (!orderReservations.ContainsKey(orderId) && !loadingOrderReservations.Contains(orderId))
+            {
+                await LoadOrderReservations(orderId);
+            }
+        }
+        StateHasChanged();
+    }
+
+    // POPRAWIONA METODA - bez debugów, z poprawną deserializacją
+    private async Task LoadOrderReservations(int orderId)
+    {
+        loadingOrderReservations.Add(orderId);
+        reservationErrors.Remove(orderId);
+        StateHasChanged();
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/reservation/{orderId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var reservations = await response.Content.ReadFromJsonAsync<List<ReservationResponse>>() ?? new List<ReservationResponse>();
+                orderReservations[orderId] = reservations;
+            }
+            else
+            {
+                var errorMessage = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.NotFound => "Nie znaleziono rezerwacji dla tego zamówienia",
+                    System.Net.HttpStatusCode.Forbidden => "Brak uprawnień do przeglądania rezerwacji",
+                    System.Net.HttpStatusCode.Unauthorized => "Brak autoryzacji",
+                    _ => $"Błąd API: {response.StatusCode}"
+                };
+                
+                reservationErrors[orderId] = errorMessage;
+                orderReservations[orderId] = new List<ReservationResponse>();
+            }
+        }
+        catch (Exception ex)
+        {
+            reservationErrors[orderId] = $"Błąd podczas ładowania: {ex.Message}";
+            orderReservations[orderId] = new List<ReservationResponse>();
+        }
+        finally
+        {
+            loadingOrderReservations.Remove(orderId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmOrder(int orderId)
+    {
+        confirmingOrderIds.Add(orderId);
+        StateHasChanged();
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PutAsync($"api/order/confirm/{orderId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                operationSuccess = true;
+                operationMessage = $"Zamówienie #{orderId} zostało pomyślnie potwierdzone.";
+                
+                await Task.WhenAll(LoadPendingOrders(), LoadConfirmedOrders());
+                expandedOrderIds.Remove(orderId);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                operationSuccess = false;
+                operationMessage = "Nie masz uprawnień do potwierdzania zamówień.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                operationSuccess = false;
+                operationMessage = $"Zamówienie #{orderId} nie zostało znalezione.";
+            }
+            else
+            {
+                operationSuccess = false;
+                operationMessage = $"Błąd podczas potwierdzania zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            operationSuccess = false;
+            operationMessage = $"Błąd podczas potwierdzania zamówienia: {ex.Message}";
+        }
+        finally
+        {
+            confirmingOrderIds.Remove(orderId);
+            await ShowOperationResultModal();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmCancelOrder(int orderId)
+    {
+        orderIdToCancel = orderId;
+        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('cancelOrderModal')).show()");
+    }
+
+    private async Task CancelOrder()
+    {
+        if (orderIdToCancel == 0) return;
+
+        cancellingOrderIds.Add(orderIdToCancel);
+        StateHasChanged();
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.PutAsync($"api/order/cancel/{orderIdToCancel}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                operationSuccess = true;
+                operationMessage = $"Zamówienie #{orderIdToCancel} zostało pomyślnie anulowane.";
+                
+                await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide()");
+                await LoadPendingOrders();
+                expandedOrderIds.Remove(orderIdToCancel);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                operationSuccess = false;
+                operationMessage = "Nie masz uprawnień do anulowania zamówień.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                operationSuccess = false;
+                operationMessage = $"Zamówienie #{orderIdToCancel} nie zostało znalezione.";
+            }
+            else
+            {
+                operationSuccess = false;
+                operationMessage = $"Błąd podczas anulowania zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            operationSuccess = false;
+            operationMessage = $"Błąd podczas anulowania zamówienia: {ex.Message}";
+        }
+        finally
+        {
+            cancellingOrderIds.Remove(orderIdToCancel);
+            orderIdToCancel = 0;
+            await ShowOperationResultModal();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowOperationResultModal()
+    {
+        await Task.Delay(500);
+        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('operationResultModal')).show()");
+    }
+
+    private int GetNightCount(ReservationResponse reservation)
+    {
+        return (reservation.To - reservation.From).Days;
+    }
+
+    private string GetStatusText(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "pending" => "Oczekuje",
+            "confirmed" => "Potwierdzone",
+            "completed" => "Zakończone",
+            "cancelled" => "Anulowane",
+            _ => status ?? "Nieznany"
+        };
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            httpClient.DefaultRequestHeaders.Authorization = null;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return httpClient;
+    }
+
+    private async Task LoadAllData()
+    {
+        isInitialLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            await Task.WhenAll(
+                LoadPendingOrders(),
+                LoadConfirmedOrders(),
+                LoadGuests(),
+                LoadBlacklistedUsers()
+            );
+            
+            lastUpdateTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania danych: {ex.Message}";
+        }
+        finally
+        {
+            isInitialLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshAllData()
+    {
+        isRefreshing = true;
+        errorMessage = "";
+
+        try
+        {
+            await LoadAllData();
+        }
+        finally
+        {
+            isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPendingOrders()
+    {
+        loadingPendingOrders = true;
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/order/pending");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                pendingOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania oczekujących zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu oczekujących zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania oczekujących zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingPendingOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadConfirmedOrders()
+    {
+        loadingConfirmedOrders = true;
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/order/confirmed");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                confirmedOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania potwierdzonych zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu potwierdzonych zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania potwierdzonych zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingConfirmedOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadGuests()
+    {
+        loadingGuests = true;
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/guest/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                guests = await response.Content.ReadFromJsonAsync<List<UserViewModel>>() ?? new List<UserViewModel>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania listy gości.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania gości: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu gości.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania gości: {ex.Message}";
+        }
+        finally
+        {
+            loadingGuests = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadBlacklistedUsers()
+    {
+        loadingBlacklistedUsers = true;
+        
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/blacklist/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                blacklistedUsers = await response.Content.ReadFromJsonAsync<List<UserViewModel>>() ?? new List<UserViewModel>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania czarnej listy.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania czarnej listy: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu czarnej listy.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania czarnej listy: {ex.Message}";
+        }
+        finally
+        {
+            loadingBlacklistedUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    // Helper methods
+    private string GetCustomerName(OrderViewModel order)
+    {
+        var firstName = order?.FirstName ?? "";
+        var lastName = order?.LastName ?? "";
+        var fullName = $"{firstName} {lastName}".Trim();
+        return string.IsNullOrEmpty(fullName) ? "Nieznany klient" : fullName;
+    }
+
+    private string GetGuestName(UserViewModel guest)
+    {
+        var userName = guest?.UserName ?? "";
+        return string.IsNullOrEmpty(userName) ? "Nieznany użytkownik" : userName;
+    }
+
+    private string GetBlacklistedUserName(UserViewModel user)
+    {
+        var userName = user?.UserName ?? "";
+        return string.IsNullOrEmpty(userName) ? "Nieznany użytkownik" : userName;
+    }
+
+    private string GetFormattedPrice(decimal? price)
+    {
+        return price?.ToString("C", polishCulture) ?? "0,00 zł";
+    }
+
+    private string GetFormattedDateTime(string? dateString)
+    {
+        if (string.IsNullOrEmpty(dateString)) return "Brak daty";
+        
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("dd.MM.yyyy HH:mm", polishCulture);
+        }
+        return dateString;
+    }
+
+    private void ViewOrderDetails(int orderId)
+    {
+        NavigationManager.NavigateTo($"/order/{orderId}");
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    // View Models
+    public class OrderViewModel
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Country { get; set; } = "";
+        public decimal TotalPrice { get; set; }
+        public string Created { get; set; } = "";
+        public string? Updated { get; set; }
+    }
+
+    public class UserViewModel
+    {
+        public string Id { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public List<string> Roles { get; set; } = new();
+        public string? ProfilePicture { get; set; }
+        public bool? IsEmailConfirmed { get; set; }
+    }
+
+    // POPRAWIONY MODEL - zgodny z odpowiedzią API
+    public class ReservationResponse
+    {
+        public int Id { get; set; }
+        public DateTime From { get; set; }
+        public DateTime To { get; set; }
+        public int RoomId { get; set; }
+        public string UserId { get; set; } = "";
+        public int OrderId { get; set; }
+    }
+}

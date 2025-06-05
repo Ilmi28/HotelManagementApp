@@ -1,0 +1,40 @@
+﻿@page "/"
+@namespace HotelManagementApp.Blazor.Pages
+@using Microsoft.AspNetCore.Components.Web
+@using HotelManagementApp.Blazor.Components
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null; // _Host nie używa innego layoutu
+}
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Management App</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="bootstrap/bootstrap-icons.css">
+    <script src="bootstrap/bootstrap.bundle.min.js"></script>
+    <link href="fonts.css" rel="stylesheet">
+    <link href="app.css" rel="stylesheet" />
+    <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
+</head>
+<body>
+<component type="typeof(App)" render-mode="ServerPrerendered" />
+
+<div id="blazor-error-ui">
+    <environment include="Staging,Production">
+        Wystąpił błąd. Aplikacja może wymagać ponownego załadowania.
+    </environment>
+    <environment include="Development">
+        Wystąpił nieobsłużony wyjątek. Zobacz narzędzia deweloperskie przeglądarki, aby uzyskać szczegóły.
+    </environment>
+    <a href="" class="reload">Odśwież</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+<script src="_framework/blazor.server.js"></script>
+</body>
+</html>
