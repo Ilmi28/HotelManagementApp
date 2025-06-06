@@ -1,0 +1,891 @@
+@page "/service-management"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager,Admin")]
+
+<PageTitle>Zarządzanie usługami hotelowymi</PageTitle>
+
+<div class="container-fluid my-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h2">
+                        <i class="bi bi-gear"></i> Zarządzanie usługami hotelowymi
+                    </h1>
+                </div>
+                <button class="btn btn-primary" @onclick="ShowAddServiceModal" disabled="@(selectedHotelId <= 0)">
+                    <i class="bi bi-plus"></i> Dodaj nową usługę
+                </button>
+            </div>
+
+            <!-- Wybór hotelu -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label for="hotelSelect" class="form-label">
+                                <i class="bi bi-building"></i> Wybierz hotel aby zarządzać usługami:
+                            </label>
+                            <select class="form-select" id="hotelSelect" @bind="selectedHotelId" @bind:after="OnHotelChanged">
+                                <option value="0">-- Wybierz hotel --</option>
+                                @if (hotels?.Any() == true)
+                                {
+                                    @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                    {
+                                        <option value="@hotel.Id">@hotel.Name (@hotel.City, @hotel.Country)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100" @onclick="LoadServices" disabled="@(selectedHotelId <= 0 || isLoading)">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-arrow-clockwise"></i> Odśwież usługi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (selectedHotelId <= 0)
+            {
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">Wybierz hotel</h5>
+                        <p class="text-muted">Wybierz hotel z listy powyżej aby wyświetlić i zarządzać jego usługami.</p>
+                    </div>
+                </div>
+            }
+            else if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-lg text-primary" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Ładowanie usług hotelu...</p>
+                </div>
+            }
+            else
+            {
+                <!-- Filtry i wyszukiwanie -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="searchInput" class="form-label">Wyszukaj usługę:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" 
+                                           @bind="searchTerm" @oninput="OnSearchChanged"
+                                           placeholder="Nazwa usługi lub opis...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="priceFilter" class="form-label">Filtr cenowy:</label>
+                                <select class="form-select" id="priceFilter" @bind="selectedPriceFilter" @bind:after="ApplyFilters">
+                                    <option value="">Wszystkie ceny</option>
+                                    <option value="free">Darmowe (0 PLN)</option>
+                                    <option value="low">Niskie (1-50 PLN)</option>
+                                    <option value="medium">Średnie (51-200 PLN)</option>
+                                    <option value="high">Wysokie (>200 PLN)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                                    <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statystyki -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredServices?.Count ?? 0)</h5>
+                                <p class="card-text">Łącznie usług</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@GetFreeServicesCount()</h5>
+                                <p class="card-text">Darmowych</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-info text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@GetPaidServicesCount()</h5>
+                                <p class="card-text">Płatnych</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-warning text-dark">
+                            <div class="card-body">
+                                <h5 class="card-title">@GetAveragePrice().ToString("C", new System.Globalization.CultureInfo("pl-PL"))</h5>
+                                <p class="card-text">Średnia cena</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista usług -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list"></i> Usługi hotelu: @GetSelectedHotelName()
+                            @if (filteredServices?.Any() == true)
+                            {
+                                <span class="badge bg-primary ms-2">@filteredServices.Count</span>
+                            }
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="ShowAddServiceModal">
+                            <i class="bi bi-plus"></i> Dodaj usługę
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredServices?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nazwa usługi</th>
+                                            <th>Opis</th>
+                                            <th>Cena</th>
+                                            <th>Kategoria</th>
+                                            <th>Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var service in filteredServices)
+                                        {
+                                            <tr>
+                                                <td><strong>#@service.Id</strong></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi @GetServiceIcon(service.Name) text-primary me-2"></i>
+                                                        <strong>@service.Name</strong>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(service.Description))
+                                                    {
+                                                        if (service.Description.Length > 100)
+                                                        {
+                                                            <small class="text-muted">@(service.Description.Substring(0, 100))...</small>
+                                                            <br>
+                                                            <button class="btn btn-link btn-sm p-0" @onclick="() => ShowFullDescription(service)">
+                                                                Pokaż więcej
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <small class="text-muted">@service.Description</small>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <small class="text-muted">Brak opisu</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (service.Price <= 0)
+                                                    {
+                                                        <span class="badge bg-success">DARMOWA</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <strong class="text-success">
+                                                            @service.Price?.ToString("C", new System.Globalization.CultureInfo("pl-PL"))
+                                                        </strong>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge @GetPriceCategoryBadge(service.Price ?? 0)">
+                                                        @GetPriceCategory(service.Price ?? 0)
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button class="btn btn-outline-primary" 
+                                                                @onclick="() => ShowEditServiceModal(service)" 
+                                                                title="Edytuj">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-info" 
+                                                                @onclick="() => ShowServiceDetails(service)" 
+                                                                title="Szczegóły">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" 
+                                                                @onclick="() => DeleteService(service)" 
+                                                                title="Usuń">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-gear text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">Brak usług</h5>
+                                <p class="text-muted">Ten hotel nie ma jeszcze skonfigurowanych usług.</p>
+                                <button class="btn btn-primary" @onclick="ShowAddServiceModal">
+                                    <i class="bi bi-plus"></i> Dodaj pierwszą usługę
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Modal dodawania/edycji usługi -->
+    @if (showServiceModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-gear"></i> @(isEditMode ? "Edytuj usługę" : "Dodaj nową usługę")
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseServiceModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @onsubmit="SaveService" @onsubmit:preventDefault="true">
+                            <div class="mb-3">
+                                <label for="serviceName" class="form-label">Nazwa usługi:</label>
+                                <input type="text" class="form-control" id="serviceName" 
+                                       @bind="serviceForm.Name" required maxlength="100"
+                                       placeholder="np. WiFi, Śniadanie, SPA, Parking">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="servicePrice" class="form-label">Cena (PLN):</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">PLN</span>
+                                    <input type="number" class="form-control" id="servicePrice" 
+                                           @bind="serviceForm.Price" required min="0" step="0.01"
+                                           placeholder="0.00">
+                                    <span class="input-group-text">
+                                        <small class="text-muted">0 = darmowa</small>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="serviceDescription" class="form-label">
+                                    Opis usługi: <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control @(IsDescriptionValid() ? "" : "is-invalid")" 
+                                          id="serviceDescription" rows="4" 
+                                          @bind="serviceForm.Description" @oninput="OnDescriptionChanged"
+                                          required minlength="20" maxlength="500"
+                                          placeholder="Wprowadź szczegółowy opis usługi (minimum 20 znaków)..."></textarea>
+                                <div class="form-text d-flex justify-content-between">
+                                    <span class="@(IsDescriptionValid() ? "text-success" : "text-danger")">
+                                        @if (IsDescriptionValid())
+                                        {
+                                            <i class="bi bi-check-circle"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-exclamation-circle"></i>
+                                        }
+                                        Wprowadzono: @(serviceForm.Description?.Length ?? 0) / 20 znaków (min. wymagane)
+                                    </span>
+                                    <span class="text-muted">
+                                        Maksymalnie: @(serviceForm.Description?.Length ?? 0) / 500 znaków
+                                    </span>
+                                </div>
+                                @if (!IsDescriptionValid())
+                                {
+                                    <div class="invalid-feedback">
+                                        Opis musi zawierać co najmniej 20 znaków. Brakuje: @(20 - (serviceForm.Description?.Length ?? 0)) znaków.
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Hotel:</strong> @GetSelectedHotelName()
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseServiceModal">Anuluj</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveService" 
+                                disabled="@(isSubmitting || !IsFormValid())">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-save"></i> @(isEditMode ? "Zapisz zmiany" : "Dodaj usługę")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Modal szczegółów usługi -->
+    @if (showDetailsModal && selectedService != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi @GetServiceIcon(selectedService.Name)"></i> Szczegóły usługi
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseDetailsModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Podstawowe informacje</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>ID:</strong></td>
+                                        <td>#@selectedService.Id</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Nazwa:</strong></td>
+                                        <td>@selectedService.Name</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Cena:</strong></td>
+                                        <td>
+                                            @if (selectedService.Price <= 0)
+                                            {
+                                                <span class="badge bg-success">DARMOWA</span>
+                                            }
+                                            else
+                                            {
+                                                <strong class="text-success">
+                                                    @selectedService.Price?.ToString("C", new System.Globalization.CultureInfo("pl-PL"))
+                                                </strong>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Kategoria:</strong></td>
+                                        <td>
+                                            <span class="badge @GetPriceCategoryBadge(selectedService.Price ?? 0)">
+                                                @GetPriceCategory(selectedService.Price ?? 0)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Hotel:</strong></td>
+                                        <td>@GetSelectedHotelName()</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Opis usługi</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        @if (!string.IsNullOrEmpty(selectedService.Description))
+                                        {
+                                            <p class="card-text">@selectedService.Description</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="card-text text-muted">Brak opisu dla tej usługi.</p>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">Zamknij</button>
+                        <button type="button" class="btn btn-primary" @onclick="() => ShowEditServiceModal(selectedService)">
+                            <i class="bi bi-pencil"></i> Edytuj usługę
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<HotelService>? allServices;
+    private List<HotelService>? filteredServices;
+    private List<Hotel>? hotels;
+    private int selectedHotelId = 0;
+    private bool isLoading = false;
+    private bool isSubmitting = false;
+    private bool showServiceModal = false;
+    private bool showDetailsModal = false;
+    private bool isEditMode = false;
+    private string searchTerm = string.Empty;
+    private string selectedPriceFilter = string.Empty;
+    private DateTime currentDateTime = DateTime.UtcNow;
+    private Timer? timer;
+    
+    private ServiceForm serviceForm = new();
+    private HotelService? selectedService;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Timer do aktualizacji czasu co sekundę
+        timer = new Timer(UpdateDateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        
+        await LoadHotels();
+    }
+
+    private void UpdateDateTime(object? state)
+    {
+        currentDateTime = DateTime.UtcNow;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+
+    private bool IsDescriptionValid()
+    {
+        return !string.IsNullOrEmpty(serviceForm.Description) && serviceForm.Description.Length >= 20;
+    }
+
+    private bool IsFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(serviceForm.Name) && 
+               serviceForm.Price >= 0 &&
+               IsDescriptionValid();
+    }
+
+    private void OnDescriptionChanged(ChangeEventArgs e)
+    {
+        serviceForm.Description = e.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private int GetFreeServicesCount()
+    {
+        return filteredServices?.Count(s => s.Price <= 0) ?? 0;
+    }
+
+    private int GetPaidServicesCount()
+    {
+        return filteredServices?.Count(s => s.Price > 0) ?? 0;
+    }
+
+    private decimal GetAveragePrice()
+    {
+        if (filteredServices?.Any() != true) return 0;
+        var paidServices = filteredServices.Where(s => s.Price > 0).ToList();
+        return paidServices.Any() ? paidServices.Average(s => s.Price ?? 0) : 0;
+    }
+
+    private string GetSelectedHotelName()
+    {
+        var hotel = hotels?.FirstOrDefault(h => h.Id == selectedHotelId);
+        return hotel != null ? $"{hotel.Name} ({hotel.City})" : "Nieznany hotel";
+    }
+
+    private string GetServiceIcon(string? serviceName)
+    {
+        if (string.IsNullOrEmpty(serviceName)) return "bi-gear";
+        
+        var name = serviceName.ToLower();
+        return name switch
+        {
+            var n when n.Contains("wifi") || n.Contains("internet") => "bi-wifi",
+            var n when n.Contains("śniadanie") || n.Contains("jedzenie") || n.Contains("restauracja") => "bi-cup-hot",
+            var n when n.Contains("parking") => "bi-car-front",
+            var n when n.Contains("spa") || n.Contains("masaż") => "bi-heart",
+            var n when n.Contains("basen") || n.Contains("pływalnia") => "bi-water",
+            var n when n.Contains("siłownia") || n.Contains("fitness") => "bi-bicycle",
+            var n when n.Contains("pranie") || n.Contains("pralnia") => "bi-droplet",
+            var n when n.Contains("taxi") || n.Contains("transport") => "bi-taxi-front",
+            var n when n.Contains("pokój") || n.Contains("room") => "bi-door-open",
+            var n when n.Contains("tv") || n.Contains("telewizja") => "bi-tv",
+            _ => "bi-gear"
+        };
+    }
+
+    private string GetPriceCategory(decimal price)
+    {
+        return price switch
+        {
+            0 => "Darmowa",
+            <= 50 => "Niska",
+            <= 200 => "Średnia",
+            _ => "Wysoka"
+        };
+    }
+
+    private string GetPriceCategoryBadge(decimal price)
+    {
+        return price switch
+        {
+            0 => "bg-success",
+            <= 50 => "bg-info",
+            <= 200 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+
+    private async Task LoadHotels()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                hotels = JsonSerializer.Deserialize<List<Hotel>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania hoteli: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania listy hoteli.");
+        }
+    }
+
+    private async Task OnHotelChanged()
+    {
+        if (selectedHotelId > 0)
+        {
+            await LoadServices();
+        }
+        else
+        {
+            allServices = null;
+            filteredServices = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadServices()
+    {
+        if (selectedHotelId <= 0) return;
+        
+        isLoading = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{selectedHotelId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                allServices = JsonSerializer.Deserialize<List<HotelService>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                ApplyFilters();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                allServices = new List<HotelService>();
+                ApplyFilters();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania usług: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania usług hotelu.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allServices == null)
+        {
+            filteredServices = new List<HotelService>();
+            return;
+        }
+
+        var filtered = allServices.AsEnumerable();
+
+        // Filtr wyszukiwania
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(s => 
+                s.Name?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                s.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        // Filtr cenowy
+        if (!string.IsNullOrWhiteSpace(selectedPriceFilter))
+        {
+            filtered = selectedPriceFilter switch
+            {
+                "free" => filtered.Where(s => s.Price <= 0),
+                "low" => filtered.Where(s => s.Price > 0 && s.Price <= 50),
+                "medium" => filtered.Where(s => s.Price > 50 && s.Price <= 200),
+                "high" => filtered.Where(s => s.Price > 200),
+                _ => filtered
+            };
+        }
+
+        filteredServices = filtered.OrderBy(s => s.Name).ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedPriceFilter = string.Empty;
+        ApplyFilters();
+    }
+
+    private void ShowAddServiceModal()
+    {
+        serviceForm = new ServiceForm();
+        isEditMode = false;
+        showServiceModal = true;
+    }
+
+    private void ShowEditServiceModal(HotelService service)
+    {
+        serviceForm = new ServiceForm
+        {
+            Id = service.Id,
+            Name = service.Name,
+            Description = service.Description ?? string.Empty,
+            Price = service.Price ?? 0
+        };
+        isEditMode = true;
+        showServiceModal = true;
+        showDetailsModal = false; // Zamknij modal szczegółów jeśli był otwarty
+    }
+
+    private void CloseServiceModal()
+    {
+        showServiceModal = false;
+        serviceForm = new ServiceForm();
+        isEditMode = false;
+    }
+
+    private void ShowServiceDetails(HotelService service)
+    {
+        selectedService = service;
+        showDetailsModal = true;
+    }
+
+    private void ShowFullDescription(HotelService service)
+    {
+        ShowServiceDetails(service);
+    }
+
+    private void CloseDetailsModal()
+    {
+        showDetailsModal = false;
+        selectedService = null;
+    }
+
+    private async Task SaveService()
+    {
+        if (!IsFormValid())
+        {
+            var missingFields = new List<string>();
+            
+            if (string.IsNullOrWhiteSpace(serviceForm.Name))
+                missingFields.Add("nazwa usługi");
+            if (serviceForm.Price < 0)
+                missingFields.Add("cena (nie może być ujemna)");
+            if (!IsDescriptionValid())
+                missingFields.Add($"opis (minimum 20 znaków, obecnie: {serviceForm.Description?.Length ?? 0})");
+            
+            await JSRuntime.InvokeVoidAsync("alert", $"Następujące pola wymagają uzupełnienia:\n• {string.Join("\n• ", missingFields)}");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            var requestData = new
+            {
+                id = isEditMode ? serviceForm.Id : (int?)null,
+                name = serviceForm.Name,
+                description = serviceForm.Description,
+                price = serviceForm.Price,
+                hotelId = selectedHotelId
+            };
+            
+            var json = JsonSerializer.Serialize(requestData);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            HttpResponseMessage response;
+            if (isEditMode)
+            {
+                response = await authenticatedClient.PutAsync("api/hotel-services", content);
+            }
+            else
+            {
+                response = await authenticatedClient.PostAsync("api/hotel-services", content);
+            }
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Usługa została {(isEditMode ? "zaktualizowana" : "dodana")} pomyślnie!");
+                CloseServiceModal();
+                await LoadServices();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do tej operacji.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                if (isEditMode)
+                    await JSRuntime.InvokeVoidAsync("alert", "Usługa nie została znaleziona.");
+                else
+                    await JSRuntime.InvokeVoidAsync("alert", "Hotel nie został znaleziony.");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response: {errorContent}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas {(isEditMode ? "aktualizacji" : "dodawania")} usługi: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zapisywania usługi: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania usługi.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteService(HotelService service)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć usługę '{service.Name}'? Ta operacja jest nieodwracalna."))
+        {
+            try
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.DeleteAsync($"api/hotel-services/{service.Id}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Usługa została usunięta pomyślnie!");
+                    await LoadServices();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do usunięcia usługi.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Usługa nie została znaleziona.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania usługi: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania usługi: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania usługi.");
+            }
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        try
+        {
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                HttpClient.DefaultRequestHeaders.Authorization = null;
+                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
+        }
+        
+        return HttpClient;
+    }
+
+    public class HotelService
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public int HotelId { get; set; }
+    }
+
+    public class Hotel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+    }
+
+    public class ServiceForm
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; } = 0;
+    }
+}
