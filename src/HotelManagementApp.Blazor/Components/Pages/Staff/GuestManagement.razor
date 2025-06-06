@@ -1,0 +1,903 @@
+@page "/guest-management"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Staff,Manager,Admin")]
+
+<PageTitle>Zarządzanie gośćmi</PageTitle>
+
+<div class="container-fluid my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">
+                    <i class="bi bi-people"></i> Zarządzanie gośćmi
+                </h1>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary @(activeTab == "guests" ? "active" : "")" 
+                            @onclick='() => SetActiveTab("guests")'>
+                        <i class="bi bi-people"></i> Wszyscy goście
+                    </button>
+                    <button type="button" class="btn btn-outline-warning @(activeTab == "vip" ? "active" : "")" 
+                            @onclick='() => SetActiveTab("vip")'>
+                        <i class="bi bi-star"></i> VIP
+                    </button>
+                    <button type="button" class="btn btn-outline-danger @(activeTab == "blacklist" ? "active" : "")" 
+                            @onclick='() => SetActiveTab("blacklist")'>
+                        <i class="bi bi-person-x"></i> Czarna lista
+                    </button>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- Panel wyszukiwania -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Wyszukaj:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" 
+                                           @bind="searchTerm" @oninput="OnSearchChanged"
+                                           placeholder="Wpisz nazwę użytkownika lub email...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="roleFilter" class="form-label">Filtruj po roli:</label>
+                                <select class="form-select" id="roleFilter" @bind="selectedRoleFilter" @bind:after="OnFilterChanged">
+                                    <option value="">Wszystkie role</option>
+                                    <option value="Guest">Guest</option>
+                                    <option value="VIP">VIP</option>
+                                    <option value="Staff">Staff</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="Admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter" class="form-label">Status:</label>
+                                <select class="form-select" id="statusFilter" @bind="selectedRoleFilter" @bind:after="OnFilterChanged">
+                                    <option value="">Wszystkie</option>
+                                    <option value="active">Aktywny</option>
+                                    <option value="inactive">Nieaktywny</option>
+                                    <option value="blacklisted">Zablokowany</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                                    <i class="bi bi-x-circle"></i> Wyczyść
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statystyki -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredUsers?.Count ?? 0)</h5>
+                                <p class="card-text">Łącznie użytkowników</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredUsers?.Count(u => u.Roles?.Contains("Guest") == true) ?? 0)</h5>
+                                <p class="card-text">Goście</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-warning text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(vipUsers?.Count ?? 0)</h5>
+                                <p class="card-text">VIP</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-danger text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(blacklistedUsers?.Count ?? 0)</h5>
+                                <p class="card-text">Zablokowanych</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabela użytkowników -->
+                @if (activeTab == "guests")
+                {
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-people"></i> Lista gości
+                                @if (filteredUsers?.Any() == true)
+                                {
+                                    <span class="badge bg-primary ms-2">@filteredUsers.Count</span>
+                                }
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (filteredUsers?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Zdjęcie</th>
+                                                <th>Użytkownik</th>
+                                                <th>Email</th>
+                                                <th>Role</th>
+                                                <th>Status</th>
+                                                <th>Data rejestracji</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var user in filteredUsers)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                        {
+                                                            <img src="@user.ProfilePicture" class="rounded-circle" 
+                                                                 style="width: 40px; height: 40px; object-fit: cover;" 
+                                                                 alt="Zdjęcie profilowe" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                                                 style="width: 40px; height: 40px;">
+                                                                <i class="bi bi-person"></i>
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>@user.UserName</strong>
+                                                            <br>
+                                                            <small class="text-muted">ID: @user.Id</small>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        @user.Email
+                                                        @if (user.IsEmailConfirmed)
+                                                        {
+                                                            <i class="bi bi-check-circle-fill text-success ms-1" title="Email potwierdzony"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-exclamation-circle-fill text-warning ms-1" title="Email niepotwierdzony"></i>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (user.Roles?.Any() == true)
+                                                        {
+                                                            @foreach (var role in user.Roles)
+                                                            {
+                                                                <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">Brak ról</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge @GetStatusBadgeClass(user.Status)">
+                                                            @GetStatusText(user.Status)
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <small>@(user.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "Nieznana")</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm" role="group">
+                                                            @if (user.Roles?.Contains("Guest") == true)
+                                                            {
+                                                                <button class="btn btn-outline-danger" 
+                                                                        @onclick="() => RemoveGuestRole(user.Id, user.UserName)" 
+                                                                        title="Usuń rolę gościa">
+                                                                    <i class="bi bi-person-dash"></i>
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button class="btn btn-outline-success" 
+                                                                        @onclick="() => AddGuestRole(user.Id, user.UserName)" 
+                                                                        title="Dodaj rolę gościa">
+                                                                    <i class="bi bi-person-plus"></i>
+                                                                </button>
+                                                            }
+                                                            <button class="btn btn-outline-info" @onclick="() => ViewUserDetails(user)" title="Szczegóły">
+                                                                <i class="bi bi-eye"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                                    <h5 class="text-muted mt-3">Brak użytkowników</h5>
+                                    <p class="text-muted">Nie znaleziono użytkowników spełniających kryteria wyszukiwania.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "vip")
+                {
+                    <div class="card">
+                        <div class="card-header bg-warning text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-star"></i> Lista VIP
+                                @if (vipUsers?.Any() == true)
+                                {
+                                    <span class="badge bg-white text-warning ms-2">@vipUsers.Count</span>
+                                }
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (vipUsers?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-warning">
+                                            <tr>
+                                                <th>Zdjęcie</th>
+                                                <th>Użytkownik</th>
+                                                <th>Email</th>
+                                                <th>Status VIP</th>
+                                                <th>Data przyznania</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var user in vipUsers)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                        {
+                                                            <img src="@user.ProfilePicture" class="rounded-circle" 
+                                                                 style="width: 40px; height: 40px; object-fit: cover;" 
+                                                                 alt="Zdjęcie profilowe" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                                                 style="width: 40px; height: 40px;">
+                                                                <i class="bi bi-star"></i>
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>@user.UserName</strong>
+                                                            <i class="bi bi-star-fill text-warning ms-1"></i>
+                                                            <br>
+                                                            <small class="text-muted">ID: @user.Id</small>
+                                                        </div>
+                                                    </td>
+                                                    <td>@user.Email</td>
+                                                    <td>
+                                                        <span class="badge bg-warning">
+                                                            <i class="bi bi-star"></i> VIP
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <small>@(user.VipSince?.ToString("dd.MM.yyyy HH:mm") ?? "Nieznana")</small>
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-outline-info btn-sm" @onclick="() => ViewUserDetails(user)" title="Szczegóły">
+                                                            <i class="bi bi-eye"></i> Szczegóły
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-star text-warning" style="font-size: 3rem;"></i>
+                                    <h5 class="text-muted mt-3">Brak użytkowników VIP</h5>
+                                    <p class="text-muted">Obecnie nie ma żadnych użytkowników ze statusem VIP.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "blacklist")
+                {
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-x"></i> Czarna lista
+                                @if (blacklistedUsers?.Any() == true)
+                                {
+                                    <span class="badge bg-white text-danger ms-2">@blacklistedUsers.Count</span>
+                                }
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (blacklistedUsers?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-danger">
+                                            <tr>
+                                                <th>Zdjęcie</th>
+                                                <th>Użytkownik</th>
+                                                <th>Email</th>
+                                                <th>Powód blokady</th>
+                                                <th>Data blokady</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var user in blacklistedUsers)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                        {
+                                                            <img src="@user.ProfilePicture" class="rounded-circle" 
+                                                                 style="width: 40px; height: 40px; object-fit: cover; filter: grayscale(100%);" 
+                                                                 alt="Zdjęcie profilowe" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                                                 style="width: 40px; height: 40px;">
+                                                                <i class="bi bi-person-x"></i>
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong class="text-muted">@user.UserName</strong>
+                                                            <i class="bi bi-ban text-danger ms-1"></i>
+                                                            <br>
+                                                            <small class="text-muted">ID: @user.Id</small>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-muted">@user.Email</td>
+                                                    <td>
+                                                        <span class="badge bg-danger">
+                                                            @(user.BlacklistReason ?? "Nieznany powód")
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <small>@(user.BlacklistedAt?.ToString("dd.MM.yyyy HH:mm") ?? "Nieznana")</small>
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-outline-info btn-sm" @onclick="() => ViewUserDetails(user)" title="Szczegóły">
+                                                            <i class="bi bi-eye"></i> Szczegóły
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-person-x text-danger" style="font-size: 3rem;"></i>
+                                    <h5 class="text-muted mt-3">Brak zablokowanych użytkowników</h5>
+                                    <p class="text-muted">Obecnie nie ma żadnych użytkowników na czarnej liście.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Modal szczegółów użytkownika -->
+    @if (showUserDetailsModal && selectedUser != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-circle"></i> Szczegóły użytkownika: @selectedUser.UserName
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseUserDetailsModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                @if (!string.IsNullOrEmpty(selectedUser.ProfilePicture))
+                                {
+                                    <img src="@selectedUser.ProfilePicture" class="rounded-circle mb-3" 
+                                         style="width: 120px; height: 120px; object-fit: cover;" 
+                                         alt="Zdjęcie profilowe" />
+                                }
+                                else
+                                {
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white mx-auto mb-3" 
+                                         style="width: 120px; height: 120px; font-size: 3rem;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                }
+                                <h5>@selectedUser.UserName</h5>
+                                @if (selectedUser.Roles?.Any() == true)
+                                {
+                                    <div class="mb-3">
+                                        @foreach (var role in selectedUser.Roles)
+                                        {
+                                            <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>ID użytkownika:</strong></td>
+                                        <td>@selectedUser.Id</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td>
+                                            @selectedUser.Email
+                                            @if (selectedUser.IsEmailConfirmed)
+                                            {
+                                                <i class="bi bi-check-circle-fill text-success ms-1" title="Potwierdzony"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-exclamation-circle-fill text-warning ms-1" title="Niepotwierdzony"></i>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Status:</strong></td>
+                                        <td>
+                                            <span class="badge @GetStatusBadgeClass(selectedUser.Status)">
+                                                @GetStatusText(selectedUser.Status)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Data rejestracji:</strong></td>
+                                        <td>@(selectedUser.CreatedAt?.ToString("dd.MM.yyyy HH:mm:ss") ?? "Nieznana")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Ostatnia aktywność:</strong></td>
+                                        <td>@(selectedUser.LastActivity?.ToString("dd.MM.yyyy HH:mm:ss") ?? "Nieznana")</td>
+                                    </tr>
+                                    @if (selectedUser.VipSince.HasValue)
+                                    {
+                                        <tr>
+                                            <td><strong>VIP od:</strong></td>
+                                            <td>@selectedUser.VipSince.Value.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                                        </tr>
+                                    }
+                                    @if (selectedUser.BlacklistedAt.HasValue)
+                                    {
+                                        <tr>
+                                            <td><strong>Zablokowany:</strong></td>
+                                            <td>@selectedUser.BlacklistedAt.Value.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Powód blokady:</strong></td>
+                                            <td>@(selectedUser.BlacklistReason ?? "Nieznany")</td>
+                                        </tr>
+                                    }
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseUserDetailsModal">Zamknij</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<UserDto>? allUsers;
+    private List<UserDto>? filteredUsers;
+    private List<VipUserDto>? vipUsers;
+    private List<BlacklistedUserDto>? blacklistedUsers;
+    private string activeTab = "guests";
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private string selectedRoleFilter = string.Empty;
+    private string selectedStatusFilter = string.Empty;
+    private bool showUserDetailsModal = false;
+    private UserDto? selectedUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            await Task.WhenAll(
+                LoadAllGuests(),
+                LoadVipUsers(),
+                LoadBlacklistedUsers()
+            );
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAllGuests()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/guest/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                allUsers = JsonSerializer.Deserialize<List<UserDto>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                ApplyFilters();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do przeglądania listy gości.");
+                NavigationManager.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania listy gości: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania danych.");
+        }
+    }
+
+    private async Task LoadVipUsers()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/vip/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                vipUsers = JsonSerializer.Deserialize<List<VipUserDto>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania listy VIP: {ex.Message}");
+        }
+    }
+
+    private async Task LoadBlacklistedUsers()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/blacklist/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                blacklistedUsers = JsonSerializer.Deserialize<List<BlacklistedUserDto>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania czarnej listy: {ex.Message}");
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        StateHasChanged();
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void OnFilterChanged()
+    {
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allUsers == null)
+        {
+            filteredUsers = new List<UserDto>();
+            return;
+        }
+
+        var filtered = allUsers.AsEnumerable();
+
+        // Filtr wyszukiwania
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(u => 
+                u.UserName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                u.Email?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                u.Id?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        // Filtr roli
+        if (!string.IsNullOrWhiteSpace(selectedRoleFilter))
+        {
+            filtered = filtered.Where(u => u.Roles?.Contains(selectedRoleFilter) == true);
+        }
+
+        // Filtr statusu
+        if (!string.IsNullOrWhiteSpace(selectedStatusFilter))
+        {
+            filtered = filtered.Where(u => u.Status?.Equals(selectedStatusFilter, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        filteredUsers = filtered.ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedRoleFilter = string.Empty;
+        selectedStatusFilter = string.Empty;
+        ApplyFilters();
+    }
+
+    private async Task AddGuestRole(string userId, string userName)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz dodać rolę gościa dla użytkownika {userName}?"))
+        {
+            try
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.PatchAsync($"api/guest/add/{userId}", null);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Rola gościa została dodana pomyślnie!");
+                    await LoadAllGuests();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Użytkownik już ma rolę gościa.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Nie znaleziono użytkownika.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania roli: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas dodawania roli gościa: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas dodawania roli.");
+            }
+        }
+    }
+
+    private async Task RemoveGuestRole(string userId, string userName)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć rolę gościa dla użytkownika {userName}?"))
+        {
+            try
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.PatchAsync($"api/guest/remove/{userId}", null);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Rola gościa została usunięta pomyślnie!");
+                    await LoadAllGuests();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Użytkownik nie ma roli gościa.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Nie znaleziono użytkownika.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania roli: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania roli gościa: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania roli.");
+            }
+        }
+    }
+
+    private void ViewUserDetails(object user)
+    {
+        if (user is UserDto userDto)
+        {
+            selectedUser = userDto;
+        }
+        else if (user is VipUserDto vipUser)
+        {
+            selectedUser = new UserDto
+            {
+                Id = vipUser.Id,
+                UserName = vipUser.UserName,
+                Email = vipUser.Email,
+                ProfilePicture = vipUser.ProfilePicture,
+                Roles = new[] { "VIP" },
+                VipSince = vipUser.VipSince,
+                Status = "active"
+            };
+        }
+        else if (user is BlacklistedUserDto blacklistedUser)
+        {
+            selectedUser = new UserDto
+            {
+                Id = blacklistedUser.Id,
+                UserName = blacklistedUser.UserName,
+                Email = blacklistedUser.Email,
+                ProfilePicture = blacklistedUser.ProfilePicture,
+                Status = "blacklisted",
+                BlacklistedAt = blacklistedUser.BlacklistedAt,
+                BlacklistReason = blacklistedUser.BlacklistReason
+            };
+        }
+        
+        showUserDetailsModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseUserDetailsModal()
+    {
+        showUserDetailsModal = false;
+        selectedUser = null;
+        StateHasChanged();
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-warning",
+            "Staff" => "bg-info",
+            "VIP" => "bg-warning",
+            "Guest" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusBadgeClass(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => "bg-success",
+            "inactive" => "bg-secondary",
+            "blacklisted" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => "Aktywny",
+            "inactive" => "Nieaktywny",
+            "blacklisted" => "Zablokowany",
+            _ => "Nieznany"
+        };
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        try
+        {
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                HttpClient.DefaultRequestHeaders.Authorization = null;
+                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
+        }
+        
+        return HttpClient;
+    }
+
+    public class UserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? ProfilePicture { get; set; }
+        public string[]? Roles { get; set; }
+        public bool IsEmailConfirmed { get; set; }
+        public string? Status { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? LastActivity { get; set; }
+        public DateTime? VipSince { get; set; }
+        public DateTime? BlacklistedAt { get; set; }
+        public string? BlacklistReason { get; set; }
+    }
+
+    public class VipUserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? ProfilePicture { get; set; }
+        public DateTime? VipSince { get; set; }
+    }
+
+    public class BlacklistedUserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? ProfilePicture { get; set; }
+        public DateTime? BlacklistedAt { get; set; }
+        public string? BlacklistReason { get; set; }
+    }
+}

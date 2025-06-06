@@ -1,0 +1,1013 @@
+@page "/room-management"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager,Admin")]
+
+<PageTitle>Zarządzanie pokojami</PageTitle>
+
+<div class="container-fluid my-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h2">
+                        <i class="bi bi-door-open"></i> Zarządzanie pokojami
+                    </h1>
+                </div>
+                <button class="btn btn-primary" @onclick="ShowAddRoomModal">
+                    <i class="bi bi-plus"></i> Dodaj nowy pokój
+                </button>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-lg text-primary" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Ładowanie pokoi...</p>
+                </div>
+            }
+            else
+            {
+                <!-- Filtry i wyszukiwanie -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="searchInput" class="form-label">Wyszukaj pokój:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" 
+                                           @bind="searchTerm" @oninput="OnSearchChanged"
+                                           placeholder="Nazwa pokoju lub typ...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="hotelFilter" class="form-label">Hotel:</label>
+                                <select class="form-select" id="hotelFilter" @bind="selectedHotelFilter" @bind:after="ApplyFilters">
+                                    <option value="">Wszystkie hotele</option>
+                                    @if (availableHotels?.Any() == true)
+                                    {
+                                        @foreach (var hotel in availableHotels)
+                                        {
+                                            <option value="@hotel.Key">@hotel.Value</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="roomTypeFilter" class="form-label">Typ pokoju:</label>
+                                <select class="form-select" id="roomTypeFilter" @bind="selectedRoomTypeFilter" @bind:after="ApplyFilters">
+                                    <option value="">Wszystkie typy</option>
+                                    @if (availableRoomTypes?.Any() == true)
+                                    {
+                                        @foreach (var roomType in availableRoomTypes)
+                                        {
+                                            <option value="@roomType">@roomType</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                                    <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statystyki -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredRooms?.Count ?? 0)</h5>
+                                <p class="card-text">Łącznie pokoi</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(availableHotels?.Count ?? 0)</h5>
+                                <p class="card-text">Hoteli</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-info text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(availableRoomTypes?.Count ?? 0)</h5>
+                                <p class="card-text">Typów pokoi</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-warning text-dark">
+                            <div class="card-body">
+                                <h5 class="card-title">@GetAveragePrice().ToString("C", new System.Globalization.CultureInfo("pl-PL"))</h5>
+                                <p class="card-text">Średnia cena</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista pokoi -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list"></i> Lista pokoi
+                            @if (filteredRooms?.Any() == true)
+                            {
+                                <span class="badge bg-primary ms-2">@filteredRooms.Count</span>
+                            }
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredRooms?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Zdjęcie</th>
+                                            <th>Nazwa pokoju</th>
+                                            <th>Hotel</th>
+                                            <th>Typ pokoju</th>
+                                            <th>Cena / Cena końcowa</th>
+                                            <th>Zniżka</th>
+                                            <th>Zdjęcia</th>
+                                            <th>Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var room in filteredRooms)
+                                        {
+                                            <tr>
+                                                <td><strong>#@room.Id</strong></td>
+                                                <td>
+                                                    @if (room.RoomImages?.Any() == true)
+                                                    {
+                                                        <img src="@room.RoomImages.First()" class="rounded" 
+                                                             style="width: 60px; height: 40px; object-fit: cover;" 
+                                                             alt="Pokój" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center text-white" 
+                                                             style="width: 60px; height: 40px;">
+                                                            <i class="bi bi-door-open"></i>
+                                                        </div>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <strong>@room.RoomName</strong>
+                                                </td>
+                                                <td>
+                                                    @{
+                                                        var hotelName = GetHotelName(room.HotelId);
+                                                    }
+                                                    <small class="text-primary">
+                                                        <i class="bi bi-building"></i> @hotelName
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">@room.RoomType</span>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        @if (room.DiscountPercent > 0)
+                                                        {
+                                                            <small class="text-muted text-decoration-line-through">
+                                                                @room.Price?.ToString("C", new System.Globalization.CultureInfo("pl-PL"))
+                                                            </small><br>
+                                                            <strong class="text-success">
+                                                                @room.FinalPrice?.ToString("C", new System.Globalization.CultureInfo("pl-PL"))
+                                                            </strong>
+                                                        }
+                                                        else
+                                                        {
+                                                            <strong class="text-success">
+                                                                @room.Price?.ToString("C", new System.Globalization.CultureInfo("pl-PL"))
+                                                            </strong>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    @if (room.DiscountPercent > 0)
+                                                    {
+                                                        <span class="badge bg-danger">-@room.DiscountPercent%</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Brak</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary">@(room.RoomImages?.Count ?? 0)</span>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button class="btn btn-outline-primary" 
+                                                                @onclick="() => ShowEditRoomModal(room)" 
+                                                                title="Edytuj">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-warning" 
+                                                                @onclick="() => ShowImageModal(room)" 
+                                                                title="Zarządzaj zdjęciami">
+                                                            <i class="bi bi-images"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" 
+                                                                @onclick="() => DeleteRoom(room)" 
+                                                                title="Usuń">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-door-open text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">Brak pokoi</h5>
+                                <p class="text-muted">Nie znaleziono pokoi spełniających kryteria wyszukiwania.</p>
+                                <button class="btn btn-primary" @onclick="ShowAddRoomModal">
+                                    <i class="bi bi-plus"></i> Dodaj pierwszy pokój
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Modal dodawania/edycji pokoju -->
+    @if (showRoomModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-door-open"></i> @(isEditMode ? "Edytuj pokój" : "Dodaj nowy pokój")
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseRoomModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (loadingFormData)
+                        {
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Ładowanie danych...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Ładowanie hoteli i typów pokoi...</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <form @onsubmit="SaveRoom" @onsubmit:preventDefault="true">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="roomName" class="form-label">Nazwa pokoju:</label>
+                                        <input type="text" class="form-control" id="roomName" 
+                                               @bind="roomForm.RoomName" required maxlength="100"
+                                               placeholder="np. Pokój 101, Suite Prezydencki">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="hotelSelect" class="form-label">Hotel:</label>
+                                        <select class="form-select" id="hotelSelect" @bind="roomForm.HotelId" required>
+                                            <option value="0">-- Wybierz hotel --</option>
+                                            @if (hotels?.Any() == true)
+                                            {
+                                                @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                                {
+                                                    <option value="@hotel.Id">@hotel.Name (@hotel.City)</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="roomTypeSelect" class="form-label">Typ pokoju:</label>
+                                        <select class="form-select" id="roomTypeSelect" @bind="roomForm.RoomType" required>
+                                            <option value="0">-- Wybierz typ pokoju --</option>
+                                            @if (roomTypes?.Any() == true)
+                                            {
+                                                @foreach (var roomType in roomTypes.OrderBy(rt => rt.Name))
+                                                {
+                                                    <option value="@roomType.Id">@roomType.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="roomPrice" class="form-label">Cena za noc (PLN):</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">PLN</span>
+                                            <input type="number" class="form-control" id="roomPrice" 
+                                                   @bind="roomForm.Price" required min="0" step="0.01"
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="roomDescription" class="form-label">
+                                        Opis pokoju: <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control @(IsDescriptionValid() ? "" : "is-invalid")" 
+                                              id="roomDescription" rows="4" 
+                                              @bind="roomForm.Description" @oninput="OnDescriptionChanged"
+                                              required minlength="50" maxlength="1000"
+                                              placeholder="Wprowadź szczegółowy opis pokoju (minimum 50 znaków)..."></textarea>
+                                    <div class="form-text d-flex justify-content-between">
+                                        <span class="@(IsDescriptionValid() ? "text-success" : "text-danger")">
+                                            @if (IsDescriptionValid())
+                                            {
+                                                <i class="bi bi-check-circle"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-exclamation-circle"></i>
+                                            }
+                                            Wprowadzono: @(roomForm.Description?.Length ?? 0) / 50 znaków (min. wymagane)
+                                        </span>
+                                        <span class="text-muted">
+                                            Maksymalnie: @(roomForm.Description?.Length ?? 0) / 1000 znaków
+                                        </span>
+                                    </div>
+                                    @if (!IsDescriptionValid())
+                                    {
+                                        <div class="invalid-feedback">
+                                            Opis musi zawierać co najmniej 50 znaków. Brakuje: @(50 - (roomForm.Description?.Length ?? 0)) znaków.
+                                        </div>
+                                    }
+                                </div>
+                            </form>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseRoomModal">Anuluj</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveRoom" 
+                                disabled="@(isSubmitting || loadingFormData || !IsFormValid())">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-save"></i> @(isEditMode ? "Zapisz zmiany" : "Dodaj pokój")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Modal zarządzania zdjęciami -->
+    @if (showImageModal && selectedRoom != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-images"></i> Zarządzanie zdjęciami - @selectedRoom.RoomName
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseImageModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="imageUpload" class="form-label">Wybierz nowe zdjęcia:</label>
+                            <InputFile class="form-control" multiple accept="image/*" OnChange="OnImagesSelected" />
+                            <div class="form-text">Wybierz maksymalnie 10 zdjęć (JPG, PNG, GIF, max 5MB każde)</div>
+                        </div>
+                        
+                        @if (selectedRoom.RoomImages?.Any() == true)
+                        {
+                            <h6>Obecne zdjęcia:</h6>
+                            <div class="row">
+                                @foreach (var image in selectedRoom.RoomImages)
+                                {
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card">
+                                            <img src="@image" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Pokój">
+                                            <div class="card-body p-2">
+                                                <button class="btn btn-danger btn-sm w-100" @onclick="() => RemoveImage(image)">
+                                                    <i class="bi bi-trash"></i> Usuń
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-images text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-2">Brak zdjęć dla tego pokoju</p>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseImageModal">Zamknij</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveImages" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-upload"></i> Zapisz zdjęcia
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Room>? allRooms;
+    private List<Room>? filteredRooms;
+    private List<Hotel>? hotels;
+    private List<RoomType>? roomTypes;
+    private Dictionary<int, string>? availableHotels;
+    private List<string>? availableRoomTypes;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool loadingFormData = false;
+    private bool showRoomModal = false;
+    private bool showImageModal = false;
+    private bool isEditMode = false;
+    private string searchTerm = string.Empty;
+    private string selectedHotelFilter = string.Empty;
+    private string selectedRoomTypeFilter = string.Empty;
+    private DateTime currentDateTime = DateTime.UtcNow;
+    private Timer? timer;
+    
+    private RoomForm roomForm = new();
+    private Room? selectedRoom;
+    private List<IBrowserFile>? selectedImages;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Timer do aktualizacji czasu co sekundę
+        timer = new Timer(UpdateDateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        
+        await Task.WhenAll(
+            LoadRooms(),
+            LoadRoomTypes()
+        );
+    }
+
+    private void UpdateDateTime(object? state)
+    {
+        currentDateTime = DateTime.UtcNow;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+
+    private bool IsDescriptionValid()
+    {
+        return !string.IsNullOrEmpty(roomForm.Description) && roomForm.Description.Length >= 50;
+    }
+
+    private bool IsFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(roomForm.RoomName) && 
+               roomForm.HotelId > 0 &&
+               roomForm.RoomType > 0 &&
+               roomForm.Price > 0 &&
+               IsDescriptionValid();
+    }
+
+    private void OnDescriptionChanged(ChangeEventArgs e)
+    {
+        roomForm.Description = e.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private decimal GetAveragePrice()
+    {
+        if (filteredRooms?.Any() != true) return 0;
+        return filteredRooms.Where(r => r.FinalPrice.HasValue).Average(r => r.FinalPrice ?? 0);
+    }
+
+    private string GetHotelName(int? hotelId)
+    {
+        if (hotelId.HasValue && availableHotels?.ContainsKey(hotelId.Value) == true)
+        {
+            return availableHotels[hotelId.Value];
+        }
+        return "Nieznany hotel";
+    }
+
+    private async Task LoadRooms()
+    {
+        isLoading = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel-room/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                allRooms = JsonSerializer.Deserialize<List<Room>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                // Załaduj hotele aby mieć nazwy
+                await LoadHotelsForDisplay();
+                
+                // Wyodrębnij dostępne typy pokoi dla filtra
+                availableRoomTypes = allRooms?.Where(r => !string.IsNullOrEmpty(r.RoomType))
+                                           .Select(r => r.RoomType!)
+                                           .Distinct()
+                                           .OrderBy(rt => rt)
+                                           .ToList();
+                
+                ApplyFilters();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania pokoi: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania listy pokoi.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadHotelsForDisplay()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var hotelsList = JsonSerializer.Deserialize<List<Hotel>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                // Stwórz mapę hoteli dla filtra i wyświetlania
+                availableHotels = hotelsList?.ToDictionary(h => h.Id, h => h.Name) ?? new Dictionary<int, string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania hoteli do wyświetlania: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRoomTypes()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel-room/get-room-types");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                roomTypes = JsonSerializer.Deserialize<List<RoomType>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania typów pokoi: {ex.Message}");
+        }
+    }
+
+    private async Task LoadHotels()
+    {
+        loadingFormData = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                hotels = JsonSerializer.Deserialize<List<Hotel>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania hoteli: {ex.Message}");
+        }
+        finally
+        {
+            loadingFormData = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allRooms == null)
+        {
+            filteredRooms = new List<Room>();
+            return;
+        }
+
+        var filtered = allRooms.AsEnumerable();
+
+        // Filtr wyszukiwania
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(r => 
+                r.RoomName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                r.RoomType?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        // Filtr hotelu
+        if (!string.IsNullOrWhiteSpace(selectedHotelFilter) && int.TryParse(selectedHotelFilter, out int hotelId))
+        {
+            filtered = filtered.Where(r => r.HotelId == hotelId);
+        }
+
+        // Filtr typu pokoju
+        if (!string.IsNullOrWhiteSpace(selectedRoomTypeFilter))
+        {
+            filtered = filtered.Where(r => r.RoomType?.Equals(selectedRoomTypeFilter, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        filteredRooms = filtered.OrderBy(r => GetHotelName(r.HotelId)).ThenBy(r => r.RoomName).ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedHotelFilter = string.Empty;
+        selectedRoomTypeFilter = string.Empty;
+        ApplyFilters();
+    }
+
+    private async Task ShowAddRoomModal()
+    {
+        roomForm = new RoomForm();
+        isEditMode = false;
+        showRoomModal = true;
+        
+        // Załaduj hotele jeśli nie są załadowane
+        if (hotels?.Any() != true)
+        {
+            await LoadHotels();
+        }
+    }
+
+    private async Task ShowEditRoomModal(Room room)
+    {
+        roomForm = new RoomForm
+        {
+            RoomId = room.Id,
+            RoomName = room.RoomName,
+            HotelId = room.HotelId ?? 0,
+            RoomType = GetRoomTypeId(room.RoomType),
+            Price = room.Price ?? 0,
+            Description = room.Description ?? string.Empty
+        };
+        isEditMode = true;
+        showRoomModal = true;
+        
+        // Załaduj hotele jeśli nie są załadowane
+        if (hotels?.Any() != true)
+        {
+            await LoadHotels();
+        }
+    }
+
+    private int GetRoomTypeId(string? roomTypeName)
+    {
+        if (string.IsNullOrEmpty(roomTypeName) || roomTypes?.Any() != true)
+            return 0;
+        
+        var roomType = roomTypes.FirstOrDefault(rt => rt.Name?.Equals(roomTypeName, StringComparison.OrdinalIgnoreCase) == true);
+        return roomType?.Id ?? 0;
+    }
+
+    private void CloseRoomModal()
+    {
+        showRoomModal = false;
+        roomForm = new RoomForm();
+        isEditMode = false;
+    }
+
+    private async Task SaveRoom()
+    {
+        if (!IsFormValid())
+        {
+            var missingFields = new List<string>();
+            
+            if (string.IsNullOrWhiteSpace(roomForm.RoomName))
+                missingFields.Add("nazwa pokoju");
+            if (roomForm.HotelId <= 0)
+                missingFields.Add("hotel");
+            if (roomForm.RoomType <= 0)
+                missingFields.Add("typ pokoju");
+            if (roomForm.Price <= 0)
+                missingFields.Add("cena");
+            if (!IsDescriptionValid())
+                missingFields.Add($"opis (minimum 50 znaków, obecnie: {roomForm.Description?.Length ?? 0})");
+            
+            await JSRuntime.InvokeVoidAsync("alert", $"Następujące pola wymagają uzupełnienia:\n• {string.Join("\n• ", missingFields)}");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            var requestData = new
+            {
+                roomId = isEditMode ? roomForm.RoomId : (int?)null,
+                roomName = roomForm.RoomName,
+                hotelId = roomForm.HotelId,
+                roomType = roomForm.RoomType,
+                price = roomForm.Price,
+                description = roomForm.Description
+            };
+            
+            var json = JsonSerializer.Serialize(requestData);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            HttpResponseMessage response;
+            if (isEditMode)
+            {
+                response = await authenticatedClient.PutAsync("api/hotel-room", content);
+            }
+            else
+            {
+                response = await authenticatedClient.PostAsync("api/hotel-room", content);
+            }
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Pokój został {(isEditMode ? "zaktualizowany" : "dodany")} pomyślnie!");
+                CloseRoomModal();
+                await LoadRooms();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do tej operacji.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                if (isEditMode)
+                    await JSRuntime.InvokeVoidAsync("alert", "Pokój nie został znaleziony.");
+                else
+                    await JSRuntime.InvokeVoidAsync("alert", "Hotel nie został znaleziony.");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response: {errorContent}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas {(isEditMode ? "aktualizacji" : "dodawania")} pokoju: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zapisywania pokoju: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania pokoju.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteRoom(Room room)
+    {
+        var hotelName = GetHotelName(room.HotelId);
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć pokój '{room.RoomName}' z hotelu '{hotelName}'? Ta operacja jest nieodwracalna."))
+        {
+            try
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.DeleteAsync($"api/hotel-room/{room.Id}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Pokój został usunięty pomyślnie!");
+                    await LoadRooms();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do usunięcia pokoju.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Pokój nie został znaleziony.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania pokoju: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania pokoju: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania pokoju.");
+            }
+        }
+    }
+
+    private void ShowImageModal(Room room)
+    {
+        selectedRoom = room;
+        selectedImages = null;
+        showImageModal = true;
+    }
+
+    private void CloseImageModal()
+    {
+        showImageModal = false;
+        selectedRoom = null;
+        selectedImages = null;
+    }
+
+    private void OnImagesSelected(InputFileChangeEventArgs e)
+    {
+        selectedImages = e.GetMultipleFiles(10).ToList();
+        
+        // Walidacja plików
+        foreach (var file in selectedImages)
+        {
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
+                selectedImages = null;
+                return;
+            }
+            
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży (max 5MB).");
+                selectedImages = null;
+                return;
+            }
+        }
+    }
+
+    private async Task SaveImages()
+    {
+        if (selectedRoom == null || selectedImages?.Any() != true)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wybierz zdjęcia do przesłania.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(selectedRoom.Id.ToString()), "roomId");
+            
+            foreach (var file in selectedImages)
+            {
+                using var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                using var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(streamContent, "images", file.Name);
+            }
+            
+            var response = await authenticatedClient.PutAsync("api/hotel-room/images", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zdjęcia zostały zaktualizowane pomyślnie!");
+                CloseImageModal();
+                await LoadRooms();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji zdjęć: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji zdjęć: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas aktualizacji zdjęć.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void RemoveImage(string imageUrl)
+    {
+        if (selectedRoom?.RoomImages != null)
+        {
+            selectedRoom.RoomImages.Remove(imageUrl);
+            StateHasChanged();
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        try
+        {
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                HttpClient.DefaultRequestHeaders.Authorization = null;
+                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
+        }
+        
+        return HttpClient;
+    }
+
+    public class Room
+    {
+        public int Id { get; set; }
+        public string RoomName { get; set; } = string.Empty;
+        public string? RoomType { get; set; }
+        public decimal? Price { get; set; }
+        public decimal DiscountPercent { get; set; }
+        public decimal? FinalPrice { get; set; }
+        public int? HotelId { get; set; }
+        public List<string> RoomImages { get; set; } = new();
+        public string? Description { get; set; } // Dodane dla formularza
+    }
+
+    public class Hotel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+    }
+
+    public class RoomType
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+
+    public class RoomForm
+    {
+        public int RoomId { get; set; }
+        public string RoomName { get; set; } = string.Empty;
+        public int HotelId { get; set; } = 0;
+        public int RoomType { get; set; } = 0;
+        public decimal Price { get; set; } = 0;
+        public string Description { get; set; } = string.Empty;
+    }
+}

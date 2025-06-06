@@ -28,6 +28,9 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<CustomAuthStateProvider>());
 builder.Services.AddScoped<AuthTokenHandler>();
 
+// Rejestracja usługi do komunikacji między komponentami
+builder.Services.AddSingleton<IEventBusService, EventBusService>();
+
 // ✅ POPRAWNA konfiguracja HttpClient z AuthTokenHandler
 builder.Services.AddHttpClient("HotelApi", client =>
 {
