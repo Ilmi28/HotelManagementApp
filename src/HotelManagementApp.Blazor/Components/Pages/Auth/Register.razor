@@ -1,6 +1,5 @@
 ﻿@page "/register"
 @inject HttpClient Http
-@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ITokenService TokenService
@@ -221,7 +220,7 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("HotelApi");
+            // Używamy bezpośrednio Http dla rejestracji (bez tokenów)
             var command = new { 
                 registerModel.UserName, 
                 registerModel.Email, 
@@ -230,7 +229,7 @@
 
             Console.WriteLine($"Attempting registration for user: {registerModel.UserName}, email: {registerModel.Email}");
 
-            var response = await client.PostAsJsonAsync("api/auth/register", command);
+            var response = await Http.PostAsJsonAsync("api/auth/register", command);
 
             if (response.IsSuccessStatusCode)
             {
@@ -301,16 +300,14 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("HotelApi");
-            
-            // Ustaw nagłówek autoryzacji
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
-            
+            // TUTAJ używamy NOWEGO HttpClient z automatycznymi tokenami
+            // bo użytkownik jest już zalogowany po rejestracji
             var emailCommand = new { UserId = currentUserId };
             
             Console.WriteLine($"Sending confirmation email for userId: {currentUserId}");
             
-            var emailResponse = await client.PostAsJsonAsync("api/account/send-confirmation-email", emailCommand);
+            // Używamy Http z automatycznymi tokenami (tokeny są już zapisane w TokenService)
+            var emailResponse = await Http.PostAsJsonAsync("api/account/send-confirmation-email", emailCommand);
             
             Console.WriteLine($"Email send response status: {emailResponse.StatusCode}");
 

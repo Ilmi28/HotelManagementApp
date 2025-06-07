@@ -1,7 +1,4 @@
 ﻿@page "/"
-@using Microsoft.IdentityModel.Tokens
-@inject HttpClient Http
-@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
 <PageTitle>Hotel Management System - Strona główna</PageTitle>
@@ -136,10 +133,5 @@
     private void GoToRegister()
     {
         NavigationManager.NavigateTo("/register");
-    }
-
-    private void ViewHotelDetails(int hotelId)
-    {
-        NavigationManager.NavigateTo($"/hotel/{hotelId}");
     }
 }

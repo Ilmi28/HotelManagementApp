@@ -1,10 +1,8 @@
 @page "/hotels"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 
 <PageTitle>Wyszukiwarka hoteli - Hotel Management System</PageTitle>
 
@@ -239,81 +237,25 @@
     private string viewMode = "grid";
     private bool isLoading = false;
     private string errorMessage = "";
-    
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
-        // Użyj klienta HotelApi
-        httpClient = HttpClientFactory.CreateClient("HotelApi");
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
+        // Sprawdź autoryzację
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity.IsAuthenticated)
         {
-            // Sprawdź autoryzację
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (!authState.User.Identity.IsAuthenticated)
-            {
-                NavigationManager.NavigateTo("/login");
-                return;
-            }
-
-            // Załaduj dane z tokenem z localStorage
-            await LoadData();
+            NavigationManager.NavigateTo("/login");
+            return;
         }
+
+        // Załaduj dane - tokeny będą dodawane automatycznie przez AuthTokenHandler
+        await LoadData();
     }
 
     private async Task LoadData()
     {
         await LoadHotels();
         await LoadCountries();
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            // Sprawdź czy JavaScript jest dostępny
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            
-            // Pobierz token z localStorage
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            // JavaScript jeszcze niedostępny, poczekaj
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            // Usuń poprzedni header i dodaj nowy
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
     }
 
     private async Task LoadHotels()
@@ -323,8 +265,8 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie przez AuthTokenHandler
+            var response = await Http.GetAsync("api/hotel/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -359,8 +301,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/city/get-countries");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync("api/city/get-countries");
             if (response.IsSuccessStatusCode)
             {
                 countries = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
@@ -390,8 +332,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/city/get-by-country/{Uri.EscapeDataString(country)}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/city/get-by-country/{Uri.EscapeDataString(country)}");
             if (response.IsSuccessStatusCode)
             {
                 cities = await response.Content.ReadFromJsonAsync<List<CityViewModel>>() ?? new List<CityViewModel>();

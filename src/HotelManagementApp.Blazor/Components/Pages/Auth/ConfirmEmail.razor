@@ -1,9 +1,7 @@
 @page "/account/confirm-email"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Net
-@using System.Web
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
@@ -115,21 +113,15 @@
             // Dekodowanie parametrów URL (na wypadek gdyby były zakodowane)
             var decodedUserId = Uri.UnescapeDataString(UserId);
             var decodedToken = Uri.UnescapeDataString(Token);
-            var tokenx = "l6/ALyagwMCyVFr15cgZjpqmlQ/dlZUYnY7N+HOmuDPfcILk2NaAWvO0/AgUcS5FStipBpcvHBC1mL7SxdY+bJRBq2R5yfaN2Thb9u1iMxRA5mJjwixDN7MiKQ3W89gPPhivIdP06lPRdWARdTUdHvnXuZOSQEcgRQhvAakIRYXTO/SkC7vsJO6q+gwF9LKwDgxTxaNiZ/kBfcnKbnxuGPYwOCL1S0VCFl+nqgfpv6mwZOdlZ4nrsvtu/j+7xibpJZFMlm76Cxr2LBQYEV8AdyMUctvbJL0lZrUM4ZEK0/FZ+kYinFs5q+OztVoSSW/M/FPPgmqD63IygM7s5u+r6HwtGML7kKmUX5+VkDWLQrKXXWhwAJIr3aqHOCt3zuvkYZXIEKpSgYsyVvQ47buk3Ly3EX6ZZswr9yPLCJmLAM7qTtq3KvlGYYRRZCdxrsjgNjmiXNcz3mJXHO5pcJSHypOvU4kjA0X9Q1aKjWWdt5mtYTyvRVS+lQaBkpvS0CgE+hFgydOYAfs3POe0a59ZiyIBQfKGwss2UFQCks2mo4MLgjApaorDN3r/Iu2K380fc/e68oJ2mZ34VuLc64egfIGm7olEvQy6AyFdPKsye0EYmNNnSBLqkHQJc6cqs+p+H7uwZJ5ECBI50MtHfQT1mMniu6lxj1SjGDnB0OqlRnE=";
             Console.WriteLine($"Confirming email for userId: {decodedUserId}");
-            Console.WriteLine($"Token length: {decodedToken?.Length}");
-            Console.WriteLine($"Token: {decodedToken}");
-            Console.WriteLine($"Token: {tokenx}");
-            Console.WriteLine($"Test: {tokenx == decodedToken}");
 
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var command = new { 
                 UserId = decodedUserId, 
                 Token = decodedToken 
             };
 
-            var response = await authenticatedClient.PostAsJsonAsync("api/account/confirm-email", command);
+            var response = await Http.PostAsJsonAsync("api/account/confirm-email", command);
 
             Console.WriteLine($"Response status: {response.StatusCode}");
 
@@ -237,46 +229,6 @@
         // Tutaj możesz dodać logikę kontaktu z pomocą techniczną
         // Na przykład przekierowanie na stronę kontaktową lub otwarcie maila
         NavigationManager.NavigateTo("/contact");
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            HttpClient.DefaultRequestHeaders.Authorization = null;
-            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return HttpClient;
     }
 
     public class ErrorResponse

@@ -1,10 +1,9 @@
 @page "/reservation/{roomId:int}"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.Globalization
 @using System.Timers
 
@@ -591,14 +590,11 @@
     private string pageTitle = "Rezerwacja pokoju - Hotel Management System";
     
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
-            
             // Ustaw domyślne daty
             reservationModel.CheckInDate = DateTime.Today.AddDays(1);
             reservationModel.CheckOutDate = DateTime.Today.AddDays(2);
@@ -607,47 +603,35 @@
             // Inicjalizuj kolekcje
             availableServices = new List<HotelServiceResponse>();
             selectedServices = new Dictionary<int, int>();
+
+            // Sprawdź autoryzację
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await CheckEmailVerificationStatus();
+            await LoadRoomData();
+            
+            // Załaduj usługi dla hotelu
+            if (room != null)
+            {
+                await LoadAvailableServices(room.HotelId);
+            }
+            
+            // Sprawdź dostępność dla domyślnych dat
+            if (isEmailConfirmed && IsValidDateRange())
+            {
+                await CheckAvailabilityWithDebounce();
+            }
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await CheckEmailVerificationStatus();
-                await LoadRoomData();
-                
-                // Załaduj usługi dla hotelu
-                if (room != null)
-                {
-                    await LoadAvailableServices(room.HotelId);
-                }
-                
-                // Sprawdź dostępność dla domyślnych dat
-                if (isEmailConfirmed && IsValidDateRange())
-                {
-                    await CheckAvailabilityWithDebounce();
-                }
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -657,8 +641,8 @@
         loadingServices = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -843,7 +827,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             
             var requestData = new
             {
@@ -852,7 +836,7 @@
                 to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
             };
 
-            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/get-available-days", requestData);
+            var response = await Http.PostAsJsonAsync("api/reservation/get-available-days", requestData);
 
             if (response.IsSuccessStatusCode)
             {
@@ -932,8 +916,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -979,8 +963,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PostAsync("api/account/send-verification-email", null);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PostAsync("api/account/send-verification-email", null);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1017,13 +1001,13 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             
             // Pobierz dane z session API
             var userId = "";
             try
             {
-                var sessionResponse = await authenticatedClient.GetAsync("api/account/session");
+                var sessionResponse = await Http.GetAsync("api/account/session");
                 if (sessionResponse.IsSuccessStatusCode)
                 {
                     var sessionData = await sessionResponse.Content.ReadFromJsonAsync<SessionViewModel>();
@@ -1050,7 +1034,7 @@
                 country = "x"
             };
 
-            var response = await authenticatedClient.PostAsJsonAsync("api/order", orderData);
+            var response = await Http.PostAsJsonAsync("api/order", orderData);
             
             if (response.IsSuccessStatusCode)
             {
@@ -1076,21 +1060,20 @@
                     
                     if (orderId > 0)
                     {
-                        var reservationResult = await AddReservationToOrder(orderId, authenticatedClient);
+                        var reservationResult = await AddReservationToOrder(orderId);
                         Console.WriteLine($"Reservation result: Success={reservationResult.Success}, ReservationId={reservationResult.ReservationId}, ErrorMessage={reservationResult.ErrorMessage}");
                         if (reservationResult.Success && reservationResult.ReservationId.HasValue)
                         {
                             // Dodaj wybrane usługi do rezerwacji
                             if (selectedServices.Any())
                             {
-                                await AddServicesToReservation(reservationResult.ReservationId.Value, authenticatedClient);
+                                await AddServicesToReservation(reservationResult.ReservationId.Value);
                             }
                             
                             NavigationManager.NavigateTo($"/order/{orderId}");
                         }
                         else
                         {
-                            // errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
                             errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
                         }
                     }
@@ -1103,13 +1086,13 @@
                 {
                     if (int.TryParse(responseContent.Trim(), out var directId))
                     {
-                        var reservationResult = await AddReservationToOrder(directId, authenticatedClient);
+                        var reservationResult = await AddReservationToOrder(directId);
                         
                         if (reservationResult.Success && reservationResult.ReservationId.HasValue)
                         {
                             if (selectedServices.Any())
                             {
-                                await AddServicesToReservation(reservationResult.ReservationId.Value, authenticatedClient);
+                                await AddServicesToReservation(reservationResult.ReservationId.Value);
                             }
                             
                             NavigationManager.NavigateTo($"/order/{directId}");
@@ -1142,7 +1125,7 @@
     }
 
     // NOWA METODA - dodawanie usług do rezerwacji
-    private async Task AddServicesToReservation(int reservationId, HttpClient client)
+    private async Task AddServicesToReservation(int reservationId)
     {
         foreach (var serviceSelection in selectedServices)
         {
@@ -1157,7 +1140,8 @@
                         quantity = 1
                     };
 
-                    var response = await client.PostAsJsonAsync("api/reservation/service/add", requestData);
+                    // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+                    var response = await Http.PostAsJsonAsync("api/reservation/service/add", requestData);
                     
                     if (!response.IsSuccessStatusCode)
                     {
@@ -1189,7 +1173,7 @@
         public bool IsEmailConfirmed { get; set; }
     }
 
-    private async Task<ReservationResult> AddReservationToOrder(int orderId, HttpClient client)
+    private async Task<ReservationResult> AddReservationToOrder(int orderId)
     {
         try
         {
@@ -1201,7 +1185,8 @@
                 to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
             };
 
-            var response = await client.PostAsJsonAsync("api/reservation", reservationData);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PostAsJsonAsync("api/reservation", reservationData);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.StatusCode == System.Net.HttpStatusCode.OK)
             {
@@ -1307,46 +1292,6 @@
         return (room.Price - room.FinalPrice) * GetStayDuration();
     }
 
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
-
     private async Task LoadRoomData()
     {
         isLoading = true;
@@ -1354,8 +1299,8 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-room/{RoomId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-room/{RoomId}");
 
             if (response.IsSuccessStatusCode)
             {

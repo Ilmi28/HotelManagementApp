@@ -1,6 +1,5 @@
 ﻿@page "/login"
 @inject HttpClient Http
-@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ITokenService TokenService
@@ -69,8 +68,9 @@
 		isProcessing = true;
 		try
 		{
-			var client = HttpClientFactory.CreateClient("HotelApi");
-			var response = await client.PostAsJsonAsync("api/auth/login", loginModel);
+			// Używamy bezpośrednio Http - dla logowania NIE CHCEMY automatycznych tokenów
+			// (użytkownik jeszcze się nie zalogował)
+			var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
 
 			if (response.IsSuccessStatusCode)
 			{

@@ -1,10 +1,9 @@
 @page "/order/{orderId:int}"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
 
@@ -535,7 +534,6 @@
     private string pageTitle = "Podsumowanie zamówienia - Hotel Management System";
     
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     private bool isEmailConfirmed = false;
     private bool emailVerificationChecked = false;
@@ -544,41 +542,27 @@
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
-            
             // Inicjalizuj kolekcje
             reservations = new List<ReservationResponse>();
             reservationServices = new List<ReservationServiceResponse>();
             reservationParkings = new List<ReservationParkingResponse>();
+
+            // Sprawdź autoryzację
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await CheckEmailVerificationStatus();
+            await LoadOrderData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await CheckEmailVerificationStatus();
-                await LoadOrderData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -586,8 +570,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -627,8 +611,8 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-room/{roomId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-room/{roomId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -752,46 +736,6 @@
         };
     }
 
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
-
     private async Task LoadOrderData()
     {
         isLoading = true;
@@ -799,8 +743,8 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/order/{OrderId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/order/{OrderId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -894,8 +838,8 @@
         loadingReservations = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/reservation/{OrderId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/reservation/{OrderId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -929,8 +873,6 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var allServices = new List<ReservationServiceResponse>();
             
             if (reservations?.Any() == true)
@@ -939,7 +881,8 @@
                 {
                     try
                     {
-                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/services");
+                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/services");
                         if (response.IsSuccessStatusCode)
                         {
                             var services = await response.Content.ReadFromJsonAsync<List<ReservationServiceResponse>>() ?? new List<ReservationServiceResponse>();
@@ -966,8 +909,6 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var allParkings = new List<ReservationParkingResponse>();
             
             if (reservations?.Any() == true)
@@ -976,7 +917,8 @@
                 {
                     try
                     {
-                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/parkings");
+                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/parkings");
                         if (response.IsSuccessStatusCode)
                         {
                             var parkings = await response.Content.ReadFromJsonAsync<List<ReservationParkingResponse>>() ?? new List<ReservationParkingResponse>();
@@ -1021,8 +963,8 @@
         isUpdating = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PutAsJsonAsync("api/order", editModel);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PutAsJsonAsync("api/order", editModel);
 
             if (response.IsSuccessStatusCode)
             {
@@ -1076,8 +1018,8 @@
         confirmingOrder = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PatchAsync($"api/order/confirm/{OrderId}", null);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PatchAsync($"api/order/confirm/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
             {
@@ -1138,8 +1080,8 @@
         cancellingOrder = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PatchAsync($"api/order/cancel/{OrderId}", null);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PatchAsync($"api/order/cancel/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
             {

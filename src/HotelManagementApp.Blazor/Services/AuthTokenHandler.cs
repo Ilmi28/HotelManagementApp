@@ -1,138 +1,203 @@
-﻿using System.Net.Http.Headers;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using HotelManagementApp.Blazor.Auth;
-using Microsoft.JSInterop;
 
 namespace HotelManagementApp.Blazor.Services
 {
     public class AuthTokenHandler : DelegatingHandler
     {
-        private readonly IJSRuntime _jsRuntime;
+        private readonly ITokenService _tokenService;
+        private readonly ILogger<AuthTokenHandler> _logger;
+        private static readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(1, 1);
 
-        public AuthTokenHandler(IJSRuntime jsRuntime)
+        public AuthTokenHandler(ITokenService tokenService, ILogger<AuthTokenHandler> logger)
         {
-            _jsRuntime = jsRuntime;
+            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            // Dodaj token jeśli nie ma Authorization header
-            if (request.Headers.Authorization == null)
+            // Sprawdź czy żądanie nie dotyczy endpointów auth (logowanie/rejestracja)
+            if (IsAuthEndpoint(request.RequestUri))
             {
-                await TryAddAuthToken(request);
+                _logger.LogDebug("Skipping token for auth endpoint: {Uri}", request.RequestUri);
+                return await base.SendAsync(request, cancellationToken);
             }
 
+            // Dodaj token do żądania
+            await AddTokenToRequest(request);
+
+            // Wyślij żądanie
             var response = await base.SendAsync(request, cancellationToken);
 
-            // Jeśli 401, spróbuj odświeżyć token i powtórz żądanie
+            // Jeśli otrzymaliśmy 401 (Unauthorized), spróbuj odświeżyć token
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (await TryRefreshToken(request.RequestUri))
+                _logger.LogInformation("Received 401, attempting to refresh token");
+                
+                var refreshed = await TryRefreshToken();
+                if (refreshed)
                 {
-                    await TryAddAuthToken(request);
-                    if (request.Headers.Authorization != null)
-                    {
-                        return await base.SendAsync(request, cancellationToken);
-                    }
+                    _logger.LogInformation("Token refreshed successfully, retrying request");
+                    
+                    // Dodaj nowy token do żądania i spróbuj ponownie
+                    await AddTokenToRequest(request);
+                    response = await base.SendAsync(request, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning("Token refresh failed");
                 }
             }
-            
+
             return response;
         }
 
-        private async Task TryAddAuthToken(HttpRequestMessage request)
+        private async Task AddTokenToRequest(HttpRequestMessage request)
         {
             try
             {
-                var token = await GetTokenWithRetry();
+                var token = await _tokenService.GetAccessTokenAsync();
+                
                 if (!string.IsNullOrEmpty(token))
                 {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
-            }
-            catch
-            {
-                // Ignoruj błędy - żądanie pójdzie bez tokena
-            }
-        }
-
-        private async Task<string?> GetTokenWithRetry(int maxAttempts = 3)
-        {
-            for (int i = 0; i < maxAttempts; i++)
-            {
-                try
-                {
-                    // Sprawdź czy JavaScript jest dostępny
-                    await _jsRuntime.InvokeAsync<string>("eval", "''");
-                    
-                    // Pobierz token z localStorage
-                    var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                    return token;
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-                {
-                    // JavaScript jeszcze niedostępny, poczekaj i spróbuj ponownie
-                    if (i < maxAttempts - 1)
+                    // Sprawdź czy token nie wygasł
+                    if (IsTokenExpired(token))
                     {
-                        await Task.Delay(500 * (i + 1)); // 500ms, 1s, 1.5s
+                        _logger.LogInformation("Token is expired, attempting to refresh");
+                        var refreshed = await TryRefreshToken();
+                        
+                        if (refreshed)
+                        {
+                            // Pobierz nowy token
+                            token = await _tokenService.GetAccessTokenAsync();
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                        _logger.LogDebug("Added Bearer token to request: {Uri}", request.RequestUri);
                     }
                 }
-                catch
-                {
-                    break; // Inny błąd, przerwij próby
-                }
             }
-            return null;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding token to request");
+            }
         }
 
-        private async Task<bool> TryRefreshToken(Uri? requestUri)
+        private async Task<bool> TryRefreshToken()
         {
+            // Używamy SemaphoreSlim aby zapobiec wielokrotnym równoczesnym odświeżeniom
+            await _refreshSemaphore.WaitAsync();
+            
             try
             {
-                var refreshToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
-                if (string.IsNullOrEmpty(refreshToken))
-                    return false;
-
-                using var refreshClient = new HttpClient();
+                var refreshToken = await _tokenService.GetRefreshTokenAsync();
                 
-                var baseAddress = requestUri?.GetLeftPart(UriPartial.Authority);
-                if (!string.IsNullOrEmpty(baseAddress))
+                if (string.IsNullOrEmpty(refreshToken))
                 {
-                    refreshClient.BaseAddress = new Uri(baseAddress);
+                    _logger.LogWarning("No refresh token available");
+                    return false;
                 }
 
-                var refreshRequest = new { RefreshToken = refreshToken };
-                var refreshResponse = await refreshClient.PostAsJsonAsync("api/auth/refresh", refreshRequest);
+                _logger.LogInformation("Attempting to refresh token");
+
+                // Utwórz nowe żądanie odświeżenia tokenu
+                using var httpClient = new HttpClient();
                 
-                if (refreshResponse.IsSuccessStatusCode)
+                // UWAGA: Tutaj używamy bezpośrednio HttpClient bez AuthTokenHandler
+                // aby uniknąć nieskończonej pętli
+                httpClient.BaseAddress = new Uri("https://localhost:7051/"); // Dostosuj do swojego API
+                
+                var refreshRequest = new
                 {
-                    var result = await refreshResponse.Content.ReadFromJsonAsync<TokenResponse>();
-                    if (result != null && !string.IsNullOrEmpty(result.IdentityToken) && !string.IsNullOrEmpty(result.RefreshToken))
+                    RefreshToken = refreshToken
+                };
+
+                var response = await httpClient.PostAsJsonAsync("api/auth/refresh", refreshRequest);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<TokenRefreshResponse>();
+                    
+                    if (result != null && !string.IsNullOrEmpty(result.IdentityToken))
                     {
-                        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", result.IdentityToken);
-                        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "refreshToken", result.RefreshToken);
+                        await _tokenService.SetTokensAsync(result.IdentityToken, result.RefreshToken ?? refreshToken);
+                        _logger.LogInformation("Token refreshed successfully");
                         return true;
                     }
                 }
                 else
                 {
-                    // Usuń nieprawidłowe tokeny
-                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+                    _logger.LogWarning("Token refresh failed with status: {StatusCode}", response.StatusCode);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignoruj błędy refresh
+                _logger.LogError(ex, "Exception during token refresh");
+            }
+            finally
+            {
+                _refreshSemaphore.Release();
             }
 
+            // Jeśli odświeżenie nie powiodło się, wyczyść tokeny
+            await _tokenService.RemoveTokensAsync();
             return false;
         }
 
-        private class TokenResponse
+        private bool IsTokenExpired(string token)
         {
-            public string IdentityToken { get; set; } = "";
-            public string RefreshToken { get; set; } = "";
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                
+                if (!tokenHandler.CanReadToken(token))
+                {
+                    return true;
+                }
+
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+                
+                // Sprawdź czy token wygasł (z 30-sekundowym buforem)
+                var expirationTime = jwtToken.ValidTo;
+                var currentTime = DateTime.UtcNow.AddSeconds(30); // 30-sekundowy bufor
+                
+                var isExpired = currentTime >= expirationTime;
+                
+                if (isExpired)
+                {
+                    _logger.LogInformation("Token expires at {ExpirationTime}, current time: {CurrentTime}, considered expired: {IsExpired}", 
+                        expirationTime, DateTime.UtcNow, isExpired);
+                }
+
+                return isExpired;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking token expiration");
+                return true; // Jeśli nie można sprawdzić, zakładamy że wygasł
+            }
+        }
+
+        private static bool IsAuthEndpoint(Uri? uri)
+        {
+            if (uri == null) return false;
+            
+            var path = uri.AbsolutePath.ToLowerInvariant();
+            return path.Contains("/api/auth/login") || 
+                   path.Contains("/api/auth/register") ||
+                   path.Contains("/api/auth/refresh");
+        }
+
+        private class TokenRefreshResponse
+        {
+            public string? IdentityToken { get; set; }
+            public string? RefreshToken { get; set; }
         }
     }
 }
