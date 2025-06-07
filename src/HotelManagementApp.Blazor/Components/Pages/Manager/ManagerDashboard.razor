@@ -12,22 +12,6 @@
 <div class="container-fluid my-4">
     <div class="row">
         <div class="col-12">
-            <!-- Header z informacjami systemowymi -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h2">
-                        <i class="bi bi-graph-up"></i> Dashboard menedżera
-                    </h1>
-                    <p class="text-muted mb-0">Witaj, @currentUserLogin</p>
-                </div>
-                <div class="text-end">
-                    <small class="text-muted">
-                        <i class="bi bi-clock"></i> Aktualny czas (UTC): <br>
-                        <strong>@DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")</strong>
-                    </small>
-                </div>
-            </div>
-
             @if (isLoading)
             {
                 <div class="text-center py-5">
@@ -416,7 +400,6 @@
     private List<Payment>? payments;
     private List<LoyaltyPointsGuest>? loyaltyPointsData;
     private bool isLoading = true;
-    private string currentUserLogin = "MarcinZalewski1";
     private decimal totalRevenue = 0;
     private decimal todayRevenue = 0;
     private decimal monthRevenue = 0;

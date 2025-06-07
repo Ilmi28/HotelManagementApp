@@ -189,42 +189,45 @@
                                 @if (accountHistory?.Any() == true)
                                 {
                                     <div class="table-responsive">
-                                        <table class="table table-sm">
+                                        <table class="table table-sm table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>Data</th>
-                                                    <th>Akcja</th>
-                                                    <th>Szczegóły</th>
-                                                    <th>IP</th>
+                                                    <th>Data i godzina</th>
+                                                    <th>Operacja</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var entry in accountHistory.Take(10))
+                                                @foreach (var entry in accountHistory.OrderByDescending(x => x.OperationDate).Take(15))
                                                 {
                                                     <tr>
                                                         <td>
-                                                            <small>@entry.Date.ToString("dd.MM.yyyy HH:mm")</small>
+                                                            <small>@entry.OperationDate.ToString("dd.MM.yyyy HH:mm:ss")</small>
                                                         </td>
                                                         <td>
-                                                            <span class="badge @GetActionBadgeClass(entry.Action)">
-                                                                @entry.Action
+                                                            <span class="badge @GetOperationBadgeClass(entry.Operation)">
+                                                                @GetPolishOperationName(entry.Operation)
                                                             </span>
-                                                        </td>
-                                                        <td>
-                                                            <small>@entry.Details</small>
-                                                        </td>
-                                                        <td>
-                                                            <small class="text-muted">@entry.IpAddress</small>
                                                         </td>
                                                     </tr>
                                                 }
                                             </tbody>
                                         </table>
                                     </div>
+                                    
+                                    @if (accountHistory.Count > 15)
+                                    {
+                                        <div class="text-center mt-3">
+                                            <small class="text-muted">
+                                                Wyświetlono ostatnie 15 z @accountHistory.Count operacji
+                                            </small>
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
-                                    <p class="text-muted text-center py-3">Brak historii aktywności</p>
+                                    <p class="text-muted text-center py-3">
+                                        <i class="bi bi-info-circle"></i> Brak historii aktywności
+                                    </p>
                                 }
                             </div>
                         </div>
@@ -311,7 +314,7 @@
 
 @code {
     private UserSession? currentUser;
-    private List<AccountHistoryEntry>? accountHistory;
+    private List<AccountHistoryOperation>? accountHistory;
     private bool isLoading = true;
     private bool isSubmitting = false;
     private bool showDeleteModal = false;
@@ -377,10 +380,18 @@
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                accountHistory = JsonSerializer.Deserialize<List<AccountHistoryEntry>>(json, new JsonSerializerOptions
+                Console.WriteLine($"Historia konta JSON: {json}"); // Debug log
+                
+                accountHistory = JsonSerializer.Deserialize<List<AccountHistoryOperation>>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Załadowano {accountHistory?.Count ?? 0} operacji"); // Debug log
+            }
+            else
+            {
+                Console.WriteLine($"Błąd API historii konta: {response.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -550,6 +561,8 @@
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Hasło zostało zmienione!");
                 passwordForm = new PasswordChangeForm(); // Wyczyść formularz
+                // Odśwież historię po zmianie hasła
+                await LoadAccountHistory();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
@@ -698,16 +711,31 @@
         };
     }
 
-    private string GetActionBadgeClass(string action)
+    private string GetOperationBadgeClass(string operation)
     {
-        return action?.ToLower() switch
+        return operation?.ToLower() switch
         {
             "login" => "bg-success",
             "logout" => "bg-secondary",
-            "profile_update" => "bg-info",
-            "password_change" => "bg-warning",
-            "email_sent" => "bg-primary",
+            "register" => "bg-primary",
+            "passwordchange" => "bg-warning",
+            "profileupdate" => "bg-info",
+            "emailconfirmation" => "bg-primary",
             _ => "bg-light text-dark"
+        };
+    }
+
+    private string GetPolishOperationName(string operation)
+    {
+        return operation?.ToLower() switch
+        {
+            "login" => "Logowanie",
+            "logout" => "Wylogowanie",
+            "register" => "Rejestracja",
+            "passwordchange" => "Zmiana hasła",
+            "profileupdate" => "Aktualizacja profilu",
+            "emailconfirmation" => "Potwierdzenie emaila",
+            _ => operation ?? "Nieznana operacja"
         };
     }
 
@@ -760,12 +788,10 @@
         public string Password { get; set; } = string.Empty;
         public bool ConfirmDeletion { get; set; } = false;
     }
-
-    public class AccountHistoryEntry
+    
+    public class AccountHistoryOperation
     {
-        public DateTime Date { get; set; }
-        public string Action { get; set; } = string.Empty;
-        public string Details { get; set; } = string.Empty;
-        public string IpAddress { get; set; } = string.Empty;
+        public string Operation { get; set; } = string.Empty;
+        public DateTime OperationDate { get; set; }
     }
 }
