@@ -1,0 +1,1471 @@
+@page "/discount-management"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+
+<PageTitle>@pageTitle</PageTitle>
+
+<div class="container mt-4">
+    @try
+    {
+        <!-- Loading state -->
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie informacji o zniżkach...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" @onclick="GoToHotels">
+                            Powrót do hoteli
+                        </button>
+                        <button class="btn btn-sm btn-secondary ms-2" @onclick="LoadData">
+                            Spróbuj ponownie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/hotels" class="text-decoration-none">
+                            <i class="bi bi-house-door"></i> Hotele
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Zarządzanie zniżkami
+                    </li>
+                </ol>
+            </nav>
+
+            <!-- Page header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h1 class="display-6 fw-bold text-primary mb-2">
+                                        <i class="bi bi-percent"></i> Zarządzanie zniżkami i promocjami
+                                    </h1>
+                                    <p class="text-muted mb-0">
+                                        Konfiguracja zniżek dla hoteli, pokoi, parkingów i usług
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-plus-circle"></i> Dodaj zniżkę
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("hotel")'>
+                                                <i class="bi bi-building"></i> Zniżka na hotel
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("room")'>
+                                                <i class="bi bi-door-closed"></i> Zniżka na pokój
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("parking")'>
+                                                <i class="bi bi-car-front"></i> Zniżka na parking
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("service")'>
+                                                <i class="bi bi-gear"></i> Zniżka na usługę
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hotel selection -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label for="hotelFilter" class="form-label">
+                                        <i class="bi bi-building"></i> Wybierz hotel do wyświetlenia zniżek
+                                    </label>
+                                    <select id="hotelFilter" class="form-select" @bind="selectedHotelId" @bind:after="LoadDiscountsForSelectedHotel">
+                                        <option value="0">-- Wybierz hotel --</option>
+                                        @if (hotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                            {
+                                                <option value="@hotel.Id">@hotel.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    @if (selectedHotelId > 0)
+                                    {
+                                        <button class="btn btn-outline-secondary" @onclick="RefreshDiscounts">
+                                            <i class="bi bi-arrow-clockwise"></i> Odśwież zniżki
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and search -->
+            @if (selectedHotelId > 0)
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-funnel text-primary"></i> Filtry i wyszukiwanie
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label for="typeFilter" class="form-label">
+                                            <i class="bi bi-tags"></i> Typ zniżki
+                                        </label>
+                                        <select id="typeFilter" class="form-select" @bind="selectedTypeFilter" @bind:after="ApplyFilters">
+                                            <option value="">-- Wszystkie typy --</option>
+                                            <option value="hotel">Hotel</option>
+                                            <option value="room">Pokój</option>
+                                            <option value="parking">Parking</option>
+                                            <option value="service">Usługa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="statusFilter" class="form-label">
+                                            <i class="bi bi-info-circle"></i> Status zniżki
+                                        </label>
+                                        <select id="statusFilter" class="form-select" @bind="selectedStatusFilter" @bind:after="ApplyFilters">
+                                            <option value="">-- Wszystkie statusy --</option>
+                                            <option value="active">Aktywne</option>
+                                            <option value="future">Przyszłe</option>
+                                            <option value="expired">Wygasłe</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="discountRangeFilter" class="form-label">
+                                            <i class="bi bi-percent"></i> Zakres zniżki
+                                        </label>
+                                        <select id="discountRangeFilter" class="form-select" @bind="selectedDiscountRangeFilter" @bind:after="ApplyFilters">
+                                            <option value="">-- Wszystkie zniżki --</option>
+                                            <option value="1-25">1% - 25%</option>
+                                            <option value="26-50">26% - 50%</option>
+                                            <option value="51-75">51% - 75%</option>
+                                            <option value="76-100">76% - 100%</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="sortBy" class="form-label">
+                                            <i class="bi bi-sort-down"></i> Sortowanie
+                                        </label>
+                                        <select id="sortBy" class="form-select" @bind="selectedSortBy" @bind:after="ApplyFilters">
+                                            <option value="id">ID (domyślnie)</option>
+                                            <option value="discount-asc">Zniżka rosnąco</option>
+                                            <option value="discount-desc">Zniżka malejąco</option>
+                                            <option value="date-from-asc">Data początkowa rosnąco</option>
+                                            <option value="date-from-desc">Data początkowa malejąco</option>
+                                            <option value="date-to-asc">Data końcowa rosnąco</option>
+                                            <option value="date-to-desc">Data końcowa malejąco</option>
+                                            <option value="type">Typ zniżki</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-4">
+                                        <label for="dateFromFilter" class="form-label">
+                                            <i class="bi bi-calendar-check"></i> Data początkowa od
+                                        </label>
+                                        <input type="date" id="dateFromFilter" class="form-control" @bind="filterDateFrom" @bind:after="ApplyFilters" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="dateToFilter" class="form-label">
+                                            <i class="bi bi-calendar-x"></i> Data końcowa do
+                                        </label>
+                                        <input type="date" id="dateToFilter" class="form-control" @bind="filterDateTo" @bind:after="ApplyFilters" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="searchText" class="form-label">
+                                            <i class="bi bi-search"></i> Wyszukaj
+                                        </label>
+                                        <input type="text" id="searchText" class="form-control" placeholder="Wpisz nazwę..." 
+                                               @bind="searchText" @oninput="OnSearchTextChanged" />
+                                    </div>
+                                </div>
+
+                                @if (HasActiveFilters())
+                                {
+                                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">
+                                                <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                            </button>
+                                            <span class="ms-2 text-muted">
+                                                Pokazano @filteredDiscounts.Count z @(allDiscounts?.Count ?? 0) zniżek
+                                            </span>
+                                        </div>
+                                        <div class="text-muted">
+                                            <small>
+                                                Aktywne: @GetStatusCount("active") | 
+                                                Przyszłe: @GetStatusCount("future") | 
+                                                Wygasłe: @GetStatusCount("expired")
+                                            </small>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Discounts list -->
+            @if (selectedHotelId > 0)
+            {
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-list text-primary"></i> 
+                                    Zniżki dla hotelu: @GetHotelName(selectedHotelId)
+                                    @if (filteredDiscounts?.Any() == true)
+                                    {
+                                        <span class="badge bg-primary ms-2">@filteredDiscounts.Count</span>
+                                        @if (HasActiveFilters() && allDiscounts?.Count != filteredDiscounts.Count)
+                                        {
+                                            <span class="badge bg-secondary ms-1">z @allDiscounts.Count</span>
+                                        }
+                                    }
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                @if (filteredDiscounts?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th scope="col">ID</th>
+                                                    <th scope="col">Typ</th>
+                                                    <th scope="col">Cel</th>
+                                                    <th scope="col">Zniżka</th>
+                                                    <th scope="col">Od</th>
+                                                    <th scope="col">Do</th>
+                                                    <th scope="col">Status</th>
+                                                    <th scope="col" class="text-end">Akcje</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var discount in filteredDiscounts)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <strong>#@discount.Id</strong>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge @GetDiscountTypeBadgeClass(discount.Type)" data-type="@discount.Type">
+                                                                <i class="bi @GetDiscountTypeIcon(discount.Type)"></i>
+                                                                @GetDiscountTypeDisplayName(discount.Type)
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            @if (!string.IsNullOrEmpty(searchText) && GetDiscountTargetName(discount).Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                                                            {
+                                                                @((MarkupString)HighlightSearchText(GetDiscountTargetName(discount), searchText))
+                                                            }
+                                                            else
+                                                            {
+                                                                @GetDiscountTargetName(discount)
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <strong class="text-success">@discount.DiscountPercent%</strong>
+                                                        </td>
+                                                        <td>
+                                                            @DateTime.Parse(discount.From).ToString("dd.MM.yyyy")
+                                                        </td>
+                                                        <td>
+                                                            @DateTime.Parse(discount.To).ToString("dd.MM.yyyy")
+                                                        </td>
+                                                        <td>
+                                                            @if (IsDiscountActive(discount))
+                                                            {
+                                                                <span class="badge bg-success">Aktywna</span>
+                                                            }
+                                                            else if (IsDiscountExpired(discount))
+                                                            {
+                                                                <span class="badge bg-secondary">Wygasła</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning">Przyszła</span>
+                                                            }
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-outline-danger btn-sm" 
+                                                                    @onclick="() => DeleteDiscount(discount)"
+                                                                    title="Usuń zniżkę">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else if (loadingDiscounts)
+                                {
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Ładowanie zniżek...</span>
+                                        </div>
+                                        <p class="mt-3 text-muted">Wczytywanie listy zniżek...</p>
+                                    </div>
+                                }
+                                else if (HasActiveFilters())
+                                {
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-search display-1 text-muted"></i>
+                                        <h4 class="mt-3">Brak wyników</h4>
+                                        <p class="text-muted">Nie znaleziono zniżek pasujących do kryteriów wyszukiwania.</p>
+                                        <button class="btn btn-outline-primary" @onclick="ClearFilters">
+                                            <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-percent display-1 text-muted"></i>
+                                        <h4 class="mt-3">Brak zniżek</h4>
+                                        <p class="text-muted">Nie dodano jeszcze żadnych zniżek dla tego hotelu.</p>
+                                        <div class="dropdown">
+                                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-plus-circle"></i> Dodaj pierwszą zniżkę
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("hotel")'>
+                                                    <i class="bi bi-building"></i> Zniżka na hotel
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("room")'>
+                                                    <i class="bi bi-door-closed"></i> Zniżka na pokój
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("parking")'>
+                                                    <i class="bi bi-car-front"></i> Zniżka na parking
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" @onclick='() => ShowAddForm("service")'>
+                                                    <i class="bi bi-gear"></i> Zniżka na usługę
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-5">
+                                <i class="bi bi-building display-1 text-muted"></i>
+                                <h4 class="mt-3">Wybierz hotel</h4>
+                                <p class="text-muted">Wybierz hotel z listy powyżej, aby wyświetlić i zarządzać jego zniżkami.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="GoToHotels">
+                Powrót do hoteli
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Modal for adding discounts -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi @GetDiscountTypeIcon(discountModel.Type) text-primary"></i>
+                        Dodaj zniżkę - @GetDiscountTypeDisplayName(discountModel.Type)
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CancelForm"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@discountModel" OnValidSubmit="@SaveDiscount">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="row mb-3">
+                            @if (discountModel.Type != "hotel")
+                            {
+                                <div class="col-md-6">
+                                    <label for="hotelSelect" class="form-label">
+                                        <i class="bi bi-building"></i> Hotel
+                                    </label>
+                                    <InputSelect id="hotelSelect" class="form-select" @bind-Value="discountModel.HotelId" @bind-Value:after="OnHotelSelectedInModal">
+                                        <option value="0">-- Wybierz hotel --</option>
+                                        @if (hotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                            {
+                                                <option value="@hotel.Id">@hotel.Name</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => discountModel.HotelId)" class="text-danger" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="targetSelect" class="form-label">
+                                        <i class="bi @GetDiscountTypeIcon(discountModel.Type)"></i> 
+                                        @GetDiscountTypeDisplayName(discountModel.Type)
+                                    </label>
+                                    <InputSelect id="targetSelect" class="form-select" @bind-Value="discountModel.TargetId" disabled="@(discountModel.HotelId <= 0)">
+                                        <option value="0">@(discountModel.HotelId <= 0 ? "-- Najpierw wybierz hotel --" : $"-- Wybierz {GetDiscountTypeDisplayName(discountModel.Type).ToLower()} --")</option>
+                                        @if (GetTargetOptions().Any())
+                                        {
+                                            @foreach (var option in GetTargetOptions())
+                                            {
+                                                <option value="@option.Key">@option.Value</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => discountModel.TargetId)" class="text-danger" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-12">
+                                    <label for="hotelSelectForHotel" class="form-label">
+                                        <i class="bi bi-building"></i> Hotel
+                                    </label>
+                                    <InputSelect id="hotelSelectForHotel" class="form-select" @bind-Value="discountModel.TargetId">
+                                        <option value="0">-- Wybierz hotel --</option>
+                                        @if (hotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                            {
+                                                <option value="@hotel.Id">@hotel.Name</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => discountModel.TargetId)" class="text-danger" />
+                                    <InputNumber @bind-Value="discountModel.HotelId" style="display: none;" />
+                                </div>
+                            }
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="discountPercent" class="form-label">
+                                    <i class="bi bi-percent"></i> Procent zniżki
+                                </label>
+                                <div class="input-group">
+                                    <InputNumber id="discountPercent" class="form-control" @bind-Value="discountModel.DiscountPercent" 
+                                                min="1" max="100" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <ValidationMessage For="@(() => discountModel.DiscountPercent)" class="text-danger" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="dateFrom" class="form-label">
+                                    <i class="bi bi-calendar-check"></i> Data początkowa
+                                </label>
+                                <InputDate id="dateFrom" class="form-control" @bind-Value="discountModel.DateFrom" />
+                                <ValidationMessage For="@(() => discountModel.DateFrom)" class="text-danger" />
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="dateTo" class="form-label">
+                                    <i class="bi bi-calendar-x"></i> Data końcowa
+                                </label>
+                                <InputDate id="dateTo" class="form-control" @bind-Value="discountModel.DateTo" />
+                                <ValidationMessage For="@(() => discountModel.DateTo)" class="text-danger" />
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Podsumowanie:</strong> @discountModel.DiscountPercent% zniżki 
+                            od @discountModel.DateFrom.ToString("dd.MM.yyyy") do @discountModel.DateTo.ToString("dd.MM.yyyy")
+                            @if (discountModel.Type == "hotel")
+                            {
+                                @if (discountModel.TargetId > 0)
+                                {
+                                    <p><br>dla hotelu: <strong>@GetHotelName(discountModel.TargetId)</strong></p>
+                                }
+                            }
+                            else
+                            {
+                                @if (discountModel.HotelId > 0)
+                                {
+                                    <p><br>dla hotelu: <strong>@GetHotelName(discountModel.HotelId)</strong></p>
+                                }
+                            }
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelForm">
+                                <i class="bi bi-x"></i> Anuluj
+                            </button>
+                            <button type="submit" class="btn btn-success" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Dodaję zniżkę...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-plus"></i>
+                                    <span>Dodaj zniżkę</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Data
+    private List<HotelResponse>? hotels;
+    private List<DiscountResponse>? allDiscounts;
+    private List<DiscountResponse> filteredDiscounts = new();
+    private List<RoomResponse>? rooms;
+    private List<ParkingResponse>? parkings;
+    private List<ServiceResponse>? services;
+    private DiscountModel discountModel = new();
+    
+    // Filter fields
+    private string selectedTypeFilter = "";
+    private string selectedStatusFilter = "";
+    private string selectedDiscountRangeFilter = "";
+    private string selectedSortBy = "id";
+    private DateTime? filterDateFrom;
+    private DateTime? filterDateTo;
+    private string searchText = "";
+    
+    // State
+    private int selectedHotelId = 0;
+    private bool isLoading = true;
+    private bool loadingDiscounts = false;
+    private bool showModal = false;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+    private string pageTitle = "Zarządzanie zniżkami - Hotel Management System";
+    
+    // Cache dla nazw
+    private Dictionary<int, string> hotelNamesCache = new();
+    
+    private HttpClient httpClient = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            hotels = new List<HotelResponse>();
+            allDiscounts = new List<DiscountResponse>();
+            filteredDiscounts = new List<DiscountResponse>();
+            rooms = new List<RoomResponse>();
+            parkings = new List<ParkingResponse>();
+            services = new List<ServiceResponse>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (!authState.User.Identity.IsAuthenticated)
+                {
+                    NavigationManager.NavigateTo("/login");
+                    return;
+                }
+
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        await LoadHotelData();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadHotelData()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                hotels = await response.Content.ReadFromJsonAsync<List<HotelResponse>>() ?? new List<HotelResponse>();
+                Console.WriteLine($"Loaded {hotels.Count} hotels");
+                
+                // Dodaj nazwy hoteli do cache
+                foreach (var hotel in hotels)
+                {
+                    hotelNamesCache[hotel.Id] = hotel.Name;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania hoteli: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania hoteli: {ex.Message}";
+        }
+    }
+
+    private async Task LoadDiscountsForSelectedHotel()
+    {
+        if (selectedHotelId <= 0) return;
+
+        loadingDiscounts = true;
+        allDiscounts = new List<DiscountResponse>();
+        
+        try
+        {
+            // Najpierw załaduj szczegóły hotelu (pokoje, parkingi, usługi)
+            await LoadHotelDetails(selectedHotelId);
+            
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Pobierz zniżki dla hotelu
+            await LoadHotelDiscounts(authenticatedClient, selectedHotelId);
+            
+            // Pobierz zniżki dla pokoi
+            await LoadRoomDiscounts(authenticatedClient);
+            
+            // Pobierz zniżki dla parkingów
+            await LoadParkingDiscounts(authenticatedClient);
+            
+            // Pobierz zniżki dla usług
+            await LoadServiceDiscounts(authenticatedClient);
+            
+            Console.WriteLine($"Total loaded {allDiscounts.Count} discounts for hotel {selectedHotelId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania zniżek: {ex.Message}");
+        }
+        finally
+        {
+            loadingDiscounts = false;
+            ApplyFilters(); // Apply filters after loading
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadHotelDiscounts(HttpClient client, int hotelId)
+    {
+        try
+        {
+            var response = await client.GetAsync($"api/discounts/hotel/{hotelId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Hotel discounts JSON: {jsonString}");
+                
+                var hotelDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
+                foreach (var discount in hotelDiscounts)
+                {
+                    discount.Type = "hotel"; // Ustawiamy typ explicite
+                    allDiscounts.Add(discount);
+                }
+                Console.WriteLine($"Loaded {hotelDiscounts.Count} hotel discounts");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading hotel discounts: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRoomDiscounts(HttpClient client)
+    {
+        if (rooms?.Any() != true) return;
+        
+        try
+        {
+            foreach (var room in rooms)
+            {
+                var response = await client.GetAsync($"api/discounts/room/{room.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var roomDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
+                    foreach (var discount in roomDiscounts)
+                    {
+                        discount.Type = "room"; // Ustawiamy typ explicite
+                        allDiscounts.Add(discount);
+                    }
+                    Console.WriteLine($"Loaded {roomDiscounts.Count} discounts for room {room.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading room discounts: {ex.Message}");
+        }
+    }
+
+    private async Task LoadParkingDiscounts(HttpClient client)
+    {
+        if (parkings?.Any() != true) return;
+        
+        try
+        {
+            foreach (var parking in parkings)
+            {
+                var response = await client.GetAsync($"api/discounts/parking/{parking.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var parkingDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
+                    foreach (var discount in parkingDiscounts)
+                    {
+                        discount.Type = "parking"; // Ustawiamy typ explicite
+                        allDiscounts.Add(discount);
+                    }
+                    Console.WriteLine($"Loaded {parkingDiscounts.Count} discounts for parking {parking.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading parking discounts: {ex.Message}");
+        }
+    }
+
+    private async Task LoadServiceDiscounts(HttpClient client)
+    {
+        if (services?.Any() != true) return;
+        
+        try
+        {
+            foreach (var service in services)
+            {
+                var response = await client.GetAsync($"api/discounts/service/{service.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var serviceDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
+                    foreach (var discount in serviceDiscounts)
+                    {
+                        discount.Type = "service"; // Ustawiamy typ explicite
+                        allDiscounts.Add(discount);
+                    }
+                    Console.WriteLine($"Loaded {serviceDiscounts.Count} discounts for service {service.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading service discounts: {ex.Message}");
+        }
+    }
+
+    private async Task LoadHotelDetails(int hotelId)
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Załaduj pokoje, parkingi i usługi równolegle
+            var roomsTask = LoadRoomsForHotel(authenticatedClient, hotelId);
+            var parkingsTask = LoadParkingsForHotel(authenticatedClient, hotelId);
+            var servicesTask = LoadServicesForHotel(authenticatedClient, hotelId);
+            
+            await Task.WhenAll(roomsTask, parkingsTask, servicesTask);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania szczegółów hotelu: {ex.Message}");
+        }
+    }
+
+    private async Task LoadRoomsForHotel(HttpClient client, int hotelId)
+    {
+        try
+        {
+            // Używamy nowego endpointu do pobierania wszystkich pokoi
+            var response = await client.GetAsync("api/hotel-room/get-all");
+            if (response.IsSuccessStatusCode)
+            {
+                var allRooms = await response.Content.ReadFromJsonAsync<List<RoomResponse>>() ?? new List<RoomResponse>();
+                // Filtrujemy pokoje dla wybranego hotelu
+                rooms = allRooms.Where(r => r.HotelId == hotelId).ToList();
+                Console.WriteLine($"Loaded {rooms.Count} rooms for hotel {hotelId}");
+            }
+            else
+            {
+                rooms = new List<RoomResponse>();
+                Console.WriteLine($"Failed to load rooms: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            rooms = new List<RoomResponse>();
+            Console.WriteLine($"Error loading rooms: {ex.Message}");
+        }
+    }
+
+    private async Task LoadParkingsForHotel(HttpClient client, int hotelId)
+    {
+        try
+        {
+            var response = await client.GetAsync($"api/hotel-parkings/get-by-hotel/{hotelId}");
+            if (response.IsSuccessStatusCode)
+            {
+                parkings = await response.Content.ReadFromJsonAsync<List<ParkingResponse>>() ?? new List<ParkingResponse>();
+                Console.WriteLine($"Loaded {parkings.Count} parkings for hotel {hotelId}");
+            }
+            else
+            {
+                parkings = new List<ParkingResponse>();
+                Console.WriteLine($"Failed to load parkings: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            parkings = new List<ParkingResponse>();
+            Console.WriteLine($"Error loading parkings: {ex.Message}");
+        }
+    }
+
+    private async Task LoadServicesForHotel(HttpClient client, int hotelId)
+    {
+        try
+        {
+            var response = await client.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Raw JSON from services API: {jsonString}");
+                
+                // Używamy JsonDocument do ręcznego parsowania
+                using var document = System.Text.Json.JsonDocument.Parse(jsonString);
+                var servicesFromJson = new List<ServiceResponse>();
+                
+                foreach (var element in document.RootElement.EnumerateArray())
+                {
+                    var service = new ServiceResponse
+                    {
+                        Id = element.GetProperty("id").GetInt32(),
+                        Name = element.GetProperty("name").GetString() ?? "",
+                        Description = element.GetProperty("description").GetString() ?? "",
+                        Price = element.GetProperty("price").GetDecimal(),
+                        Discount = element.GetProperty("discount").GetDecimal(),
+                        FinalPrice = element.GetProperty("finalPrice").GetDecimal(),
+                        HotelId = element.GetProperty("hotelId").GetInt32()
+                    };
+                    servicesFromJson.Add(service);
+                }
+                
+                services = servicesFromJson;
+                Console.WriteLine($"Loaded {services.Count} services for hotel {hotelId}");
+            }
+            else
+            {
+                services = new List<ServiceResponse>();
+                Console.WriteLine($"Failed to load services: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            services = new List<ServiceResponse>();
+            Console.WriteLine($"Error loading services: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshDiscounts()
+    {
+        await LoadDiscountsForSelectedHotel();
+    }
+
+    // Event handlers
+    private async Task OnSearchTextChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    // Filter and search methods
+    private void ApplyFilters()
+    {
+        if (allDiscounts == null)
+        {
+            filteredDiscounts = new List<DiscountResponse>();
+            return;
+        }
+
+        var filtered = allDiscounts.AsEnumerable();
+
+        // Filter by type
+        if (!string.IsNullOrEmpty(selectedTypeFilter))
+        {
+            filtered = filtered.Where(d => d.Type.Equals(selectedTypeFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Filter by status
+        if (!string.IsNullOrEmpty(selectedStatusFilter))
+        {
+            filtered = selectedStatusFilter switch
+            {
+                "active" => filtered.Where(d => IsDiscountActive(d)),
+                "future" => filtered.Where(d => !IsDiscountActive(d) && !IsDiscountExpired(d)),
+                "expired" => filtered.Where(d => IsDiscountExpired(d)),
+                _ => filtered
+            };
+        }
+
+        // Filter by discount range
+        if (!string.IsNullOrEmpty(selectedDiscountRangeFilter))
+        {
+            filtered = selectedDiscountRangeFilter switch
+            {
+                "1-25" => filtered.Where(d => d.DiscountPercent >= 1 && d.DiscountPercent <= 25),
+                "26-50" => filtered.Where(d => d.DiscountPercent >= 26 && d.DiscountPercent <= 50),
+                "51-75" => filtered.Where(d => d.DiscountPercent >= 51 && d.DiscountPercent <= 75),
+                "76-100" => filtered.Where(d => d.DiscountPercent >= 76 && d.DiscountPercent <= 100),
+                _ => filtered
+            };
+        }
+
+        // Filter by date range
+        if (filterDateFrom.HasValue)
+        {
+            filtered = filtered.Where(d => DateTime.Parse(d.From).Date >= filterDateFrom.Value.Date);
+        }
+
+        if (filterDateTo.HasValue)
+        {
+            filtered = filtered.Where(d => DateTime.Parse(d.To).Date <= filterDateTo.Value.Date);
+        }
+
+        // Filter by search text
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filtered = filtered.Where(d => 
+                GetDiscountTargetName(d).Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                GetDiscountTypeDisplayName(d.Type).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        // Sort
+        filtered = selectedSortBy switch
+        {
+            "discount-asc" => filtered.OrderBy(d => d.DiscountPercent),
+            "discount-desc" => filtered.OrderByDescending(d => d.DiscountPercent),
+            "date-from-asc" => filtered.OrderBy(d => DateTime.Parse(d.From)),
+            "date-from-desc" => filtered.OrderByDescending(d => DateTime.Parse(d.From)),
+            "date-to-asc" => filtered.OrderBy(d => DateTime.Parse(d.To)),
+            "date-to-desc" => filtered.OrderByDescending(d => DateTime.Parse(d.To)),
+            "type" => filtered.OrderBy(d => d.Type),
+            _ => filtered.OrderBy(d => d.Id)
+        };
+
+        filteredDiscounts = filtered.ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedTypeFilter = "";
+        selectedStatusFilter = "";
+        selectedDiscountRangeFilter = "";
+        selectedSortBy = "id";
+        filterDateFrom = null;
+        filterDateTo = null;
+        searchText = "";
+        ApplyFilters();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrEmpty(selectedTypeFilter) ||
+               !string.IsNullOrEmpty(selectedStatusFilter) ||
+               !string.IsNullOrEmpty(selectedDiscountRangeFilter) ||
+               selectedSortBy != "id" ||
+               filterDateFrom.HasValue ||
+               filterDateTo.HasValue ||
+               !string.IsNullOrWhiteSpace(searchText);
+    }
+
+    private int GetStatusCount(string status)
+    {
+        if (allDiscounts == null) return 0;
+
+        return status switch
+        {
+            "active" => allDiscounts.Count(d => IsDiscountActive(d)),
+            "future" => allDiscounts.Count(d => !IsDiscountActive(d) && !IsDiscountExpired(d)),
+            "expired" => allDiscounts.Count(d => IsDiscountExpired(d)),
+            _ => 0
+        };
+    }
+
+    private string HighlightSearchText(string text, string searchTerm)
+    {
+        if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchTerm))
+            return text;
+
+        var index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
+        if (index < 0) return text;
+
+        var before = text.Substring(0, index);
+        var match = text.Substring(index, searchTerm.Length);
+        var after = text.Substring(index + searchTerm.Length);
+
+        return $"{before}<mark class=\"bg-warning\">{match}</mark>{after}";
+    }
+
+    private void ShowAddForm(string discountType)
+    {
+        discountModel = new DiscountModel 
+        { 
+            Type = discountType,
+            DateFrom = DateTime.Now.Date,
+            DateTo = DateTime.Now.Date.AddDays(7),
+            DiscountPercent = 10 // Ustaw domyślną wartość
+        };
+    
+        Console.WriteLine($"ShowAddForm called for type: {discountType}");
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CancelForm()
+    {
+        showModal = false;
+        discountModel = new DiscountModel();
+    }
+
+    private async Task OnHotelSelectedInModal()
+    {
+        Console.WriteLine($"OnHotelSelectedInModal - HotelId: {discountModel.HotelId}, Type: {discountModel.Type}");
+    
+        // Reset target selection when hotel changes (tylko dla typów innych niż hotel)
+        if (discountModel.Type != "hotel")
+        {
+            discountModel.TargetId = 0;
+        
+            // Load details for the selected hotel in modal
+            if (discountModel.HotelId > 0)
+            {
+                await LoadHotelDetails(discountModel.HotelId);
+            }
+        }
+    
+        StateHasChanged();
+    }
+
+    private async Task SaveDiscount()
+    {
+        Console.WriteLine($"SaveDiscount called - Type: {discountModel.Type}, HotelId: {discountModel.HotelId}, TargetId: {discountModel.TargetId}, Percent: {discountModel.DiscountPercent}");
+        
+        // Dla typu hotel, ustaw HotelId = TargetId dla walidacji
+        if (discountModel.Type == "hotel")
+        {
+            discountModel.HotelId = discountModel.TargetId;
+        }
+        
+        // Sprawdź custom validation
+        if (!discountModel.IsValid())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wypełnij wszystkie wymagane pola poprawnie.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            
+            // Przygotuj dane zgodnie z API
+            object requestData = discountModel.Type switch
+            {
+                "hotel" => new
+                {
+                    hotelId = discountModel.TargetId, // TargetId to ID hotelu
+                    discountPercent = discountModel.DiscountPercent,
+                    from = discountModel.DateFrom.ToString("yyyy-MM-dd"),
+                    to = discountModel.DateTo.ToString("yyyy-MM-dd")
+                },
+                "room" => new
+                {
+                    roomId = discountModel.TargetId,
+                    discountPercent = discountModel.DiscountPercent,
+                    from = discountModel.DateFrom.ToString("yyyy-MM-dd"),
+                    to = discountModel.DateTo.ToString("yyyy-MM-dd")
+                },
+                "parking" => new
+                {
+                    parkingId = discountModel.TargetId,
+                    discountPercent = discountModel.DiscountPercent,
+                    from = discountModel.DateFrom.ToString("yyyy-MM-dd"),
+                    to = discountModel.DateTo.ToString("yyyy-MM-dd")
+                },
+                "service" => new
+                {
+                    serviceId = discountModel.TargetId,
+                    discountPercent = discountModel.DiscountPercent,
+                    from = discountModel.DateFrom.ToString("yyyy-MM-dd"),
+                    to = discountModel.DateTo.ToString("yyyy-MM-dd")
+                },
+                _ => throw new ArgumentException($"Nieznany typ zniżki: {discountModel.Type}")
+            };
+
+            Console.WriteLine($"Request data: {System.Text.Json.JsonSerializer.Serialize(requestData)}");
+            
+            var response = await authenticatedClient.PostAsJsonAsync($"api/discounts/{discountModel.Type}", requestData);
+            
+            Console.WriteLine($"Response status: {response.StatusCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zniżka została dodana pomyślnie!");
+                CancelForm();
+                
+                // Refresh discounts if we're viewing the same hotel
+                if (selectedHotelId > 0)
+                {
+                    await LoadDiscountsForSelectedHotel();
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response: {errorContent}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do dodawania zniżek.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błędne dane: {errorContent}");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd dodawania zniżki: {response.StatusCode} - {errorContent}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception in SaveDiscount: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania zniżki: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteDiscount(DiscountResponse discount)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz usunąć tę zniżkę? Ta operacja jest nieodwracalna.");
+        if (!confirmed) return;
+
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.DeleteAsync($"api/discounts/{discount.Type}/{discount.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zniżka została usunięta pomyślnie!");
+                await LoadDiscountsForSelectedHotel();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do usuwania zniżek.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania zniżki: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania zniżki: {ex.Message}");
+        }
+    }
+
+    // Helper methods
+    private string GetHotelName(int hotelId)
+    {
+        return hotelNamesCache.ContainsKey(hotelId) ? hotelNamesCache[hotelId] : $"Hotel #{hotelId}";
+    }
+
+    private string GetDiscountTypeDisplayName(string type) => type switch
+    {
+        "hotel" => "Hotel",
+        "room" => "Pokój", 
+        "parking" => "Parking",
+        "service" => "Usługa",
+        _ => type
+    };
+
+    private string GetDiscountTypeIcon(string type) => type switch
+    {
+        "hotel" => "bi-building",
+        "room" => "bi-door-closed",
+        "parking" => "bi-car-front",
+        "service" => "bi-gear",
+        _ => "bi-question"
+    };
+
+    private string GetDiscountTypeBadgeClass(string type) => type switch
+    {
+        "hotel" => "bg-primary",
+        "room" => "bg-info",
+        "parking" => "bg-warning text-dark",
+        "service" => "bg-success",
+        _ => "bg-secondary"
+    };
+
+    private Dictionary<int, string> GetTargetOptions()
+    {
+        return discountModel.Type switch
+        {
+            "hotel" => hotels?.ToDictionary(h => h.Id, h => h.Name) ?? new Dictionary<int, string>(),
+            "room" => rooms?.ToDictionary(r => r.Id, r => $"{r.RoomName} ({r.RoomType})") ?? new Dictionary<int, string>(),
+            "parking" => parkings?.ToDictionary(p => p.Id, p => $"Parking #{p.Id} - {p.Description}") ?? new Dictionary<int, string>(),
+            "service" => services?.ToDictionary(s => s.Id, s => s.Name) ?? new Dictionary<int, string>(),
+            _ => new Dictionary<int, string>()
+        };
+    }
+
+    private string GetDiscountTargetName(DiscountResponse discount)
+    {
+        return discount.Type switch
+        {
+            "hotel" => GetHotelName(discount.TargetId),
+            "room" => rooms?.FirstOrDefault(r => r.Id == discount.TargetId)?.RoomName ?? $"Pokój #{discount.TargetId}",
+            "parking" => parkings?.FirstOrDefault(p => p.Id == discount.TargetId)?.Description ?? $"Parking #{discount.TargetId}",
+            "service" => services?.FirstOrDefault(s => s.Id == discount.TargetId)?.Name ?? $"Usługa #{discount.TargetId}",
+            _ => $"ID: {discount.TargetId}"
+        };
+    }
+
+    private bool IsDiscountActive(DiscountResponse discount)
+    {
+        var now = DateTime.UtcNow.Date;
+        var from = DateTime.Parse(discount.From).Date;
+        var to = DateTime.Parse(discount.To).Date;
+        return now >= from && now <= to;
+    }
+
+    private bool IsDiscountExpired(DiscountResponse discount)
+    {
+        var now = DateTime.UtcNow.Date;
+        var to = DateTime.Parse(discount.To).Date;
+        return now > to;
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            httpClient.DefaultRequestHeaders.Authorization = null;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return httpClient;
+    }
+
+    private void GoToHotels()
+    {
+        NavigationManager.NavigateTo("/hotels");
+    }
+    
+    public class DiscountModel
+    {
+        public string Type { get; set; } = "";
+        public int HotelId { get; set; }
+    
+        [Required(ErrorMessage = "Wybierz cel zniżki")]
+        [Range(1, int.MaxValue, ErrorMessage = "Wybierz cel zniżki")]
+        public int TargetId { get; set; }
+    
+        [Required(ErrorMessage = "Procent zniżki jest wymagany")]
+        [Range(1, 100, ErrorMessage = "Zniżka musi być między 1% a 100%")]
+        public int DiscountPercent { get; set; }
+    
+        [Required(ErrorMessage = "Data początkowa jest wymagana")]
+        public DateTime DateFrom { get; set; } = DateTime.Now.Date;
+    
+        [Required(ErrorMessage = "Data końcowa jest wymagana")]
+        public DateTime DateTo { get; set; } = DateTime.Now.Date.AddDays(7);
+        
+        public bool IsValid()
+        {
+            if (Type == "hotel")
+            {
+                return TargetId > 0 && DiscountPercent > 0 && DateFrom < DateTo;
+            }
+            else
+            {
+                return HotelId > 0 && TargetId > 0 && DiscountPercent > 0 && DateFrom < DateTo;
+            }
+        }
+    }
+
+    public class DiscountResponse
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = "";
+        public int TargetId { get; set; }
+        public int DiscountPercent { get; set; }
+        public string From { get; set; } = "";
+        public string To { get; set; } = "";
+    }
+
+    public class HotelResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Street { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Rating { get; set; }
+    }
+
+    public class RoomResponse
+    {
+        public int Id { get; set; }
+        public string RoomName { get; set; } = "";
+        public string RoomType { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal DiscountPercent { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int HotelId { get; set; }
+        public List<string>? RoomImages { get; set; }
+        
+        // Property dla kompatybilności z poprzednim kodem
+        public string Name => RoomName;
+        public int MaxGuests { get; set; } = 1; // Można dodać jeśli potrzebne
+    }
+
+    public class ParkingResponse
+    {
+        public int Id { get; set; }
+        public int HotelId { get; set; }
+        public int CarSpaces { get; set; }
+        public string Description { get; set; } = "";
+        public int Price { get; set; }
+    }
+
+    public class ServiceResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal Discount { get; set; }
+        public decimal FinalPrice { get; set; }
+        public int HotelId { get; set; }
+    }
+}
