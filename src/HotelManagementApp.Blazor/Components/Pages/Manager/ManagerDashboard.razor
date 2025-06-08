@@ -1,8 +1,7 @@
 @page "/manager-dashboard"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Globalization
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Manager,Admin")]
@@ -23,7 +22,6 @@
             }
             else
             {
-                <!-- Główne wskaźniki KPI -->
                 <div class="row mb-4">
                     <div class="col-xl-3 col-md-6 mb-4">
                         <div class="card border-left-primary shadow h-100 py-2">
@@ -106,9 +104,7 @@
                     </div>
                 </div>
 
-                <!-- Wykresy i szczegółowe dane -->
                 <div class="row">
-                    <!-- Lista hoteli -->
                     <div class="col-lg-6 mb-4">
                         <div class="card shadow">
                             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -169,7 +165,6 @@
                         </div>
                     </div>
 
-                    <!-- Oczekujące zamówienia -->
                     <div class="col-lg-6 mb-4">
                         <div class="card shadow">
                             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -231,9 +226,7 @@
                     </div>
                 </div>
 
-                <!-- Druga seria wykresów -->
                 <div class="row">
-                    <!-- Ostatnie płatności -->
                     <div class="col-lg-8 mb-4">
                         <div class="card shadow">
                             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -300,7 +293,6 @@
                         </div>
                     </div>
 
-                    <!-- Top goście z punktami lojalnościowymi -->
                     <div class="col-lg-4 mb-4">
                         <div class="card shadow">
                             <div class="card-header py-3">
@@ -353,7 +345,6 @@
                     </div>
                 </div>
 
-                <!-- Przycisk odświeżania -->
                 <div class="row">
                     <div class="col-12 text-center">
                         <button class="btn btn-outline-primary" @onclick="RefreshData" disabled="@isLoading">
@@ -441,8 +432,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -451,6 +441,11 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                Console.WriteLine($"Loaded {hotels?.Count ?? 0} hotels");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load hotels: {response.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -463,8 +458,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/pending");
+            var response = await Http.GetAsync("api/order/pending");
             
             if (response.IsSuccessStatusCode)
             {
@@ -473,6 +467,11 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                Console.WriteLine($"Loaded {pendingOrders?.Count ?? 0} pending orders");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load pending orders: {response.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -485,8 +484,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/payment/get-all");
+            var response = await Http.GetAsync("api/payment/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -495,6 +493,11 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                Console.WriteLine($"Loaded {payments?.Count ?? 0} payments");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load payments: {response.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -507,8 +510,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/loyalty-points/guests/points");
+            var response = await Http.GetAsync("api/loyalty-points/guests/points");
             
             if (response.IsSuccessStatusCode)
             {
@@ -517,6 +519,11 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                Console.WriteLine($"Loaded {loyaltyPointsData?.Count ?? 0} loyalty points records");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load loyalty points: {response.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -532,16 +539,19 @@
         var successfulPayments = payments.Where(p => p.Status?.ToLower() == "completed" || p.Status?.ToLower() == "success").ToList();
         
         totalRevenue = successfulPayments.Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Total revenue calculated: {totalRevenue}");
         
         var today = DateTime.Today;
         todayRevenue = successfulPayments
             .Where(p => p.PaymentDate?.Date == today)
             .Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Today revenue: {todayRevenue}");
             
         var firstDayOfMonth = new DateTime(today.Year, today.Month, 1);
         monthRevenue = successfulPayments
             .Where(p => p.PaymentDate >= firstDayOfMonth && p.PaymentDate <= today.AddDays(1))
             .Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Month revenue: {monthRevenue}");
     }
 
     private string GetPaymentStatusBadge(string? status)
@@ -568,26 +578,6 @@
             "cancelled" => "Anulowana",
             _ => status ?? "Nieznany"
         };
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        try
-        {
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpClient.DefaultRequestHeaders.Authorization = null;
-                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
-        }
-        
-        return HttpClient;
     }
 
     public class Hotel

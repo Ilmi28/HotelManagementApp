@@ -1,8 +1,7 @@
 @page "/guest-management"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Staff,Manager,Admin")]
@@ -42,7 +41,6 @@
             }
             else
             {
-                <!-- Panel wyszukiwania -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="row g-3">
@@ -68,7 +66,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="statusFilter" class="form-label">Status:</label>
-                                <select class="form-select" id="statusFilter" @bind="selectedRoleFilter" @bind:after="OnFilterChanged">
+                                <select class="form-select" id="statusFilter" @bind="selectedStatusFilter" @bind:after="OnFilterChanged">
                                     <option value="">Wszystkie</option>
                                     <option value="active">Aktywny</option>
                                     <option value="inactive">Nieaktywny</option>
@@ -84,7 +82,6 @@
                     </div>
                 </div>
 
-                <!-- Statystyki -->
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="card text-center bg-primary text-white">
@@ -120,7 +117,6 @@
                     </div>
                 </div>
 
-                <!-- Tabela użytkowników -->
                 @if (activeTab == "guests")
                 {
                     <div class="card">
@@ -421,7 +417,6 @@
         </div>
     </div>
 
-    <!-- Modal szczegółów użytkownika -->
     @if (showUserDetailsModal && selectedUser != null)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -567,8 +562,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/guest/all");
+            var response = await Http.GetAsync("api/guest/all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -578,6 +572,7 @@
                     PropertyNameCaseInsensitive = true
                 });
                 
+                Console.WriteLine($"Loaded {allUsers?.Count ?? 0} users");
                 ApplyFilters();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -597,8 +592,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/vip/all");
+            var response = await Http.GetAsync("api/vip/all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -607,6 +601,8 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Loaded {vipUsers?.Count ?? 0} VIP users");
             }
         }
         catch (Exception ex)
@@ -619,8 +615,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/blacklist/all");
+            var response = await Http.GetAsync("api/blacklist/all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -629,6 +624,8 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Loaded {blacklistedUsers?.Count ?? 0} blacklisted users");
             }
         }
         catch (Exception ex)
@@ -664,7 +661,6 @@
 
         var filtered = allUsers.AsEnumerable();
 
-        // Filtr wyszukiwania
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             filtered = filtered.Where(u => 
@@ -673,13 +669,11 @@
                 u.Id?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
         }
 
-        // Filtr roli
         if (!string.IsNullOrWhiteSpace(selectedRoleFilter))
         {
             filtered = filtered.Where(u => u.Roles?.Contains(selectedRoleFilter) == true);
         }
 
-        // Filtr statusu
         if (!string.IsNullOrWhiteSpace(selectedStatusFilter))
         {
             filtered = filtered.Where(u => u.Status?.Equals(selectedStatusFilter, StringComparison.OrdinalIgnoreCase) == true);
@@ -703,8 +697,7 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.PatchAsync($"api/guest/add/{userId}", null);
+                var response = await Http.PatchAsync($"api/guest/add/{userId}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -738,8 +731,7 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.PatchAsync($"api/guest/remove/{userId}", null);
+                var response = await Http.PatchAsync($"api/guest/remove/{userId}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -844,26 +836,6 @@
             "blacklisted" => "Zablokowany",
             _ => "Nieznany"
         };
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        try
-        {
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpClient.DefaultRequestHeaders.Authorization = null;
-                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
-        }
-        
-        return HttpClient;
     }
 
     public class UserDto

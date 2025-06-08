@@ -1,10 +1,9 @@
 @page "/discount-management"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
 
@@ -13,7 +12,6 @@
 <div class="container mt-4">
     @try
     {
-        <!-- Loading state -->
         @if (isLoading)
         {
             <div class="text-center py-5">
@@ -42,7 +40,6 @@
         }
         else
         {
-            <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -56,7 +53,6 @@
                 </ol>
             </nav>
 
-            <!-- Page header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -97,7 +93,6 @@
                 </div>
             </div>
 
-            <!-- Hotel selection -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -132,7 +127,6 @@
                 </div>
             </div>
 
-            <!-- Filters and search -->
             @if (selectedHotelId > 0)
             {
                 <div class="row mb-4">
@@ -245,7 +239,6 @@
                 </div>
             }
 
-            <!-- Discounts list -->
             @if (selectedHotelId > 0)
             {
                 <div class="row">
@@ -421,7 +414,6 @@
     }
 </div>
 
-<!-- Modal for adding discounts -->
 @if (showModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -573,7 +565,6 @@
 }
 
 @code {
-    // Data
     private List<HotelResponse>? hotels;
     private List<DiscountResponse>? allDiscounts;
     private List<DiscountResponse> filteredDiscounts = new();
@@ -582,7 +573,6 @@
     private List<ServiceResponse>? services;
     private DiscountModel discountModel = new();
     
-    // Filter fields
     private string selectedTypeFilter = "";
     private string selectedStatusFilter = "";
     private string selectedDiscountRangeFilter = "";
@@ -591,7 +581,6 @@
     private DateTime? filterDateTo;
     private string searchText = "";
     
-    // State
     private int selectedHotelId = 0;
     private bool isLoading = true;
     private bool loadingDiscounts = false;
@@ -600,50 +589,33 @@
     private string errorMessage = "";
     private string pageTitle = "Zarządzanie zniżkami - Hotel Management System";
     
-    // Cache dla nazw
     private Dictionary<int, string> hotelNamesCache = new();
-    
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
             hotels = new List<HotelResponse>();
             allDiscounts = new List<DiscountResponse>();
             filteredDiscounts = new List<DiscountResponse>();
             rooms = new List<RoomResponse>();
             parkings = new List<ParkingResponse>();
             services = new List<ServiceResponse>();
+
+            await LoadData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -659,15 +631,12 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
 
             if (response.IsSuccessStatusCode)
             {
                 hotels = await response.Content.ReadFromJsonAsync<List<HotelResponse>>() ?? new List<HotelResponse>();
-                Console.WriteLine($"Loaded {hotels.Count} hotels");
                 
-                // Dodaj nazwy hoteli do cache
                 foreach (var hotel in hotels)
                 {
                     hotelNamesCache[hotel.Id] = hotel.Name;
@@ -697,63 +666,47 @@
         
         try
         {
-            // Najpierw załaduj szczegóły hotelu (pokoje, parkingi, usługi)
             await LoadHotelDetails(selectedHotelId);
             
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Pobierz zniżki dla hotelu
-            await LoadHotelDiscounts(authenticatedClient, selectedHotelId);
-            
-            // Pobierz zniżki dla pokoi
-            await LoadRoomDiscounts(authenticatedClient);
-            
-            // Pobierz zniżki dla parkingów
-            await LoadParkingDiscounts(authenticatedClient);
-            
-            // Pobierz zniżki dla usług
-            await LoadServiceDiscounts(authenticatedClient);
-            
-            Console.WriteLine($"Total loaded {allDiscounts.Count} discounts for hotel {selectedHotelId}");
+            await LoadHotelDiscounts(selectedHotelId);
+            await LoadRoomDiscounts();
+            await LoadParkingDiscounts();
+            await LoadServiceDiscounts();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas ładowania zniżek: {ex.Message}");
+            errorMessage = $"Błąd podczas ładowania zniżek: {ex.Message}";
         }
         finally
         {
             loadingDiscounts = false;
-            ApplyFilters(); // Apply filters after loading
+            ApplyFilters();
             StateHasChanged();
         }
     }
 
-    private async Task LoadHotelDiscounts(HttpClient client, int hotelId)
+    private async Task LoadHotelDiscounts(int hotelId)
     {
         try
         {
-            var response = await client.GetAsync($"api/discounts/hotel/{hotelId}");
+            var response = await Http.GetAsync($"api/discounts/hotel/{hotelId}");
             if (response.IsSuccessStatusCode)
             {
-                var jsonString = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Hotel discounts JSON: {jsonString}");
-                
                 var hotelDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
                 foreach (var discount in hotelDiscounts)
                 {
-                    discount.Type = "hotel"; // Ustawiamy typ explicite
+                    discount.Type = "hotel";
                     allDiscounts.Add(discount);
                 }
-                Console.WriteLine($"Loaded {hotelDiscounts.Count} hotel discounts");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading hotel discounts: {ex.Message}");
+            errorMessage = $"Błąd ładowania zniżek hotelu: {ex.Message}";
         }
     }
 
-    private async Task LoadRoomDiscounts(HttpClient client)
+    private async Task LoadRoomDiscounts()
     {
         if (rooms?.Any() != true) return;
         
@@ -761,26 +714,25 @@
         {
             foreach (var room in rooms)
             {
-                var response = await client.GetAsync($"api/discounts/room/{room.Id}");
+                var response = await Http.GetAsync($"api/discounts/room/{room.Id}");
                 if (response.IsSuccessStatusCode)
                 {
                     var roomDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
                     foreach (var discount in roomDiscounts)
                     {
-                        discount.Type = "room"; // Ustawiamy typ explicite
+                        discount.Type = "room";
                         allDiscounts.Add(discount);
                     }
-                    Console.WriteLine($"Loaded {roomDiscounts.Count} discounts for room {room.Id}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading room discounts: {ex.Message}");
+            errorMessage = $"Błąd ładowania zniżek pokoi: {ex.Message}";
         }
     }
 
-    private async Task LoadParkingDiscounts(HttpClient client)
+    private async Task LoadParkingDiscounts()
     {
         if (parkings?.Any() != true) return;
         
@@ -788,26 +740,25 @@
         {
             foreach (var parking in parkings)
             {
-                var response = await client.GetAsync($"api/discounts/parking/{parking.Id}");
+                var response = await Http.GetAsync($"api/discounts/parking/{parking.Id}");
                 if (response.IsSuccessStatusCode)
                 {
                     var parkingDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
                     foreach (var discount in parkingDiscounts)
                     {
-                        discount.Type = "parking"; // Ustawiamy typ explicite
+                        discount.Type = "parking";
                         allDiscounts.Add(discount);
                     }
-                    Console.WriteLine($"Loaded {parkingDiscounts.Count} discounts for parking {parking.Id}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading parking discounts: {ex.Message}");
+            errorMessage = $"Błąd ładowania zniżek parkingów: {ex.Message}";
         }
     }
 
-    private async Task LoadServiceDiscounts(HttpClient client)
+    private async Task LoadServiceDiscounts()
     {
         if (services?.Any() != true) return;
         
@@ -815,22 +766,21 @@
         {
             foreach (var service in services)
             {
-                var response = await client.GetAsync($"api/discounts/service/{service.Id}");
+                var response = await Http.GetAsync($"api/discounts/service/{service.Id}");
                 if (response.IsSuccessStatusCode)
                 {
                     var serviceDiscounts = await response.Content.ReadFromJsonAsync<List<DiscountResponse>>() ?? new List<DiscountResponse>();
                     foreach (var discount in serviceDiscounts)
                     {
-                        discount.Type = "service"; // Ustawiamy typ explicite
+                        discount.Type = "service";
                         allDiscounts.Add(discount);
                     }
-                    Console.WriteLine($"Loaded {serviceDiscounts.Count} discounts for service {service.Id}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading service discounts: {ex.Message}");
+            errorMessage = $"Błąd ładowania zniżek usług: {ex.Message}";
         }
     }
 
@@ -838,81 +788,70 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Załaduj pokoje, parkingi i usługi równolegle
-            var roomsTask = LoadRoomsForHotel(authenticatedClient, hotelId);
-            var parkingsTask = LoadParkingsForHotel(authenticatedClient, hotelId);
-            var servicesTask = LoadServicesForHotel(authenticatedClient, hotelId);
+            var roomsTask = LoadRoomsForHotel(hotelId);
+            var parkingsTask = LoadParkingsForHotel(hotelId);
+            var servicesTask = LoadServicesForHotel(hotelId);
             
             await Task.WhenAll(roomsTask, parkingsTask, servicesTask);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas ładowania szczegółów hotelu: {ex.Message}");
+            errorMessage = $"Błąd podczas ładowania szczegółów hotelu: {ex.Message}";
         }
     }
 
-    private async Task LoadRoomsForHotel(HttpClient client, int hotelId)
+    private async Task LoadRoomsForHotel(int hotelId)
     {
         try
         {
-            // Używamy nowego endpointu do pobierania wszystkich pokoi
-            var response = await client.GetAsync("api/hotel-room/get-all");
+            var response = await Http.GetAsync("api/hotel-room/get-all");
             if (response.IsSuccessStatusCode)
             {
                 var allRooms = await response.Content.ReadFromJsonAsync<List<RoomResponse>>() ?? new List<RoomResponse>();
-                // Filtrujemy pokoje dla wybranego hotelu
                 rooms = allRooms.Where(r => r.HotelId == hotelId).ToList();
-                Console.WriteLine($"Loaded {rooms.Count} rooms for hotel {hotelId}");
             }
             else
             {
                 rooms = new List<RoomResponse>();
-                Console.WriteLine($"Failed to load rooms: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             rooms = new List<RoomResponse>();
-            Console.WriteLine($"Error loading rooms: {ex.Message}");
+            errorMessage = $"Błąd ładowania pokoi: {ex.Message}";
         }
     }
 
-    private async Task LoadParkingsForHotel(HttpClient client, int hotelId)
+    private async Task LoadParkingsForHotel(int hotelId)
     {
         try
         {
-            var response = await client.GetAsync($"api/hotel-parkings/get-by-hotel/{hotelId}");
+            var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{hotelId}");
             if (response.IsSuccessStatusCode)
             {
                 parkings = await response.Content.ReadFromJsonAsync<List<ParkingResponse>>() ?? new List<ParkingResponse>();
-                Console.WriteLine($"Loaded {parkings.Count} parkings for hotel {hotelId}");
             }
             else
             {
                 parkings = new List<ParkingResponse>();
-                Console.WriteLine($"Failed to load parkings: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             parkings = new List<ParkingResponse>();
-            Console.WriteLine($"Error loading parkings: {ex.Message}");
+            errorMessage = $"Błąd ładowania parkingów: {ex.Message}";
         }
     }
 
-    private async Task LoadServicesForHotel(HttpClient client, int hotelId)
+    private async Task LoadServicesForHotel(int hotelId)
     {
         try
         {
-            var response = await client.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
+            var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Raw JSON from services API: {jsonString}");
                 
-                // Używamy JsonDocument do ręcznego parsowania
                 using var document = System.Text.Json.JsonDocument.Parse(jsonString);
                 var servicesFromJson = new List<ServiceResponse>();
                 
@@ -932,18 +871,16 @@
                 }
                 
                 services = servicesFromJson;
-                Console.WriteLine($"Loaded {services.Count} services for hotel {hotelId}");
             }
             else
             {
                 services = new List<ServiceResponse>();
-                Console.WriteLine($"Failed to load services: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             services = new List<ServiceResponse>();
-            Console.WriteLine($"Error loading services: {ex.Message}");
+            errorMessage = $"Błąd ładowania usług: {ex.Message}";
         }
     }
 
@@ -952,14 +889,12 @@
         await LoadDiscountsForSelectedHotel();
     }
 
-    // Event handlers
     private async Task OnSearchTextChanged(ChangeEventArgs e)
     {
         searchText = e.Value?.ToString() ?? "";
         ApplyFilters();
     }
 
-    // Filter and search methods
     private void ApplyFilters()
     {
         if (allDiscounts == null)
@@ -970,13 +905,11 @@
 
         var filtered = allDiscounts.AsEnumerable();
 
-        // Filter by type
         if (!string.IsNullOrEmpty(selectedTypeFilter))
         {
             filtered = filtered.Where(d => d.Type.Equals(selectedTypeFilter, StringComparison.OrdinalIgnoreCase));
         }
 
-        // Filter by status
         if (!string.IsNullOrEmpty(selectedStatusFilter))
         {
             filtered = selectedStatusFilter switch
@@ -988,7 +921,6 @@
             };
         }
 
-        // Filter by discount range
         if (!string.IsNullOrEmpty(selectedDiscountRangeFilter))
         {
             filtered = selectedDiscountRangeFilter switch
@@ -1001,7 +933,6 @@
             };
         }
 
-        // Filter by date range
         if (filterDateFrom.HasValue)
         {
             filtered = filtered.Where(d => DateTime.Parse(d.From).Date >= filterDateFrom.Value.Date);
@@ -1012,7 +943,6 @@
             filtered = filtered.Where(d => DateTime.Parse(d.To).Date <= filterDateTo.Value.Date);
         }
 
-        // Filter by search text
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filtered = filtered.Where(d => 
@@ -1021,7 +951,6 @@
             );
         }
 
-        // Sort
         filtered = selectedSortBy switch
         {
             "discount-asc" => filtered.OrderBy(d => d.DiscountPercent),
@@ -1096,10 +1025,9 @@
             Type = discountType,
             DateFrom = DateTime.Now.Date,
             DateTo = DateTime.Now.Date.AddDays(7),
-            DiscountPercent = 10 // Ustaw domyślną wartość
+            DiscountPercent = 10
         };
     
-        Console.WriteLine($"ShowAddForm called for type: {discountType}");
         showModal = true;
         StateHasChanged();
     }
@@ -1112,14 +1040,10 @@
 
     private async Task OnHotelSelectedInModal()
     {
-        Console.WriteLine($"OnHotelSelectedInModal - HotelId: {discountModel.HotelId}, Type: {discountModel.Type}");
-    
-        // Reset target selection when hotel changes (tylko dla typów innych niż hotel)
         if (discountModel.Type != "hotel")
         {
             discountModel.TargetId = 0;
         
-            // Load details for the selected hotel in modal
             if (discountModel.HotelId > 0)
             {
                 await LoadHotelDetails(discountModel.HotelId);
@@ -1131,15 +1055,11 @@
 
     private async Task SaveDiscount()
     {
-        Console.WriteLine($"SaveDiscount called - Type: {discountModel.Type}, HotelId: {discountModel.HotelId}, TargetId: {discountModel.TargetId}, Percent: {discountModel.DiscountPercent}");
-        
-        // Dla typu hotel, ustaw HotelId = TargetId dla walidacji
         if (discountModel.Type == "hotel")
         {
             discountModel.HotelId = discountModel.TargetId;
         }
         
-        // Sprawdź custom validation
         if (!discountModel.IsValid())
         {
             await JSRuntime.InvokeVoidAsync("alert", "Wypełnij wszystkie wymagane pola poprawnie.");
@@ -1149,14 +1069,11 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Przygotuj dane zgodnie z API
             object requestData = discountModel.Type switch
             {
                 "hotel" => new
                 {
-                    hotelId = discountModel.TargetId, // TargetId to ID hotelu
+                    hotelId = discountModel.TargetId,
                     discountPercent = discountModel.DiscountPercent,
                     from = discountModel.DateFrom.ToString("yyyy-MM-dd"),
                     to = discountModel.DateTo.ToString("yyyy-MM-dd")
@@ -1184,19 +1101,14 @@
                 },
                 _ => throw new ArgumentException($"Nieznany typ zniżki: {discountModel.Type}")
             };
-
-            Console.WriteLine($"Request data: {System.Text.Json.JsonSerializer.Serialize(requestData)}");
             
-            var response = await authenticatedClient.PostAsJsonAsync($"api/discounts/{discountModel.Type}", requestData);
-            
-            Console.WriteLine($"Response status: {response.StatusCode}");
+            var response = await Http.PostAsJsonAsync($"api/discounts/{discountModel.Type}", requestData);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Zniżka została dodana pomyślnie!");
                 CancelForm();
                 
-                // Refresh discounts if we're viewing the same hotel
                 if (selectedHotelId > 0)
                 {
                     await LoadDiscountsForSelectedHotel();
@@ -1205,7 +1117,6 @@
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error response: {errorContent}");
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
@@ -1223,7 +1134,6 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception in SaveDiscount: {ex.Message}");
             await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania zniżki: {ex.Message}");
         }
         finally
@@ -1240,8 +1150,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.DeleteAsync($"api/discounts/{discount.Type}/{discount.Id}");
+            var response = await Http.DeleteAsync($"api/discounts/{discount.Type}/{discount.Id}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -1263,7 +1172,6 @@
         }
     }
 
-    // Helper methods
     private string GetHotelName(int hotelId)
     {
         return hotelNamesCache.ContainsKey(hotelId) ? hotelNamesCache[hotelId] : $"Hotel #{hotelId}";
@@ -1335,46 +1243,6 @@
         return now > to;
     }
 
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
-
     private void GoToHotels()
     {
         NavigationManager.NavigateTo("/hotels");
@@ -1444,9 +1312,8 @@
         public int HotelId { get; set; }
         public List<string>? RoomImages { get; set; }
         
-        // Property dla kompatybilności z poprzednim kodem
         public string Name => RoomName;
-        public int MaxGuests { get; set; } = 1; // Można dodać jeśli potrzebne
+        public int MaxGuests { get; set; } = 1;
     }
 
     public class ParkingResponse

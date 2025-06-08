@@ -1,9 +1,8 @@
 @page "/service-management"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Manager,Admin")]
@@ -13,7 +12,6 @@
 <div class="container-fluid my-4">
     <div class="row">
         <div class="col-12">
-            <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 class="h2">
@@ -25,7 +23,6 @@
                 </button>
             </div>
 
-            <!-- Wybór hotelu -->
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row g-3 align-items-end">
@@ -78,7 +75,6 @@
             }
             else
             {
-                <!-- Filtry i wyszukiwanie -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="row g-3">
@@ -110,7 +106,6 @@
                     </div>
                 </div>
 
-                <!-- Statystyki -->
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="card text-center bg-primary text-white">
@@ -146,7 +141,6 @@
                     </div>
                 </div>
 
-                <!-- Lista usług -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -266,7 +260,6 @@
         </div>
     </div>
 
-    <!-- Modal dodawania/edycji usługi -->
     @if (showServiceModal)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -355,7 +348,6 @@
         </div>
     }
 
-    <!-- Modal szczegółów usługi -->
     @if (showDetailsModal && selectedService != null)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -450,29 +442,13 @@
     private bool isEditMode = false;
     private string searchTerm = string.Empty;
     private string selectedPriceFilter = string.Empty;
-    private DateTime currentDateTime = DateTime.UtcNow;
-    private Timer? timer;
     
     private ServiceForm serviceForm = new();
     private HotelService? selectedService;
 
     protected override async Task OnInitializedAsync()
     {
-        // Timer do aktualizacji czasu co sekundę
-        timer = new Timer(UpdateDateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-        
         await LoadHotels();
-    }
-
-    private void UpdateDateTime(object? state)
-    {
-        currentDateTime = DateTime.UtcNow;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        timer?.Dispose();
     }
 
     private bool IsDescriptionValid()
@@ -563,8 +539,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -573,6 +548,8 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Loaded {hotels?.Count ?? 0} hotels");
             }
         }
         catch (Exception ex)
@@ -603,8 +580,7 @@
         isLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{selectedHotelId}");
+            var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{selectedHotelId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -614,6 +590,7 @@
                     PropertyNameCaseInsensitive = true
                 });
                 
+                Console.WriteLine($"Loaded {allServices?.Count ?? 0} services for hotel {selectedHotelId}");
                 ApplyFilters();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -653,7 +630,6 @@
 
         var filtered = allServices.AsEnumerable();
 
-        // Filtr wyszukiwania
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             filtered = filtered.Where(s => 
@@ -661,7 +637,6 @@
                 s.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
         }
 
-        // Filtr cenowy
         if (!string.IsNullOrWhiteSpace(selectedPriceFilter))
         {
             filtered = selectedPriceFilter switch
@@ -703,7 +678,7 @@
         };
         isEditMode = true;
         showServiceModal = true;
-        showDetailsModal = false; // Zamknij modal szczegółów jeśli był otwarty
+        showDetailsModal = false;
     }
 
     private void CloseServiceModal()
@@ -750,8 +725,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var requestData = new
             {
                 id = isEditMode ? serviceForm.Id : (int?)null,
@@ -764,14 +737,16 @@
             var json = JsonSerializer.Serialize(requestData);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
+            Console.WriteLine($"Saving service: {json}");
+            
             HttpResponseMessage response;
             if (isEditMode)
             {
-                response = await authenticatedClient.PutAsync("api/hotel-services", content);
+                response = await Http.PutAsync("api/hotel-services", content);
             }
             else
             {
-                response = await authenticatedClient.PostAsync("api/hotel-services", content);
+                response = await Http.PostAsync("api/hotel-services", content);
             }
             
             if (response.IsSuccessStatusCode)
@@ -815,8 +790,7 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.DeleteAsync($"api/hotel-services/{service.Id}");
+                var response = await Http.DeleteAsync($"api/hotel-services/{service.Id}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -842,26 +816,6 @@
                 await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania usługi.");
             }
         }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        try
-        {
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpClient.DefaultRequestHeaders.Authorization = null;
-                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
-        }
-        
-        return HttpClient;
     }
 
     public class HotelService

@@ -1,7 +1,6 @@
 @page "/my-reservations"
-@using System.Net.Http.Headers
 @using System.Text.Json
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
@@ -80,7 +79,6 @@
         </div>
     </div>
 
-    <!-- Modal szczegółów rezerwacji -->
     @if (selectedReservation != null)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -125,7 +123,6 @@
         </div>
     }
 
-    <!-- Modal płatności -->
     @if (selectedPayment != null)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -166,8 +163,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -192,8 +188,7 @@
         {
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.GetAsync($"api/order/get-by-guest/{currentUserId}");
+                var response = await Http.GetAsync($"api/order/get-by-guest/{currentUserId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -219,8 +214,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/reservation/{orderId}");
+            var response = await Http.GetAsync($"api/reservation/{orderId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -241,8 +235,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/payment/get-payment-by-order/{orderId}");
+            var response = await Http.GetAsync($"api/payment/get-payment-by-order/{orderId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -265,12 +258,11 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.PatchAsync($"api/order/cancel/{orderId}", null);
+                var response = await Http.PatchAsync($"api/order/cancel/{orderId}", null);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    await LoadOrders(); // Odśwież listę
+                    await LoadOrders();
                     await JSRuntime.InvokeVoidAsync("alert", "Zamówienie zostało anulowane.");
                 }
             }
@@ -295,46 +287,6 @@
     };
 
     private bool CanCancelOrder(string? status) => status?.ToLower() is "pending" or "confirmed";
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            HttpClient.DefaultRequestHeaders.Authorization = null;
-            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return HttpClient;
-    }
 
     public class UserSession
     {

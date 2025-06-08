@@ -1,9 +1,8 @@
 @page "/my-reviews"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
@@ -105,7 +104,6 @@
         </div>
     </div>
 
-    <!-- Modal dodawania/edycji opinii -->
     @if (showReviewForm)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -235,7 +233,6 @@
         </div>
     }
 
-    <!-- Modal podglądu zdjęcia -->
     @if (showImageModal)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.8);" @onclick="CloseImageModal">
@@ -278,8 +275,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -305,8 +301,7 @@
         {
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.GetAsync($"api/review/guest/{currentUserId}");
+                var response = await Http.GetAsync($"api/review/guest/{currentUserId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -334,8 +329,7 @@
         {
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.GetAsync($"api/order/get-by-guest/{currentUserId}");
+                var response = await Http.GetAsync($"api/order/get-by-guest/{currentUserId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -345,7 +339,6 @@
                         PropertyNameCaseInsensitive = true
                     });
                     
-                    // Wyciągnij unikalne hotele z zamówień (tylko te potwierdzone/zakończone)
                     reservedHotels = orders?
                         .Where(o => o.Status?.ToLower() is "confirmed" or "completed")
                         .GroupBy(o => o.HotelId)
@@ -424,14 +417,12 @@
         
         foreach (var file in e.GetMultipleFiles(5))
         {
-            // Sprawdź typ pliku
             if (!file.ContentType.StartsWith("image/"))
             {
                 await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
                 continue;
             }
             
-            // Sprawdź rozmiar pliku (5MB = 5 * 1024 * 1024 bytes)
             if (file.Size > 5 * 1024 * 1024)
             {
                 await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży. Maksymalny rozmiar to 5MB.");
@@ -440,12 +431,10 @@
             
             try
             {
-                // Odczytaj plik do tablicy bajtów
                 using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
                 var buffer = new byte[file.Size];
                 await stream.ReadAsync(buffer);
                 
-                // Konwertuj do base64
                 var base64String = Convert.ToBase64String(buffer);
                 var dataUrl = $"data:{file.ContentType};base64,{base64String}";
                 
@@ -488,7 +477,6 @@
 
     private async Task SubmitReview()
     {
-        // Walidacja
         if (editingReview == null && newReview.HotelId == 0)
         {
             await JSRuntime.InvokeVoidAsync("alert", "Proszę wybrać hotel.");
@@ -511,11 +499,8 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             if (editingReview != null)
             {
-                // Edycja istniejącej opinii
                 var updateRequest = new
                 {
                     reviewId = newReview.ReviewId,
@@ -526,11 +511,10 @@
                 
                 var json = JsonSerializer.Serialize(updateRequest);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await authenticatedClient.PutAsync("api/review", content);
+                var response = await Http.PutAsync("api/review", content);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Zaktualizuj zdjęcia jeśli są nowe lub usunięte
                     await UpdateReviewImages(newReview.ReviewId);
                     
                     await JSRuntime.InvokeVoidAsync("alert", "Opinia została zaktualizowana!");
@@ -545,7 +529,6 @@
             }
             else
             {
-                // Dodanie nowej opinii
                 var addRequest = new
                 {
                     userName = currentUserName,
@@ -557,18 +540,16 @@
                 
                 var json = JsonSerializer.Serialize(addRequest);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await authenticatedClient.PostAsync("api/review", content);
+                var response = await Http.PostAsync("api/review", content);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Pobierz ID nowo utworzonej opinii z odpowiedzi
                     var responseContent = await response.Content.ReadAsStringAsync();
                     var reviewResponse = JsonSerializer.Deserialize<ReviewResponse>(responseContent, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
                     
-                    // Dodaj zdjęcia jeśli są wybrane
                     if (selectedImages.Any() && reviewResponse?.ReviewId > 0)
                     {
                         await UpdateReviewImages(reviewResponse.ReviewId);
@@ -600,18 +581,13 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Przygotuj listę zdjęć (istniejące + nowe)
             var allImages = new List<string>();
             
-            // Dodaj istniejące zdjęcia (jeśli edytujemy)
             if (editingReview?.Images?.Any() == true)
             {
                 allImages.AddRange(editingReview.Images);
             }
             
-            // Dodaj nowe zdjęcia (konwertuj do base64 lub wyślij jako pliki)
             foreach (var image in selectedImages)
             {
                 allImages.Add(image.DataUrl);
@@ -626,7 +602,7 @@
             var json = JsonSerializer.Serialize(imageUpdateRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await authenticatedClient.PutAsync("api/review/images", content);
+            var response = await Http.PutAsync("api/review/images", content);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -645,8 +621,7 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.DeleteAsync($"api/review/{reviewId}");
+                var response = await Http.DeleteAsync($"api/review/{reviewId}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -664,46 +639,6 @@
                 await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania opinii.");
             }
         }
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            HttpClient.DefaultRequestHeaders.Authorization = null;
-            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return HttpClient;
     }
 
     public class UserSession

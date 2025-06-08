@@ -1,17 +1,15 @@
 @page "/order-management"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.Globalization
 @using System.Net
 
 <PageTitle>Zarządzanie zamówieniami - Hotel Management System</PageTitle>
 
 <div class="container-fluid mt-4">
-    <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
@@ -48,7 +46,6 @@
         </div>
     </div>
 
-    <!-- Error Handling -->
     @if (hasRenderError)
     {
         <div class="alert alert-danger">
@@ -61,7 +58,6 @@
     }
     else
     {
-        <!-- Loading state -->
         @if (isInitialLoading)
         {
             <div class="text-center py-5">
@@ -98,7 +94,6 @@
         }
         else
         {
-            <!-- Summary Cards -->
             <div class="row mb-4">
                 <div class="col-lg-3 col-md-6 mb-3">
                     <div class="card bg-warning text-dark border-0 shadow-sm">
@@ -162,7 +157,6 @@
                 </div>
             </div>
 
-            <!-- Tabs Navigation -->
             <div class="row mb-4">
                 <div class="col-12">
                     <ul class="nav nav-tabs" role="tablist">
@@ -218,9 +212,7 @@
                 </div>
             </div>
 
-            <!-- Tab Content -->
             <div class="tab-content">
-                <!-- Pending Orders -->
                 @if (activeTab == "pending")
                 {
                     <div class="card border-0 shadow-sm">
@@ -319,7 +311,6 @@
                     </div>
                 }
 
-                <!-- Confirmed Orders -->
                 @if (activeTab == "confirmed")
                 {
                     <div class="card border-0 shadow-sm">
@@ -393,7 +384,6 @@
                     </div>
                 }
 
-                <!-- Completed Orders -->
                 @if (activeTab == "completed")
                 {
                     <div class="card border-0 shadow-sm">
@@ -467,7 +457,6 @@
                     </div>
                 }
 
-                <!-- Cancelled Orders -->
                 @if (activeTab == "cancelled")
                 {
                     <div class="card border-0 shadow-sm">
@@ -545,7 +534,6 @@
     }
 </div>
 
-<!-- Cancel Order Confirmation Modal -->
 <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -580,7 +568,6 @@
     </div>
 </div>
 
-<!-- Operation Result Modal -->
 <div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -654,46 +641,27 @@
     private bool operationSuccess = false;
     private string operationMessage = "";
 
-    // Error handling for render issues
     private bool hasRenderError = false;
     private string renderErrorMessage = "";
 
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await LoadAllOrders();
         }
         catch (Exception ex)
         {
             SetRenderError($"Błąd inicjalizacji: {ex.Message}");
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !hasRenderError)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadAllOrders();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isInitialLoading = false;
-                StateHasChanged();
-            }
         }
     }
 
@@ -722,46 +690,6 @@
             errorMessage = $"Błąd: {ex.Message}";
             StateHasChanged();
         }
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
     }
 
     private async Task LoadAllOrders()
@@ -809,8 +737,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/pending");
+            var response = await Http.GetAsync("api/order/pending");
             
             if (response.IsSuccessStatusCode)
             {
@@ -850,8 +777,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/confirmed");
+            var response = await Http.GetAsync("api/order/confirmed");
             
             if (response.IsSuccessStatusCode)
             {
@@ -891,8 +817,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/completed");
+            var response = await Http.GetAsync("api/order/completed");
             
             if (response.IsSuccessStatusCode)
             {
@@ -932,8 +857,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/cancelled");
+            var response = await Http.GetAsync("api/order/cancelled");
             
             if (response.IsSuccessStatusCode)
             {
@@ -976,8 +900,7 @@
 
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.PatchAsync($"api/order/confirm/{orderId}", null);
+                var response = await Http.PatchAsync($"api/order/confirm/{orderId}", null);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1028,8 +951,7 @@
 
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.PatchAsync($"api/order/cancel/{orderIdToCancel}", null);
+                var response = await Http.PatchAsync($"api/order/cancel/{orderIdToCancel}", null);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1081,7 +1003,6 @@
         NavigationManager.NavigateTo("/login");
     }
 
-    // Helper methods
     private string GetCustomerName(OrderViewModel order)
     {
         var firstName = order?.Customer?.Name ?? "";
@@ -1098,7 +1019,6 @@
         return date?.ToString("dd.MM.yyyy HH:mm", polishCulture) ?? "Brak daty";
     }
 
-    // Model classes
     public class OrderViewModel
     {
         public int Id { get; set; }

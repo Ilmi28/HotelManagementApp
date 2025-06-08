@@ -1,17 +1,15 @@
 @page "/payment-management"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.Globalization
 @using System.Net
 
 <PageTitle>Zarządzanie płatnościami - Hotel Management System</PageTitle>
 
 <div class="container-fluid mt-4">
-    <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
@@ -48,7 +46,6 @@
         </div>
     </div>
 
-    <!-- Error Handling -->
     @if (hasRenderError)
     {
         <div class="alert alert-danger">
@@ -61,7 +58,6 @@
     }
     else
     {
-        <!-- Loading state -->
         @if (isInitialLoading)
         {
             <div class="text-center py-5">
@@ -98,7 +94,6 @@
         }
         else
         {
-            <!-- Summary Cards -->
             <div class="row mb-4">
                 <div class="col-lg-3 col-md-6 mb-3">
                     <div class="card bg-primary text-white border-0 shadow-sm">
@@ -167,7 +162,6 @@
                 </div>
             </div>
 
-            <!-- Tabs Navigation -->
             <div class="row mb-4">
                 <div class="col-12">
                     <ul class="nav nav-tabs" role="tablist">
@@ -211,9 +205,7 @@
                 </div>
             </div>
 
-            <!-- Tab Content -->
             <div class="tab-content">
-                <!-- All Payments -->
                 @if (activeTab == "all")
                 {
                     <div class="card border-0 shadow-sm">
@@ -334,7 +326,6 @@
                     </div>
                 }
 
-                <!-- Cash Payments -->
                 @if (activeTab == "cash")
                 {
                     <div class="card border-0 shadow-sm">
@@ -427,7 +418,6 @@
                     </div>
                 }
 
-                <!-- Credit Card Payments -->
                 @if (activeTab == "card")
                 {
                     <div class="card border-0 shadow-sm">
@@ -526,7 +516,6 @@
     }
 </div>
 
-<!-- Register Cash Payment Modal -->
 <div class="modal fade" id="registerCashPaymentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -571,7 +560,6 @@
     </div>
 </div>
 
-<!-- Operation Result Modal -->
 <div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -642,55 +630,34 @@
     private string errorMessage = "";
     private DateTime lastUpdateTime = DateTime.Now;
 
-    // Cash payment registration
     private int newCashPaymentOrderId = 0;
     private bool processingCashPayment = false;
     private string cashPaymentValidationMessage = "";
 
-    // Operation result
     private bool operationSuccess = false;
     private string operationMessage = "";
 
-    // Error handling for render issues
     private bool hasRenderError = false;
     private string renderErrorMessage = "";
 
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await LoadAllPaymentsData();
         }
         catch (Exception ex)
         {
             SetRenderError($"Błąd inicjalizacji: {ex.Message}");
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !hasRenderError)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadAllPaymentsData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isInitialLoading = false;
-                StateHasChanged();
-            }
         }
     }
 
@@ -719,46 +686,6 @@
             errorMessage = $"Błąd: {ex.Message}";
             StateHasChanged();
         }
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
     }
 
     private async Task LoadAllPaymentsData()
@@ -805,8 +732,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/payment/get-all");
+            var response = await Http.GetAsync("api/payment/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -846,8 +772,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/payment/get-cash-payments");
+            var response = await Http.GetAsync("api/payment/get-cash-payments");
             
             if (response.IsSuccessStatusCode)
             {
@@ -887,8 +812,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/payment/get-credit-card-payments");
+            var response = await Http.GetAsync("api/payment/get-credit-card-payments");
             
             if (response.IsSuccessStatusCode)
             {
@@ -945,9 +869,8 @@
 
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
                 var requestData = new { orderId = newCashPaymentOrderId };
-                var response = await authenticatedClient.PostAsJsonAsync("api/payment/pay-with-cash", requestData);
+                var response = await Http.PostAsJsonAsync("api/payment/pay-with-cash", requestData);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -961,7 +884,6 @@
                 }
                 else if (response.StatusCode == HttpStatusCode.Forbidden)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
                     operationSuccess = false;
                     operationMessage = "Nie masz uprawnień do rejestracji płatności dla tego zamówienia.";
                 }
@@ -1006,7 +928,6 @@
         NavigationManager.NavigateTo("/login");
     }
 
-    // Helper methods
     private string GetFormattedPrice(decimal? price)
     {
         return price?.ToString("C", polishCulture) ?? "0,00 zł";
@@ -1024,7 +945,6 @@
         return GetFormattedPrice(total);
     }
 
-    // Model classes
     public class PaymentViewModel
     {
         public int Id { get; set; }

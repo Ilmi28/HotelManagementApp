@@ -1,10 +1,9 @@
 @page "/parking-management"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
 
@@ -13,7 +12,6 @@
 <div class="container mt-4">
     @try
     {
-        <!-- Loading state -->
         @if (isLoading)
         {
             <div class="text-center py-5">
@@ -42,7 +40,6 @@
         }
         else
         {
-            <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -56,7 +53,6 @@
                 </ol>
             </nav>
 
-            <!-- Page header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -81,7 +77,6 @@
                 </div>
             </div>
 
-            <!-- Search and filters -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -137,7 +132,6 @@
                 </div>
             </div>
 
-            <!-- Add/Edit form -->
             @if (showForm)
             {
                 <div class="row mb-4">
@@ -242,7 +236,6 @@
                 </div>
             }
 
-            <!-- Parking list -->
             <div class="row">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -390,12 +383,10 @@
     private List<HotelResponse>? hotels;
     private ParkingModel parkingModel = new();
     
-    // Search and filter fields
     private int selectedHotelFilter = 0;
     private string searchText = "";
     private string priceSortOrder = "none";
     
-    // Pola dla obsługi nazw hoteli
     private Dictionary<int, string> hotelNamesCache = new();
     private HashSet<int> loadingHotelNames = new();
     
@@ -407,45 +398,29 @@
     private bool isSubmitting = false;
     private string errorMessage = "";
     private string pageTitle = "Zarządzanie parkingami - Hotel Management System";
-    
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
             allParkings = new List<HotelParkingResponse>();
             filteredParkings = new List<HotelParkingResponse>();
             hotels = new List<HotelResponse>();
+
+            await LoadData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -453,7 +428,6 @@
     {
         isLoading = true;
         
-        // Najpierw załaduj hotele, potem parkingi
         await LoadHotelData();
         await LoadParkingData();
         
@@ -466,10 +440,6 @@
         loadingParkings = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Ponieważ nie ma endpointu dla wszystkich parkingów,
-            // musimy najpierw pobrać wszystkie hotele, a potem ich parkingi
             var allParkingsList = new List<HotelParkingResponse>();
             
             if (hotels?.Any() == true)
@@ -478,7 +448,7 @@
                 {
                     try
                     {
-                        var response = await authenticatedClient.GetAsync($"api/hotel-parkings/get-by-hotel/{hotel.Id}");
+                        var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{hotel.Id}");
                         if (response.IsSuccessStatusCode)
                         {
                             var hotelParkings = await response.Content.ReadFromJsonAsync<List<HotelParkingResponse>>() ?? new List<HotelParkingResponse>();
@@ -499,10 +469,7 @@
             allParkings = allParkingsList;
             Console.WriteLine($"Loaded {allParkings.Count} parking facilities from all hotels");
             
-            // Zastosuj filtry do nowo załadowanych danych
             ApplyFilters();
-            
-            // Załaduj nazwy hoteli dla wszystkich parkingów
             await LoadHotelNamesForParkings();
         }
         catch (Exception ex)
@@ -520,15 +487,13 @@
         loadingHotels = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
 
             if (response.IsSuccessStatusCode)
             {
                 hotels = await response.Content.ReadFromJsonAsync<List<HotelResponse>>() ?? new List<HotelResponse>();
                 Console.WriteLine($"Loaded {hotels.Count} hotels");
                 
-                // Dodaj nazwy hoteli do cache
                 foreach (var hotel in hotels)
                 {
                     hotelNamesCache[hotel.Id] = hotel.Name;
@@ -537,6 +502,7 @@
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
                 Console.WriteLine("Brak autoryzacji do ładowania hoteli");
+                NavigationManager.NavigateTo("/login");
             }
             else
             {
@@ -588,8 +554,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel/{hotelId}");
+            var response = await Http.GetAsync($"api/hotel/{hotelId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -638,7 +603,6 @@
         return $"Hotel #{hotelId}";
     }
 
-    // Search and filter methods
     private void ApplyFilters()
     {
         if (allParkings == null)
@@ -649,13 +613,11 @@
 
         var filtered = allParkings.AsEnumerable();
 
-        // Filter by hotel
         if (selectedHotelFilter > 0)
         {
             filtered = filtered.Where(p => p.HotelId == selectedHotelFilter);
         }
 
-        // Filter by search text
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filtered = filtered.Where(p => 
@@ -664,7 +626,6 @@
             );
         }
 
-        // Sort by price
         filtered = priceSortOrder switch
         {
             "asc" => filtered.OrderBy(p => p.Price),
@@ -737,16 +698,15 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
             HttpResponseMessage response;
 
             if (isEditMode)
             {
-                response = await authenticatedClient.PutAsJsonAsync("api/hotel-parkings", parkingModel);
+                response = await Http.PutAsJsonAsync("api/hotel-parkings", parkingModel);
             }
             else
             {
-                response = await authenticatedClient.PostAsJsonAsync("api/hotel-parkings", parkingModel);
+                response = await Http.PostAsJsonAsync("api/hotel-parkings", parkingModel);
             }
 
             if (response.IsSuccessStatusCode)
@@ -770,6 +730,7 @@
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Error in SaveParking: {ex.Message}");
             await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas {(isEditMode ? "aktualizacji" : "dodawania")} parkingu: {ex.Message}");
         }
         finally
@@ -786,8 +747,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.DeleteAsync($"api/hotel-parkings/{parkingId}");
+            var response = await Http.DeleteAsync($"api/hotel-parkings/{parkingId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -809,48 +769,9 @@
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Error in DeleteParking: {ex.Message}");
             await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania parkingu: {ex.Message}");
         }
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
     }
 
     private void GoToHotels()
@@ -858,7 +779,6 @@
         NavigationManager.NavigateTo("/hotels");
     }
 
-    // Models
     public class HotelParkingResponse
     {
         public int Id { get; set; }

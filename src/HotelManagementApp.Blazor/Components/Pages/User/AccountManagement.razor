@@ -1,9 +1,8 @@
 @page "/account"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject IEventBusService EventBus
 @inject NavigationManager NavigationManager
@@ -31,7 +30,6 @@
             else if (currentUser != null)
             {
                 <div class="row">
-                    <!-- Profil użytkownika -->
                     <div class="col-lg-4 mb-4">
                         <div class="card">
                             <div class="card-header">
@@ -100,7 +98,6 @@
                         </div>
                     </div>
 
-                    <!-- Formularz edycji danych -->
                     <div class="col-lg-8 mb-4">
                         <div class="card">
                             <div class="card-header">
@@ -136,7 +133,6 @@
                             </div>
                         </div>
 
-                        <!-- Zmiana hasła -->
                         <div class="card mt-4">
                             <div class="card-header">
                                 <h5 class="mb-0">
@@ -175,7 +171,6 @@
                             </div>
                         </div>
 
-                        <!-- Historia konta -->
                         <div class="card mt-4">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">
@@ -232,7 +227,6 @@
                             </div>
                         </div>
 
-                        <!-- Usuwanie konta -->
                         <div class="card mt-4 border-danger">
                             <div class="card-header bg-danger text-white">
                                 <h5 class="mb-0">
@@ -255,7 +249,6 @@
         </div>
     </div>
 
-    <!-- Modal usuwania konta -->
     @if (showDeleteModal)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -334,8 +327,7 @@
         isLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -374,20 +366,19 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/account/{currentUser.Id}/history");
+            var response = await Http.GetAsync($"api/account/{currentUser.Id}/history");
             
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Historia konta JSON: {json}"); // Debug log
+                Console.WriteLine($"Historia konta JSON: {json}");
                 
                 accountHistory = JsonSerializer.Deserialize<List<AccountHistoryOperation>>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
                 
-                Console.WriteLine($"Załadowano {accountHistory?.Count ?? 0} operacji"); // Debug log
+                Console.WriteLine($"Załadowano {accountHistory?.Count ?? 0} operacji");
             }
             else
             {
@@ -405,14 +396,12 @@
         var file = e.File;
         if (file == null) return;
 
-        // Sprawdź typ pliku
         if (!file.ContentType.StartsWith("image/"))
         {
             await JSRuntime.InvokeVoidAsync("alert", "Wybierz plik obrazu (JPG, PNG, GIF).");
             return;
         }
 
-        // Sprawdź rozmiar pliku (5MB)
         if (file.Size > 5 * 1024 * 1024)
         {
             await JSRuntime.InvokeVoidAsync("alert", "Plik jest za duży. Maksymalny rozmiar to 5MB.");
@@ -428,27 +417,21 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Przygotuj multipart form data
             using var content = new MultipartFormDataContent();
             using var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
             using var streamContent = new StreamContent(fileStream);
             
-            // Ustaw content type
             streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
             
-            // Dodaj plik do form data z nazwą "File" (jak w swagger)
             content.Add(streamContent, "File", file.Name);
             
-            // Wyślij żądanie z UserId jako query parameter
-            var response = await authenticatedClient.PutAsync($"api/account/profile-picture?UserId={currentUser.Id}", content);
+            var response = await Http.PutAsync($"api/account/profile-picture?UserId={currentUser.Id}", content);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Zdjęcie profilowe zostało zaktualizowane!");
-                await LoadCurrentUser(); // Odśwież dane użytkownika
-                EventBus.NotifyProfileUpdated(); // Powiadom inne komponenty
+                await LoadCurrentUser();
+                EventBus.NotifyProfileUpdated();
             }
             else
             {
@@ -479,8 +462,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var updateRequest = new
             {
                 userId = profileForm.UserId,
@@ -491,12 +472,12 @@
             var json = JsonSerializer.Serialize(updateRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await authenticatedClient.PutAsync("api/account/update", content);
+            var response = await Http.PutAsync("api/account/update", content);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Profil został zaktualizowany!");
-                await LoadCurrentUser(); // Odśwież dane użytkownika
+                await LoadCurrentUser();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
@@ -543,8 +524,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var changeRequest = new
             {
                 userId = currentUser?.Id,
@@ -555,13 +534,12 @@
             var json = JsonSerializer.Serialize(changeRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await authenticatedClient.PatchAsync("api/account/change-password", content);
+            var response = await Http.PatchAsync("api/account/change-password", content);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Hasło zostało zmienione!");
-                passwordForm = new PasswordChangeForm(); // Wyczyść formularz
-                // Odśwież historię po zmianie hasła
+                passwordForm = new PasswordChangeForm();
                 await LoadAccountHistory();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -591,8 +569,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var confirmRequest = new
             {
                 userId = currentUser.Id
@@ -601,7 +577,7 @@
             var json = JsonSerializer.Serialize(confirmRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await authenticatedClient.PostAsync("api/account/send-confirmation-email", content);
+            var response = await Http.PostAsync("api/account/send-confirmation-email", content);
             
             if (response.IsSuccessStatusCode)
             {
@@ -657,8 +633,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var deleteRequest = new
             {
                 userId = currentUser.Id,
@@ -668,12 +642,11 @@
             var json = JsonSerializer.Serialize(deleteRequest);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await authenticatedClient.PostAsync("api/account/delete", content);
+            var response = await Http.PostAsync("api/account/delete", content);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Konto zostało usunięte. Żegnamy!");
-                // Wyloguj i przekieruj na stronę główną
                 await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
                 NavigationManager.NavigateTo("/", true);
             }
@@ -737,26 +710,6 @@
             "emailconfirmation" => "Potwierdzenie emaila",
             _ => operation ?? "Nieznana operacja"
         };
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        try
-        {
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpClient.DefaultRequestHeaders.Authorization = null;
-                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
-        }
-        
-        return HttpClient;
     }
 
     public class UserSession

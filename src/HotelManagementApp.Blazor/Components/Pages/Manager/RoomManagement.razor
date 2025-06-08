@@ -1,9 +1,8 @@
 @page "/room-management"
-@using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient HttpClient
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Manager,Admin")]
@@ -13,7 +12,6 @@
 <div class="container-fluid my-4">
     <div class="row">
         <div class="col-12">
-            <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 class="h2">
@@ -36,7 +34,6 @@
             }
             else
             {
-                <!-- Filtry i wyszukiwanie -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="row g-3">
@@ -84,7 +81,6 @@
                     </div>
                 </div>
 
-                <!-- Statystyki -->
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="card text-center bg-primary text-white">
@@ -120,7 +116,6 @@
                     </div>
                 </div>
 
-                <!-- Lista pokoi -->
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
@@ -257,7 +252,6 @@
         </div>
     </div>
 
-    <!-- Modal dodawania/edycji pokoju -->
     @if (showRoomModal)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -380,7 +374,6 @@
         </div>
     }
 
-    <!-- Modal zarządzania zdjęciami -->
     @if (showImageModal && selectedRoom != null)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -458,8 +451,6 @@
     private string searchTerm = string.Empty;
     private string selectedHotelFilter = string.Empty;
     private string selectedRoomTypeFilter = string.Empty;
-    private DateTime currentDateTime = DateTime.UtcNow;
-    private Timer? timer;
     
     private RoomForm roomForm = new();
     private Room? selectedRoom;
@@ -467,24 +458,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Timer do aktualizacji czasu co sekundę
-        timer = new Timer(UpdateDateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-        
         await Task.WhenAll(
             LoadRooms(),
             LoadRoomTypes()
         );
-    }
-
-    private void UpdateDateTime(object? state)
-    {
-        currentDateTime = DateTime.UtcNow;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        timer?.Dispose();
     }
 
     private bool IsDescriptionValid()
@@ -527,8 +504,7 @@
         isLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel-room/get-all");
+            var response = await Http.GetAsync("api/hotel-room/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -538,10 +514,10 @@
                     PropertyNameCaseInsensitive = true
                 });
                 
-                // Załaduj hotele aby mieć nazwy
+                Console.WriteLine($"Loaded {allRooms?.Count ?? 0} rooms");
+                
                 await LoadHotelsForDisplay();
                 
-                // Wyodrębnij dostępne typy pokoi dla filtra
                 availableRoomTypes = allRooms?.Where(r => !string.IsNullOrEmpty(r.RoomType))
                                            .Select(r => r.RoomType!)
                                            .Distinct()
@@ -570,8 +546,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -581,8 +556,8 @@
                     PropertyNameCaseInsensitive = true
                 });
                 
-                // Stwórz mapę hoteli dla filtra i wyświetlania
                 availableHotels = hotelsList?.ToDictionary(h => h.Id, h => h.Name) ?? new Dictionary<int, string>();
+                Console.WriteLine($"Loaded {availableHotels.Count} hotels for display");
             }
         }
         catch (Exception ex)
@@ -595,8 +570,7 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel-room/get-room-types");
+            var response = await Http.GetAsync("api/hotel-room/get-room-types");
             
             if (response.IsSuccessStatusCode)
             {
@@ -605,6 +579,8 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Loaded {roomTypes?.Count ?? 0} room types");
             }
         }
         catch (Exception ex)
@@ -618,8 +594,7 @@
         loadingFormData = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel/get-all");
+            var response = await Http.GetAsync("api/hotel/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -628,6 +603,8 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
+                
+                Console.WriteLine($"Loaded {hotels?.Count ?? 0} hotels for form");
             }
         }
         catch (Exception ex)
@@ -657,7 +634,6 @@
 
         var filtered = allRooms.AsEnumerable();
 
-        // Filtr wyszukiwania
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             filtered = filtered.Where(r => 
@@ -665,13 +641,11 @@
                 r.RoomType?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
         }
 
-        // Filtr hotelu
         if (!string.IsNullOrWhiteSpace(selectedHotelFilter) && int.TryParse(selectedHotelFilter, out int hotelId))
         {
             filtered = filtered.Where(r => r.HotelId == hotelId);
         }
 
-        // Filtr typu pokoju
         if (!string.IsNullOrWhiteSpace(selectedRoomTypeFilter))
         {
             filtered = filtered.Where(r => r.RoomType?.Equals(selectedRoomTypeFilter, StringComparison.OrdinalIgnoreCase) == true);
@@ -695,7 +669,6 @@
         isEditMode = false;
         showRoomModal = true;
         
-        // Załaduj hotele jeśli nie są załadowane
         if (hotels?.Any() != true)
         {
             await LoadHotels();
@@ -716,7 +689,6 @@
         isEditMode = true;
         showRoomModal = true;
         
-        // Załaduj hotele jeśli nie są załadowane
         if (hotels?.Any() != true)
         {
             await LoadHotels();
@@ -763,8 +735,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             var requestData = new
             {
                 roomId = isEditMode ? roomForm.RoomId : (int?)null,
@@ -778,14 +748,16 @@
             var json = JsonSerializer.Serialize(requestData);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
+            Console.WriteLine($"Saving room: {json}");
+            
             HttpResponseMessage response;
             if (isEditMode)
             {
-                response = await authenticatedClient.PutAsync("api/hotel-room", content);
+                response = await Http.PutAsync("api/hotel-room", content);
             }
             else
             {
-                response = await authenticatedClient.PostAsync("api/hotel-room", content);
+                response = await Http.PostAsync("api/hotel-room", content);
             }
             
             if (response.IsSuccessStatusCode)
@@ -830,8 +802,7 @@
         {
             try
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.DeleteAsync($"api/hotel-room/{room.Id}");
+                var response = await Http.DeleteAsync($"api/hotel-room/{room.Id}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -877,7 +848,6 @@
     {
         selectedImages = e.GetMultipleFiles(10).ToList();
         
-        // Walidacja plików
         foreach (var file in selectedImages)
         {
             if (!file.ContentType.StartsWith("image/"))
@@ -907,8 +877,6 @@
         isSubmitting = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
             using var content = new MultipartFormDataContent();
             content.Add(new StringContent(selectedRoom.Id.ToString()), "roomId");
             
@@ -920,7 +888,7 @@
                 content.Add(streamContent, "images", file.Name);
             }
             
-            var response = await authenticatedClient.PutAsync("api/hotel-room/images", content);
+            var response = await Http.PutAsync("api/hotel-room/images", content);
             
             if (response.IsSuccessStatusCode)
             {
@@ -953,26 +921,6 @@
         }
     }
 
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        try
-        {
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-            if (!string.IsNullOrEmpty(token))
-            {
-                HttpClient.DefaultRequestHeaders.Authorization = null;
-                HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania tokenu: {ex.Message}");
-        }
-        
-        return HttpClient;
-    }
-
     public class Room
     {
         public int Id { get; set; }
@@ -983,7 +931,7 @@
         public decimal? FinalPrice { get; set; }
         public int? HotelId { get; set; }
         public List<string> RoomImages { get; set; } = new();
-        public string? Description { get; set; } // Dodane dla formularza
+        public string? Description { get; set; }
     }
 
     public class Hotel

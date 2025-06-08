@@ -5,110 +5,197 @@
 @inject ITokenService TokenService
 @using Microsoft.AspNetCore.Components.Authorization
 @using HotelManagementApp.Blazor.Auth
+@using System.Text.Json
 
-<h3>Logowanie</h3>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">
+                        <i class="bi bi-person-lock"></i> Logowanie
+                    </h3>
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-	<div class="alert alert-danger">@errorMessage</div>
-}
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>@errorMessage</div>
+                        </div>
+                    }
 
-<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
-	<DataAnnotationsValidator />
-	<ValidationSummary />
+                    <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="form-group mb-3">
+                            <label for="email" class="form-label">Email:</label>
+                            <InputText id="email" class="form-control" @bind-Value="loginModel.Email" placeholder="Wprowadź swój email" />
+                            <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small" />
+                        </div>
 
-	<div class="form-group mb-2">
-		<label for="email">Email:</label>
-		<InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
-		<ValidationMessage For="@(() => loginModel.Email)" />
-	</div>
+                        <div class="form-group mb-3">
+                            <label for="password" class="form-label">Hasło:</label>
+                            <InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Wprowadź swoje hasło" />
+                            <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small" />
+                        </div>
 
-	<div class="form-group mb-3">
-		<label for="password">Hasło:</label>
-		<InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" />
-		<ValidationMessage For="@(() => loginModel.Password)" />
-	</div>
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Logowanie...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                                    <span>Zaloguj się</span>
+                                }
+                            </button>
+                        </div>
 
-	<div class="d-flex justify-content-between align-items-center">
-		<button type="submit" class="btn btn-primary" disabled="@isProcessing">
-			@if (isProcessing)
-			{
-				<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-			}
-			Zaloguj
-		</button>
-		<a href="/forgot-password">Zapomniałeś hasła?</a>
-	</div>
-</EditForm>
+                        <div class="text-center">
+                            <a href="/forgot-password" class="text-decoration-none">
+                                <i class="bi bi-question-circle"></i> Zapomniałeś hasła?
+                            </a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <p class="text-muted">
+                    Nie masz jeszcze konta? 
+                    <a href="/register" class="text-decoration-none">
+                        <i class="bi bi-person-plus"></i> Zarejestruj się
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-	private LoginViewModel loginModel = new LoginViewModel();
-	private string errorMessage;
-	private bool isProcessing = false;
+    private LoginViewModel loginModel = new LoginViewModel();
+    private string errorMessage = string.Empty;
+    private bool isProcessing = false;
 
-	public class LoginViewModel
-	{
-		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email jest wymagany")]
-		[System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Niepoprawny format email")]
-		public string Email { get; set; }
+    public class LoginViewModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email jest wymagany")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Niepoprawny format email")]
+        public string Email { get; set; } = string.Empty;
 
-		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Hasło jest wymagane")]
-		public string Password { get; set; }
-	}
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Hasło jest wymagane")]
+        public string Password { get; set; } = string.Empty;
+    }
 
-	public class LoginApiResponse
-	{
-		public string IdentityToken { get; set; }
-		public string RefreshToken { get; set; }
-	}
+    public class LoginApiResponse
+    {
+        public string IdentityToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+    }
 
-	private async Task HandleLogin()
-	{
-		errorMessage = null;
-		isProcessing = true;
-		try
-		{
-			// Używamy bezpośrednio Http - dla logowania NIE CHCEMY automatycznych tokenów
-			// (użytkownik jeszcze się nie zalogował)
-			var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
+    private async Task HandleLogin()
+    {
+        errorMessage = string.Empty;
+        isProcessing = true;
+        
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
 
-			if (response.IsSuccessStatusCode)
-			{
-				var result = await response.Content.ReadFromJsonAsync<LoginApiResponse>();
-				if (result != null && !string.IsNullOrEmpty(result.IdentityToken) && !string.IsNullOrEmpty(result.RefreshToken))
-				{
-					await TokenService.SetTokensAsync(result.IdentityToken, result.RefreshToken);
-					
-					// Bezpieczniejsze rzutowanie
-					var customAuthStateProvider = AuthStateProvider as CustomAuthStateProvider;
-					customAuthStateProvider?.NotifyAuthenticationStateChanged();
-					
-					NavigationManager.NavigateTo("/", forceLoad: true);
-				}
-				else 
-				{
-					// Bardziej generyczny komunikat
-					errorMessage = "Logowanie nie powiodło się. Sprawdź swoje dane i spróbuj ponownie.";
-                    // TODO: Rozważ zalogowanie szczegółów błędu (result) po stronie klienta (konsola) lub serwera
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginApiResponse>();
+                if (result != null && !string.IsNullOrEmpty(result.IdentityToken) && !string.IsNullOrEmpty(result.RefreshToken))
+                {
+                    await TokenService.SetTokensAsync(result.IdentityToken, result.RefreshToken);
+                    
+                    var customAuthStateProvider = AuthStateProvider as CustomAuthStateProvider;
+                    customAuthStateProvider?.NotifyAuthenticationStateChanged();
+                    
+                    NavigationManager.NavigateTo("/", forceLoad: true);
+                }
+                else 
+                {
+                    errorMessage = "Błąd serwera - nie otrzymano poprawnych danych uwierzytelniających. Spróbuj ponownie później.";
                     Console.WriteLine("Nie otrzymano poprawnych tokenów z API lub result jest null.");
-				}
-			}
-			else
-			{
-				var errorContent = await response.Content.ReadAsStringAsync();
-				// Bardziej generyczny komunikat dla użytkownika
-				errorMessage = $"Logowanie nie powiodło się ({(int)response.StatusCode}). Spróbuj ponownie później.";
-				// Logowanie szczegółów dla dewelopera
-				Console.WriteLine($"Błąd logowania ({(int)response.StatusCode}): {response.ReasonPhrase}. Szczegóły: {errorContent}");
-			}
-		}
-		catch (Exception ex) 
-		{
-			// Bardziej generyczny komunikat dla użytkownika
-			errorMessage = "Wystąpił nieoczekiwany błąd podczas próby logowania. Spróbuj ponownie później.";
-			// Logowanie szczegółów dla dewelopera
-			Console.WriteLine($"Wystąpił wyjątek podczas logowania: {ex.Message}");
-		}
-		finally { isProcessing = false; }
-	}
+                }
+            }
+            else
+            {
+                // Obsługa specyficznych kodów błędów API
+                errorMessage = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.BadRequest => await GetBadRequestErrorMessage(response),
+                    System.Net.HttpStatusCode.Unauthorized => "Nieprawidłowy email lub hasło. Sprawdź dane i spróbuj ponownie.",
+                    System.Net.HttpStatusCode.TooManyRequests => "Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut.",
+                    System.Net.HttpStatusCode.InternalServerError => "Błąd serwera. Spróbuj ponownie później lub skontaktuj się z administratorem.",
+                    System.Net.HttpStatusCode.ServiceUnavailable => "Serwis tymczasowo niedostępny. Spróbuj ponownie za chwilę.",
+                    _ => $"Wystąpił błąd podczas logowania (kod: {(int)response.StatusCode}). Spróbuj ponownie później."
+                };
+                
+                // Logowanie szczegółów dla dewelopera
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Błąd logowania ({(int)response.StatusCode}): {response.ReasonPhrase}. Szczegóły: {errorContent}");
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = "Nie można połączyć się z serwerem. Sprawdź połączenie internetowe i spróbuj ponownie.";
+            Console.WriteLine($"Błąd połączenia HTTP podczas logowania: {httpEx.Message}");
+        }
+        catch (TaskCanceledException tcEx) when (tcEx.InnerException is TimeoutException)
+        {
+            errorMessage = "Żądanie przekroczyło limit czasu. Sprawdź połączenie internetowe i spróbuj ponownie.";
+            Console.WriteLine($"Timeout podczas logowania: {tcEx.Message}");
+        }
+        catch (JsonException jsonEx)
+        {
+            errorMessage = "Błąd podczas przetwarzania odpowiedzi z serwera. Spróbuj ponownie później.";
+            Console.WriteLine($"Błąd JSON podczas logowania: {jsonEx.Message}");
+        }
+        catch (Exception ex) 
+        {
+            errorMessage = "Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.";
+            Console.WriteLine($"Nieoczekiwany wyjątek podczas logowania: {ex.Message}");
+        }
+        finally 
+        { 
+            isProcessing = false; 
+        }
+    }
+
+    private async Task<string> GetBadRequestErrorMessage(HttpResponseMessage response)
+    {
+        try
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            
+            // Sprawdź czy odpowiedź zawiera szczegóły błędu
+            if (errorContent.Contains("Invalid login data provided", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Wprowadzone dane są nieprawidłowe. Sprawdź format email i długość hasła.";
+            }
+            
+            // Sprawdź inne możliwe komunikaty błędów
+            if (errorContent.Contains("email", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Nieprawidłowy format adresu email. Wprowadź poprawny adres email.";
+            }
+            
+            if (errorContent.Contains("password", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Hasło nie spełnia wymagań. Hasło musi mieć co najmniej 6 znaków.";
+            }
+            
+            // Domyślny komunikat dla błędu 400
+            return "Wprowadzone dane są nieprawidłowe. Sprawdź poprawność email i hasła.";
+        }
+        catch
+        {
+            return "Wprowadzone dane są nieprawidłowe. Sprawdź poprawność email i hasła.";
+        }
+    }
 }

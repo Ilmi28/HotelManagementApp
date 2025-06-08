@@ -1,10 +1,9 @@
 @page "/staff-dashboard"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.Globalization
 
 <PageTitle>Dashboard Personelu - Hotel Management System</PageTitle>
@@ -12,7 +11,6 @@
 <div class="container-fluid mt-4">
     @try
     {
-        <!-- Header -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
@@ -49,7 +47,6 @@
             </div>
         </div>
 
-        <!-- Loading state -->
         @if (isInitialLoading)
         {
             <div class="text-center py-5">
@@ -86,7 +83,6 @@
         }
         else
         {
-            <!-- Summary Cards -->
             <div class="row mb-4">
                 <div class="col-lg-3 col-md-6 mb-3">
                     <div class="card bg-warning text-dark border-0 shadow-sm">
@@ -151,9 +147,7 @@
             </div>
 
             <div class="row">
-                <!-- Left Column - Orders -->
                 <div class="col-lg-8">
-                    <!-- Pending Orders -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <div class="d-flex justify-content-between align-items-center">
@@ -283,7 +277,6 @@
                                                                             <span class="h6 text-primary">@GetFormattedPrice(order.TotalPrice)</span>
                                                                         </div>
                                                                         
-                                                                        <!-- POPRAWIONA SEKCJA REZERWACJI -->
                                                                         <div class="mt-3">
                                                                             <h6 class="mb-2">
                                                                                 <i class="bi bi-calendar-event"></i> Rezerwacje pokoi
@@ -418,7 +411,6 @@
                         </div>
                     </div>
 
-                    <!-- Confirmed Orders -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <div class="d-flex justify-content-between align-items-center">
@@ -496,9 +488,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column - Users Management -->
                 <div class="col-lg-4">
-                    <!-- Guests -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <div class="d-flex justify-content-between align-items-center">
@@ -569,7 +559,6 @@
                         </div>
                     </div>
 
-                    <!-- Blacklisted Users -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-white border-0">
                             <div class="d-flex justify-content-between align-items-center">
@@ -646,8 +635,6 @@
     }
 </div>
 
-<!-- Modals -->
-<!-- Cancel Order Confirmation Modal -->
 <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -682,7 +669,6 @@
     </div>
 </div>
 
-<!-- MODAL - Powiadomienie o zakończeniu operacji -->
 <div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -780,41 +766,25 @@
     private DateTime lastUpdateTime = DateTime.Now;
 
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await LoadAllData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadAllData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isInitialLoading = false;
-                StateHasChanged();
-            }
+            isInitialLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -828,7 +798,6 @@
         {
             expandedOrderIds.Add(orderId);
             
-            // Jeśli nie ma jeszcze załadowanych rezerwacji dla tego zamówienia, załaduj je
             if (!orderReservations.ContainsKey(orderId) && !loadingOrderReservations.Contains(orderId))
             {
                 await LoadOrderReservations(orderId);
@@ -837,7 +806,6 @@
         StateHasChanged();
     }
 
-    // POPRAWIONA METODA - bez debugów, z poprawną deserializacją
     private async Task LoadOrderReservations(int orderId)
     {
         loadingOrderReservations.Add(orderId);
@@ -846,8 +814,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/reservation/{orderId}");
+            var response = await Http.GetAsync($"api/reservation/{orderId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -887,8 +854,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PutAsync($"api/order/confirm/{orderId}", null);
+            var response = await Http.PutAsync($"api/order/confirm/{orderId}", null);
 
             if (response.IsSuccessStatusCode)
             {
@@ -942,8 +908,7 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PutAsync($"api/order/cancel/{orderIdToCancel}", null);
+            var response = await Http.PutAsync($"api/order/cancel/{orderIdToCancel}", null);
 
             if (response.IsSuccessStatusCode)
             {
@@ -1007,46 +972,6 @@
         };
     }
 
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
-
     private async Task LoadAllData()
     {
         isInitialLoading = true;
@@ -1096,8 +1021,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/pending");
+            var response = await Http.GetAsync("api/order/pending");
             
             if (response.IsSuccessStatusCode)
             {
@@ -1137,8 +1061,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/order/confirmed");
+            var response = await Http.GetAsync("api/order/confirmed");
             
             if (response.IsSuccessStatusCode)
             {
@@ -1178,8 +1101,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/guest/all");
+            var response = await Http.GetAsync("api/guest/all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -1219,8 +1141,7 @@
         
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/blacklist/all");
+            var response = await Http.GetAsync("api/blacklist/all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -1254,7 +1175,6 @@
         }
     }
 
-    // Helper methods
     private string GetCustomerName(OrderViewModel order)
     {
         var firstName = order?.FirstName ?? "";
@@ -1301,7 +1221,6 @@
         NavigationManager.NavigateTo("/login");
     }
 
-    // View Models
     public class OrderViewModel
     {
         public int Id { get; set; }
@@ -1329,7 +1248,6 @@
         public bool? IsEmailConfirmed { get; set; }
     }
 
-    // POPRAWIONY MODEL - zgodny z odpowiedzią API
     public class ReservationResponse
     {
         public int Id { get; set; }
