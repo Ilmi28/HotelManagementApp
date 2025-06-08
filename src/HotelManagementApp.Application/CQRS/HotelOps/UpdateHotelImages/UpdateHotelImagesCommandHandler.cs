@@ -19,6 +19,7 @@ public class UpdateHotelImagesCommandHandler(
         var hotelImages = await imageRepository.GetHotelImagesByHotelId(request.HotelId, cancellationToken);
         foreach (var hotelImage in hotelImages)
             fileService.DeleteFile("images", hotelImage.FileName);
+        await imageRepository.RemoveHotelImagesByHotelId(hotel.Id, cancellationToken);
         foreach (var file in request.HotelImages)
         {
             using var stream = new MemoryStream();

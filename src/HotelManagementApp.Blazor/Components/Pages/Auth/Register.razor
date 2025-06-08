@@ -1,0 +1,497 @@
+﻿@page "/register"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ITokenService TokenService
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.Security.Claims
+@using System.IdentityModel.Tokens.Jwt;
+@using HotelManagementApp.Blazor.Auth
+@using System.Net
+
+<PageTitle>Rejestracja</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title text-center">
+                        <i class="bi bi-person-plus"></i> Rejestracja
+                    </h3>
+
+                    @if (!string.IsNullOrEmpty(message) && !registrationComplete)
+                    {
+                        <div class="@(isSuccess ? "alert alert-success" : "alert alert-danger")" role="alert">
+                            <i class="bi @(isSuccess ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill")"></i>
+                            @message
+                        </div>
+                    }
+
+                    @if (!registrationComplete)
+                    {
+                        <EditForm Model="@registerModel" OnValidSubmit="HandleRegistration">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="form-group mb-3">
+                                <label for="username" class="form-label">Nazwa użytkownika:</label>
+                                <InputText id="username" class="form-control" @bind-Value="registerModel.UserName" placeholder="Wprowadź nazwę użytkownika" />
+                                <ValidationMessage For="@(() => registerModel.UserName)" class="text-danger" />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="email" class="form-label">Email:</label>
+                                <InputText id="email" type="email" class="form-control" @bind-Value="registerModel.Email" placeholder="twoj@email.com" />
+                                <ValidationMessage For="@(() => registerModel.Email)" class="text-danger" />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="password" class="form-label">Hasło:</label>
+                                <InputText type="password" id="password" class="form-control" @bind-Value="registerModel.Password" />
+                                <ValidationMessage For="@(() => registerModel.Password)" class="text-danger" />
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i>
+                                    Hasło musi mieć co najmniej 8 znaków, zawierać dużą literę, małą literę, cyfrę i znak specjalny.
+                                </small>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="confirmPassword" class="form-label">Potwierdź hasło:</label>
+                                <InputText type="password" id="confirmPassword" class="form-control" @bind-Value="registerModel.ConfirmPassword" />
+                                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger" />
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                                    @if (isProcessing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        <span class="ms-2">Rejestrowanie...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-person-plus"></i>
+                                        <span class="ms-2">Zarejestruj</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+
+                        <hr class="my-4">
+                        <div class="text-center">
+                            <p class="text-muted">Masz już konto?</p>
+                            <a href="/login" class="btn btn-outline-secondary">
+                                <i class="bi bi-box-arrow-in-right"></i> Zaloguj się
+                            </a>
+                        </div>
+                    }
+                    else if (registrationComplete && isSuccess)
+                    {
+                        <div class="text-center">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Rejestracja zakończona!</h4>
+                            <p class="mb-4">@successDetails</p>
+                            
+                            @if (!emailSent)
+                            {
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Uwaga:</strong> Nie udało się wysłać emaila potwierdzającego.
+                                    <button class="btn btn-sm btn-outline-warning ms-2" @onclick="ResendConfirmationEmail" disabled="@isResending">
+                                        @if (isResending)
+                                        {
+                                            <span class="spinner-border spinner-border-sm"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-envelope"></i>
+                                        }
+                                        Wyślij ponownie
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Ważne:</strong> Sprawdź swoją skrzynkę odbiorczą i kliknij link potwierdzający, aby w pełni aktywować swoje konto.
+                                </div>
+                            }
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" @onclick="GoToHome">
+                                    <i class="bi bi-house"></i> Przejdź do strony głównej
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="GoToDashboard">
+                                    <i class="bi bi-person-circle"></i> Panel użytkownika
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="RegisterAnother">
+                                    <i class="bi bi-person-plus"></i> Zarejestruj kolejne konto
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    else if (registrationComplete && !isSuccess)
+                    {
+                        <!-- Przypadek gdy rejestracja się nie powiodła -->
+                        <div class="text-center">
+                            <i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Rejestracja nie powiodła się</h4>
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                @message
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" @onclick="ResetForm">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Spróbuj ponownie
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="GoToHome">
+                                    <i class="bi bi-house"></i> Strona główna
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterViewModel registerModel = new RegisterViewModel();
+    private string message = string.Empty;
+    private string successDetails = string.Empty;
+    private bool isSuccess = false;
+    private bool isProcessing = false;
+    private bool registrationComplete = false;
+    private bool emailSent = false;
+    private bool isResending = false;
+    private string? currentUserId;
+    private string? currentToken;
+
+    public class RegisterViewModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nazwa użytkownika jest wymagana")]
+        [System.ComponentModel.DataAnnotations.StringLength(50, MinimumLength = 3, ErrorMessage = "Nazwa użytkownika musi mieć od 3 do 50 znaków.")]
+        public string UserName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email jest wymagany")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Niepoprawny format email")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Hasło jest wymagane")]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Password)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$", ErrorMessage = "Hasło musi spełniać wymagania.")]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Potwierdzenie hasła jest wymagane")]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Password)]
+        [System.ComponentModel.DataAnnotations.Compare("Password", ErrorMessage = "Hasło i potwierdzenie hasła nie pasują.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    public class RegistrationResponseViewModel
+    {
+        public string IdentityToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+    }
+
+    public class ErrorResponse
+    {
+        public string? Type { get; set; }
+        public string? Title { get; set; }
+        public int Status { get; set; }
+        public string? Detail { get; set; }
+        public string? Instance { get; set; }
+    }
+
+    private async Task HandleRegistration()
+    {
+        message = string.Empty;
+        isSuccess = false;
+        isProcessing = true;
+        registrationComplete = false;
+        emailSent = false;
+
+        try
+        {
+            // Używamy bezpośrednio Http dla rejestracji (bez tokenów)
+            var command = new { 
+                registerModel.UserName, 
+                registerModel.Email, 
+                registerModel.Password 
+            };
+
+            Console.WriteLine($"Attempting registration for user: {registerModel.UserName}, email: {registerModel.Email}");
+
+            var response = await Http.PostAsJsonAsync("api/auth/register", command);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var registrationResponseData = await response.Content.ReadFromJsonAsync<RegistrationResponseViewModel>();
+
+                if (registrationResponseData != null && 
+                    !string.IsNullOrEmpty(registrationResponseData.IdentityToken) && 
+                    !string.IsNullOrEmpty(registrationResponseData.RefreshToken))
+                {
+                    // Zapisz tokeny
+                    await TokenService.SetTokensAsync(registrationResponseData.IdentityToken, registrationResponseData.RefreshToken);
+
+                    // Pobierz userId z tokenu
+                    currentUserId = GetUserIdFromJwt(registrationResponseData.IdentityToken);
+                    currentToken = registrationResponseData.IdentityToken;
+
+                    Console.WriteLine($"Registration successful. UserID: {currentUserId}");
+
+                    // Spróbuj wysłać email potwierdzający (w tle)
+                    _ = Task.Run(async () => await SendConfirmationEmail());
+
+                    // Powiadom o zmianie stanu autoryzacji
+                    var customAuthStateProvider = AuthStateProvider as CustomAuthStateProvider;
+                    customAuthStateProvider?.NotifyAuthenticationStateChanged();
+
+                    Console.WriteLine("Registration completed successfully, redirecting to home page");
+
+                    // Przekieruj na stronę główną
+                    NavigationManager.NavigateTo("/", forceLoad: true);
+                    return; // Ważne: wyjdź z metody
+                }
+                else
+                {
+                    isSuccess = false;
+                    registrationComplete = true;
+                    message = "Rejestracja nie powiodła się. Nie otrzymano poprawnych tokenów z serwera.";
+                    Console.WriteLine("Invalid tokens received from registration API");
+                }
+            }
+            else
+            {
+                isSuccess = false;
+                registrationComplete = true;
+                await HandleRegistrationError(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            isSuccess = false;
+            registrationComplete = true;
+            message = "Wystąpił nieoczekiwany błąd podczas rejestracji. Spróbuj ponownie później.";
+            Console.WriteLine($"Registration exception: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<bool> SendConfirmationEmail()
+    {
+        if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentToken))
+        {
+            Console.WriteLine("Cannot send confirmation email: missing userId or token");
+            return false;
+        }
+
+        try
+        {
+            // TUTAJ używamy NOWEGO HttpClient z automatycznymi tokenami
+            // bo użytkownik jest już zalogowany po rejestracji
+            var emailCommand = new { UserId = currentUserId };
+            
+            Console.WriteLine($"Sending confirmation email for userId: {currentUserId}");
+            
+            // Używamy Http z automatycznymi tokenami (tokeny są już zapisane w TokenService)
+            var emailResponse = await Http.PostAsJsonAsync("api/account/send-confirmation-email", emailCommand);
+            
+            Console.WriteLine($"Email send response status: {emailResponse.StatusCode}");
+
+            if (emailResponse.StatusCode == HttpStatusCode.NoContent) // 204 - zgodnie z API
+            {
+                Console.WriteLine("Confirmation email sent successfully");
+                return true;
+            }
+            else if (emailResponse.StatusCode == HttpStatusCode.Forbidden) // 403
+            {
+                var errorContent = await emailResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Forbidden to send confirmation email: {errorContent}");
+                return false;
+            }
+            else
+            {
+                var errorContent = await emailResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed to send confirmation email. Status: {emailResponse.StatusCode}, Content: {errorContent}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception while sending confirmation email: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task ResendConfirmationEmail()
+    {
+        isResending = true;
+        
+        try
+        {
+            emailSent = await SendConfirmationEmail();
+            
+            if (emailSent)
+            {
+                successDetails = $"Email potwierdzający został wysłany ponownie na adres {registerModel.Email}. Sprawdź swoją skrzynkę odbiorczą.";
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine("Failed to resend confirmation email");
+            }
+        }
+        finally
+        {
+            isResending = false;
+        }
+    }
+
+    private void GoToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoToDashboard()
+    {
+        NavigationManager.NavigateTo("/user/dashboard");
+    }
+
+    private void RegisterAnother()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        // Reset wszystkich zmiennych stanu
+        registerModel = new RegisterViewModel();
+        message = string.Empty;
+        successDetails = string.Empty;
+        isSuccess = false;
+        isProcessing = false;
+        registrationComplete = false;
+        emailSent = false;
+        isResending = false;
+        currentUserId = null;
+        currentToken = null;
+        
+        StateHasChanged();
+    }
+
+    private async Task HandleRegistrationError(HttpResponseMessage response)
+    {
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"Registration error ({response.StatusCode}): {errorContent}");
+
+        switch (response.StatusCode)
+        {
+            case HttpStatusCode.BadRequest: // 400
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    message = $"Błąd rejestracji: {errorResponse?.Detail ?? "Nieprawidłowe dane rejestracji"}";
+                }
+                catch
+                {
+                    message = "Błąd rejestracji: Nieprawidłowe dane. Sprawdź wszystkie pola formularza.";
+                }
+                break;
+
+            case HttpStatusCode.Conflict: // 409
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    message = $"Użytkownik o podanym adresie email już istnieje. {errorResponse?.Detail ?? ""}";
+                }
+                catch
+                {
+                    message = "Użytkownik o podanym adresie email już istnieje.";
+                }
+                break;
+
+            default:
+                message = $"Wystąpił błąd serwera podczas rejestracji (kod: {(int)response.StatusCode}). Spróbuj ponownie później.";
+                break;
+        }
+    }
+
+    private string? GetUserIdFromJwt(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            Console.WriteLine("Token is null or empty");
+            return null;
+        }
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        try
+        {
+            if (tokenHandler.CanReadToken(token))
+            {
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+
+                // Sprawdź różne możliwe nazwy claim dla userId
+                var possibleUserIdClaimTypes = new[]
+                {
+                    ClaimTypes.NameIdentifier,
+                    "nameid",
+                    JwtRegisteredClaimNames.Sub,
+                    "sub",
+                    "userId",
+                    "user_id",
+                    "id"
+                };
+
+                foreach (var claimType in possibleUserIdClaimTypes)
+                {
+                    var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == claimType);
+                    if (userIdClaim != null)
+                    {
+                        Console.WriteLine($"Found userId in claim '{claimType}': {userIdClaim.Value}");
+                        return userIdClaim.Value;
+                    }
+                }
+
+                // Debug: wypisz wszystkie dostępne claims
+                Console.WriteLine("Available claims in JWT token:");
+                foreach (var claim in jwtToken.Claims)
+                {
+                    Console.WriteLine($"Type: {claim.Type}, Value: {claim.Value}");
+                }
+
+                Console.WriteLine("No userId claim found in JWT token");
+                return null;
+            }
+            else
+            {
+                Console.WriteLine("Cannot read JWT token");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reading JWT token: {ex.Message}");
+            return null;
+        }
+    }
+}

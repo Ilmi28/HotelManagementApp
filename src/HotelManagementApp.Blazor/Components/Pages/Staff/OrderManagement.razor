@@ -1,0 +1,1042 @@
+@page "/order-management"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Globalization
+@using System.Net
+
+<PageTitle>Zarządzanie zamówieniami - Hotel Management System</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="display-6 fw-bold text-primary mb-2">
+                                <i class="bi bi-clipboard-list"></i> Zarządzanie zamówieniami
+                            </h1>
+                            <p class="text-muted mb-0">
+                                Przeglądaj i zarządzaj zamówieniami gości w systemie hotelowym
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="small text-muted">
+                                Ostatnia aktualizacja: @lastUpdateTime.ToString("HH:mm:ss")
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm mt-2" @onclick="RefreshAllOrders" disabled="@isRefreshing">
+                                @if (isRefreshing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Odświeżanie...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                    <span>Odśwież dane</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (hasRenderError)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@renderErrorMessage</p>
+            <button class="btn btn-primary" @onclick="ClearErrorAndRefresh">
+                Odśwież stronę
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (isInitialLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie danych zamówień...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    @if (errorMessage.Contains("Unauthorized") || errorMessage.Contains("autoryzacji") || errorMessage.Contains("403"))
+                    {
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" @onclick="GoToLogin">
+                                Przejdź do logowania
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-secondary" @onclick="RefreshAllOrders">
+                                Spróbuj ponownie
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-warning text-dark border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Oczekujące</h6>
+                                    <h3 class="mb-0">@(pendingOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-warning-emphasis">
+                                    <i class="bi bi-clock-history display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-success text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Potwierdzone</h6>
+                                    <h3 class="mb-0">@(confirmedOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-success-emphasis">
+                                    <i class="bi bi-check-circle display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-info text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Zakończone</h6>
+                                    <h3 class="mb-0">@(completedOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-info-emphasis">
+                                    <i class="bi bi-check-double display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-danger text-white border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Anulowane</h6>
+                                    <h3 class="mb-0">@(cancelledOrders?.Count ?? 0)</h3>
+                                </div>
+                                <div class="text-danger-emphasis">
+                                    <i class="bi bi-x-circle display-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "pending" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("pending")' 
+                                    type="button">
+                                <i class="bi bi-clock-history me-2 text-warning"></i>
+                                Oczekujące
+                                @if (pendingOrders?.Any() == true)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">@pendingOrders.Count</span>
+                                }
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "confirmed" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("confirmed")' 
+                                    type="button">
+                                <i class="bi bi-check-circle me-2 text-success"></i>
+                                Potwierdzone
+                                @if (confirmedOrders?.Any() == true)
+                                {
+                                    <span class="badge bg-success ms-2">@confirmedOrders.Count</span>
+                                }
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "completed" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("completed")' 
+                                    type="button">
+                                <i class="bi bi-check-double me-2 text-info"></i>
+                                Zakończone
+                                @if (completedOrders?.Any() == true)
+                                {
+                                    <span class="badge bg-info ms-2">@completedOrders.Count</span>
+                                }
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "cancelled" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("cancelled")' 
+                                    type="button">
+                                <i class="bi bi-x-circle me-2 text-danger"></i>
+                                Anulowane
+                                @if (cancelledOrders?.Any() == true)
+                                {
+                                    <span class="badge bg-danger ms-2">@cancelledOrders.Count</span>
+                                }
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tab-content">
+                @if (activeTab == "pending")
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history text-warning"></i> Oczekujące zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadPendingOrders" disabled="@loadingPendingOrders">
+                                    @if (loadingPendingOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingPendingOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie oczekujących zamówień...</p>
+                                </div>
+                            }
+                            else if (pendingOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data utworzenia</th>
+                                                <th>Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in pendingOrders)
+                                            {
+                                                <tr>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Customer?.Email ?? "Brak")</td>
+                                                    <td class="text-primary fw-bold">@GetFormattedPrice(order.TotalAmount)</td>
+                                                    <td>@GetFormattedDateTime(order.CreatedDate)</td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-success btn-sm" 
+                                                                    @onclick="() => ConfirmOrder(order.Id)" 
+                                                                    disabled="@(processingOrderId == order.Id)">
+                                                                @if (processingOrderId == order.Id)
+                                                                {
+                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <i class="bi bi-check-circle"></i>
+                                                                }
+                                                                Potwierdź
+                                                            </button>
+                                                            <button class="btn btn-danger btn-sm" 
+                                                                    @onclick="() => ConfirmCancelOrder(order.Id)" 
+                                                                    disabled="@(processingOrderId == order.Id)">
+                                                                @if (processingOrderId == order.Id)
+                                                                {
+                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <i class="bi bi-x-circle"></i>
+                                                                }
+                                                                Anuluj
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-check-circle-fill text-success display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak oczekujących zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (activeTab == "confirmed")
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-check-circle text-success"></i> Potwierdzone zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadConfirmedOrders" disabled="@loadingConfirmedOrders">
+                                    @if (loadingConfirmedOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingConfirmedOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie potwierdzonych zamówień...</p>
+                                </div>
+                            }
+                            else if (confirmedOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data potwierdzenia</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in confirmedOrders)
+                                            {
+                                                <tr>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Customer?.Email ?? "Brak")</td>
+                                                    <td class="text-success fw-bold">@GetFormattedPrice(order.TotalAmount)</td>
+                                                    <td>@GetFormattedDateTime(order.ConfirmedDate)</td>
+                                                    <td>
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle"></i> Potwierdzone
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-inbox text-muted display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak potwierdzonych zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (activeTab == "completed")
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-check-double text-info"></i> Zakończone zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCompletedOrders" disabled="@loadingCompletedOrders">
+                                    @if (loadingCompletedOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingCompletedOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie zakończonych zamówień...</p>
+                                </div>
+                            }
+                            else if (completedOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data zakończenia</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in completedOrders)
+                                            {
+                                                <tr>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Customer?.Email ?? "Brak")</td>
+                                                    <td class="text-info fw-bold">@GetFormattedPrice(order.TotalAmount)</td>
+                                                    <td>@GetFormattedDateTime(order.CompletedDate)</td>
+                                                    <td>
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-check-double"></i> Zakończone
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-inbox text-muted display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak zakończonych zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (activeTab == "cancelled")
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-x-circle text-danger"></i> Anulowane zamówienia
+                                </h5>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCancelledOrders" disabled="@loadingCancelledOrders">
+                                    @if (loadingCancelledOrders)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (loadingCancelledOrders)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <p class="mt-2 mb-0 text-muted small">Ładowanie anulowanych zamówień...</p>
+                                </div>
+                            }
+                            else if (cancelledOrders?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Klient</th>
+                                                <th>Email</th>
+                                                <th>Kwota</th>
+                                                <th>Data anulowania</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var order in cancelledOrders)
+                                            {
+                                                <tr>
+                                                    <td><strong>#@order.Id</strong></td>
+                                                    <td>@GetCustomerName(order)</td>
+                                                    <td>@(order.Customer?.Email ?? "Brak")</td>
+                                                    <td class="text-muted">@GetFormattedPrice(order.TotalAmount)</td>
+                                                    <td>@GetFormattedDateTime(order.CancelledDate)</td>
+                                                    <td>
+                                                        <span class="badge bg-danger">
+                                                            <i class="bi bi-x-circle"></i> Anulowane
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-shield-check text-success display-4"></i>
+                                    <p class="mt-3 mb-0 text-muted">Brak anulowanych zamówień</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning"></i> Potwierdź anulowanie
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Czy na pewno chcesz anulować zamówienie <strong>#@orderIdToCancel</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> Ta operacja jest nieodwracalna. Klient zostanie powiadomiony o anulowaniu.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-danger" @onclick="CancelOrder" disabled="@(processingOrderId == orderIdToCancel)">
+                    @if (processingOrderId == orderIdToCancel)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Anulowanie...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-x-circle"></i>
+                        <span>Potwierdź anulowanie</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    @if (operationSuccess)
+                    {
+                        <i class="bi bi-check-circle text-success"></i>
+                        <span>Operacja zakończona pomyślnie</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-exclamation-triangle text-danger"></i>
+                        <span>Błąd operacji</span>
+                    }
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="@(operationSuccess ? "alert alert-success" : "alert alert-danger")">
+                    <p class="mb-0">@operationMessage</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    
+    .nav-link {
+        transition: all 0.3s ease;
+    }
+    
+    .nav-link:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+</style>
+
+@code {
+    private List<OrderViewModel>? pendingOrders;
+    private List<OrderViewModel>? confirmedOrders;
+    private List<OrderViewModel>? completedOrders;
+    private List<OrderViewModel>? cancelledOrders;
+
+    private string activeTab = "pending";
+    private bool isInitialLoading = true;
+    private bool isRefreshing = false;
+    private bool loadingPendingOrders = false;
+    private bool loadingConfirmedOrders = false;
+    private bool loadingCompletedOrders = false;
+    private bool loadingCancelledOrders = false;
+    private string errorMessage = "";
+    private DateTime lastUpdateTime = DateTime.Now;
+
+    private int? processingOrderId = null;
+    private int orderIdToCancel = 0;
+    private bool operationSuccess = false;
+    private string operationMessage = "";
+
+    private bool hasRenderError = false;
+    private string renderErrorMessage = "";
+
+    private readonly CultureInfo polishCulture = new("pl-PL");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await LoadAllOrders();
+        }
+        catch (Exception ex)
+        {
+            SetRenderError($"Błąd inicjalizacji: {ex.Message}");
+        }
+    }
+
+    private void SetRenderError(string message)
+    {
+        hasRenderError = true;
+        renderErrorMessage = message;
+    }
+
+    private async Task ClearErrorAndRefresh()
+    {
+        hasRenderError = false;
+        renderErrorMessage = "";
+        errorMessage = "";
+        await SafeExecute(LoadAllOrders);
+    }
+
+    private async Task SafeExecute(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAllOrders()
+    {
+        isInitialLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            await Task.WhenAll(
+                LoadPendingOrders(),
+                LoadConfirmedOrders(),
+                LoadCompletedOrders(),
+                LoadCancelledOrders()
+            );
+            
+            lastUpdateTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania danych: {ex.Message}";
+        }
+        finally
+        {
+            isInitialLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshAllOrders()
+    {
+        isRefreshing = true;
+        errorMessage = "";
+
+        await SafeExecute(async () =>
+        {
+            await LoadAllOrders();
+            isRefreshing = false;
+        });
+    }
+
+    private async Task LoadPendingOrders()
+    {
+        loadingPendingOrders = true;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/order/pending");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                pendingOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania oczekujących zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu oczekujących zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania oczekujących zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingPendingOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadConfirmedOrders()
+    {
+        loadingConfirmedOrders = true;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/order/confirmed");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                confirmedOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania potwierdzonych zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu potwierdzonych zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania potwierdzonych zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingConfirmedOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCompletedOrders()
+    {
+        loadingCompletedOrders = true;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/order/completed");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                completedOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania zakończonych zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu zakończonych zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania zakończonych zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingCompletedOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCancelledOrders()
+    {
+        loadingCancelledOrders = true;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/order/cancelled");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                cancelledOrders = await response.Content.ReadFromJsonAsync<List<OrderViewModel>>() ?? new List<OrderViewModel>();
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
+            }
+            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania zamówień.";
+            }
+            else
+            {
+                errorMessage = $"Błąd ładowania anulowanych zamówień: {response.StatusCode}";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Błąd połączenia z serwerem przy ładowaniu anulowanych zamówień.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd podczas ładowania anulowanych zamówień: {ex.Message}";
+        }
+        finally
+        {
+            loadingCancelledOrders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmOrder(int orderId)
+    {
+        await SafeExecute(async () =>
+        {
+            processingOrderId = orderId;
+            StateHasChanged();
+
+            try
+            {
+                var response = await Http.PatchAsync($"api/order/confirm/{orderId}", null);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    operationSuccess = true;
+                    operationMessage = $"Zamówienie #{orderId} zostało pomyślnie potwierdzone.";
+                    
+                    await Task.WhenAll(LoadPendingOrders(), LoadConfirmedOrders());
+                }
+                else if (response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    operationSuccess = false;
+                    operationMessage = "Nie masz uprawnień do potwierdzania zamówień.";
+                }
+                else if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    operationSuccess = false;
+                    operationMessage = $"Zamówienie #{orderId} nie zostało znalezione.";
+                }
+                else
+                {
+                    operationSuccess = false;
+                    operationMessage = $"Błąd podczas potwierdzania zamówienia: {response.StatusCode}";
+                }
+            }
+            finally
+            {
+                processingOrderId = null;
+                await ShowOperationResultModal();
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task ConfirmCancelOrder(int orderId)
+    {
+        orderIdToCancel = orderId;
+        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('cancelOrderModal')).show()");
+    }
+
+    private async Task CancelOrder()
+    {
+        if (orderIdToCancel == 0) return;
+
+        await SafeExecute(async () =>
+        {
+            processingOrderId = orderIdToCancel;
+            StateHasChanged();
+
+            try
+            {
+                var response = await Http.PatchAsync($"api/order/cancel/{orderIdToCancel}", null);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    operationSuccess = true;
+                    operationMessage = $"Zamówienie #{orderIdToCancel} zostało pomyślnie anulowane.";
+                    
+                    await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide()");
+                    await Task.WhenAll(LoadPendingOrders(), LoadCancelledOrders());
+                }
+                else if (response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    operationSuccess = false;
+                    operationMessage = "Nie masz uprawnień do anulowania zamówień.";
+                }
+                else if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    operationSuccess = false;
+                    operationMessage = $"Zamówienie #{orderIdToCancel} nie zostało znalezione.";
+                }
+                else
+                {
+                    operationSuccess = false;
+                    operationMessage = $"Błąd podczas anulowania zamówienia: {response.StatusCode}";
+                }
+            }
+            finally
+            {
+                processingOrderId = null;
+                orderIdToCancel = 0;
+                await ShowOperationResultModal();
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task ShowOperationResultModal()
+    {
+        await Task.Delay(500);
+        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('operationResultModal')).show()");
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private string GetCustomerName(OrderViewModel order)
+    {
+        var firstName = order?.Customer?.Name ?? "";
+        return string.IsNullOrEmpty(firstName) ? "Nieznany klient" : firstName;
+    }
+
+    private string GetFormattedPrice(decimal? price)
+    {
+        return price?.ToString("C", polishCulture) ?? "0,00 zł";
+    }
+
+    private string GetFormattedDateTime(DateTime? date)
+    {
+        return date?.ToString("dd.MM.yyyy HH:mm", polishCulture) ?? "Brak daty";
+    }
+
+    public class OrderViewModel
+    {
+        public int Id { get; set; }
+        public string? Description { get; set; }
+        public decimal? TotalAmount { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? ConfirmedDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public DateTime? CancelledDate { get; set; }
+        public string? CancellationReason { get; set; }
+        public CustomerViewModel? Customer { get; set; }
+    }
+
+    public class CustomerViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Email { get; set; }
+        public string? PhoneNumber { get; set; }
+    }
+}

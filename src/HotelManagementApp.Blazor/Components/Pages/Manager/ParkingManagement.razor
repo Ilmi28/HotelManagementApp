@@ -1,0 +1,823 @@
+@page "/parking-management"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@using System.Globalization
+
+<PageTitle>@pageTitle</PageTitle>
+
+<div class="container mt-4">
+    @try
+    {
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3 text-muted">Wczytywanie informacji o parkingach...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <div>
+                    @errorMessage
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" @onclick="GoToHotels">
+                            Powrót do hoteli
+                        </button>
+                        <button class="btn btn-sm btn-secondary ms-2" @onclick="LoadData">
+                            Spróbuj ponownie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/hotels" class="text-decoration-none">
+                            <i class="bi bi-house-door"></i> Hotele
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Zarządzanie parkingami
+                    </li>
+                </ol>
+            </nav>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h1 class="display-6 fw-bold text-primary mb-2">
+                                        <i class="bi bi-car-front"></i> Zarządzanie parkingami
+                                    </h1>
+                                    <p class="text-muted mb-0">
+                                        Konfiguracja miejsc parkingowych dla wszystkich hoteli
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <button class="btn btn-success" @onclick="ShowAddForm">
+                                        <i class="bi bi-plus-circle"></i> Dodaj parking
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="hotelFilter" class="form-label">
+                                        <i class="bi bi-building"></i> Filtruj po hotelu
+                                    </label>
+                                    <select id="hotelFilter" class="form-select" @bind="selectedHotelFilter" @bind:after="ApplyFilters">
+                                        <option value="0">-- Wszystkie hotele --</option>
+                                        @if (hotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                            {
+                                                <option value="@hotel.Id">@hotel.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="searchText" class="form-label">
+                                        <i class="bi bi-search"></i> Wyszukaj w opisie
+                                    </label>
+                                    <input type="text" id="searchText" class="form-control" placeholder="Wpisz tekst do wyszukania..." 
+                                           @bind="searchText" @onkeyup="ApplyFilters" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="priceFilter" class="form-label">
+                                        <i class="bi bi-currency-exchange"></i> Sortuj po cenie
+                                    </label>
+                                    <select id="priceFilter" class="form-select" @bind="priceSortOrder" @bind:after="ApplyFilters">
+                                        <option value="none">-- Bez sortowania --</option>
+                                        <option value="asc">Cena rosnąco</option>
+                                        <option value="desc">Cena malejąco</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            @if (HasActiveFilters())
+                            {
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearFilters">
+                                        <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                    </button>
+                                    <span class="ms-2 text-muted">
+                                        Pokazano @filteredParkings.Count z @(allParkings?.Count ?? 0) parkingów
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (showForm)
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="bi @(isEditMode ? "bi-pencil" : "bi-plus-circle") text-primary"></i>
+                                        @(isEditMode ? "Edytuj parking" : "Dodaj nowy parking")
+                                    </h5>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelForm">
+                                        <i class="bi bi-x"></i> Anuluj
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <EditForm Model="@parkingModel" OnValidSubmit="@SaveParking">
+                                    <DataAnnotationsValidator />
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="hotelSelect" class="form-label">
+                                                <i class="bi bi-building"></i> Hotel
+                                            </label>
+                                            <InputSelect id="hotelSelect" class="form-select" @bind-Value="parkingModel.HotelId" disabled="@isEditMode">
+                                                <option value="0">-- Wybierz hotel --</option>
+                                                @if (hotels?.Any() == true)
+                                                {
+                                                    @foreach (var hotel in hotels.OrderBy(h => h.Name))
+                                                    {
+                                                        <option value="@hotel.Id">@hotel.Name</option>
+                                                    }
+                                                }
+                                            </InputSelect>
+                                            <ValidationMessage For="@(() => parkingModel.HotelId)" class="text-danger" />
+                                            @if (isEditMode)
+                                            {
+                                                <div class="form-text">Nie można zmienić hotelu podczas edycji</div>
+                                            }
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="carSpaces" class="form-label">
+                                                <i class="bi bi-car-front-fill"></i> Liczba miejsc parkingowych
+                                            </label>
+                                            <InputNumber id="carSpaces" class="form-control" @bind-Value="parkingModel.CarSpaces" 
+                                                        min="1" max="1000" />
+                                            <ValidationMessage For="@(() => parkingModel.CarSpaces)" class="text-danger" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="price" class="form-label">
+                                                <i class="bi bi-currency-exchange"></i> Cena za dobę (w złotych)
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">zł</span>
+                                                <InputNumber id="price" class="form-control" @bind-Value="parkingModel.Price" 
+                                                            min="0" />
+                                            </div>
+                                            <ValidationMessage For="@(() => parkingModel.Price)" class="text-danger" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Podgląd ceny</label>
+                                            <div class="form-control-plaintext h5 text-success">
+                                                @parkingModel.Price zł
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">
+                                            <i class="bi bi-card-text"></i> Opis parkingu
+                                        </label>
+                                        <InputTextArea id="description" class="form-control" @bind-Value="parkingModel.Description" 
+                                                      rows="3" placeholder="Np. Parking podziemny, Parking przy recepcji, Parking strzeżony..." />
+                                        <ValidationMessage For="@(() => parkingModel.Description)" class="text-danger" />
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-success" disabled="@isSubmitting">
+                                            @if (isSubmitting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>@(isEditMode ? "Aktualizuję..." : "Dodaję...")</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi @(isEditMode ? "bi-check" : "bi-plus")"></i>
+                                                <span>@(isEditMode ? "Zapisz zmiany" : "Dodaj parking")</span>
+                                            }
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelForm">
+                                            <i class="bi bi-x"></i> Anuluj
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list text-primary"></i> Lista parkingów
+                                @if (filteredParkings?.Any() == true)
+                                {
+                                    <span class="badge bg-primary ms-2">@filteredParkings.Count</span>
+                                    @if (HasActiveFilters() && allParkings?.Count != filteredParkings.Count)
+                                    {
+                                        <span class="badge bg-secondary ms-1">z @allParkings.Count</span>
+                                    }
+                                }
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (filteredParkings?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col">ID</th>
+                                                <th scope="col">Hotel</th>
+                                                <th scope="col">Opis</th>
+                                                <th scope="col">Miejsca</th>
+                                                <th scope="col">Cena za dobę</th>
+                                                <th scope="col" class="text-end">Akcje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var parking in filteredParkings)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>#@parking.Id</strong>
+                                                    </td>
+                                                    <td>
+                                                        @if (loadingHotelNames.Contains(parking.HotelId))
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                            <span>Ładowanie...</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">@GetHotelName(parking.HotelId)</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (string.IsNullOrEmpty(parking.Description))
+                                                        {
+                                                            <em class="text-muted">Brak opisu</em>
+                                                        }
+                                                        else
+                                                        {
+                                                            @if (!string.IsNullOrEmpty(searchText) && parking.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                                                            {
+                                                                @((MarkupString)HighlightSearchText(parking.Description, searchText))
+                                                            }
+                                                            else
+                                                            {
+                                                                @parking.Description
+                                                            }
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">@parking.CarSpaces</span>
+                                                    </td>
+                                                    <td>
+                                                        <strong class="text-success">@parking.Price zł</strong>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-outline-primary btn-sm" 
+                                                                    @onclick="() => EditParking(parking)"
+                                                                    title="Edytuj parking">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-danger btn-sm" 
+                                                                    @onclick="() => DeleteParking(parking.Id)"
+                                                                    title="Usuń parking">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else if (loadingParkings)
+                            {
+                                <div class="text-center py-5">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Ładowanie parkingów...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Wczytywanie listy parkingów...</p>
+                                </div>
+                            }
+                            else if (HasActiveFilters())
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-search display-1 text-muted"></i>
+                                    <h4 class="mt-3">Brak wyników</h4>
+                                    <p class="text-muted">Nie znaleziono parkingów pasujących do kryteriów wyszukiwania.</p>
+                                    <button class="btn btn-outline-primary" @onclick="ClearFilters">
+                                        <i class="bi bi-x-circle"></i> Wyczyść filtry
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-car-front display-1 text-muted"></i>
+                                    <h4 class="mt-3">Brak parkingów</h4>
+                                    <p class="text-muted">Nie dodano jeszcze żadnych parkingów.</p>
+                                    <button class="btn btn-primary" @onclick="ShowAddForm">
+                                        <i class="bi bi-plus-circle"></i> Dodaj pierwszy parking
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    catch (Exception ex)
+    {
+        <div class="alert alert-danger">
+            <h5>Błąd renderowania strony</h5>
+            <p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="GoToHotels">
+                Powrót do hoteli
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<HotelParkingResponse>? allParkings;
+    private List<HotelParkingResponse> filteredParkings = new();
+    private List<HotelResponse>? hotels;
+    private ParkingModel parkingModel = new();
+    
+    private int selectedHotelFilter = 0;
+    private string searchText = "";
+    private string priceSortOrder = "none";
+    
+    private Dictionary<int, string> hotelNamesCache = new();
+    private HashSet<int> loadingHotelNames = new();
+    
+    private bool isLoading = true;
+    private bool loadingParkings = false;
+    private bool loadingHotels = false;
+    private bool showForm = false;
+    private bool isEditMode = false;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+    private string pageTitle = "Zarządzanie parkingami - Hotel Management System";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            allParkings = new List<HotelParkingResponse>();
+            filteredParkings = new List<HotelParkingResponse>();
+            hotels = new List<HotelResponse>();
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        
+        await LoadHotelData();
+        await LoadParkingData();
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadParkingData()
+    {
+        loadingParkings = true;
+        try
+        {
+            var allParkingsList = new List<HotelParkingResponse>();
+            
+            if (hotels?.Any() == true)
+            {
+                foreach (var hotel in hotels)
+                {
+                    try
+                    {
+                        var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{hotel.Id}");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var hotelParkings = await response.Content.ReadFromJsonAsync<List<HotelParkingResponse>>() ?? new List<HotelParkingResponse>();
+                            allParkingsList.AddRange(hotelParkings);
+                        }
+                        else if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                        {
+                            Console.WriteLine($"Błąd ładowania parkingów dla hotelu {hotel.Id}: {response.StatusCode}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Błąd podczas ładowania parkingów dla hotelu {hotel.Id}: {ex.Message}");
+                    }
+                }
+            }
+            
+            allParkings = allParkingsList;
+            Console.WriteLine($"Loaded {allParkings.Count} parking facilities from all hotels");
+            
+            ApplyFilters();
+            await LoadHotelNamesForParkings();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Wystąpił nieoczekiwany błąd: {ex.Message}";
+        }
+        finally
+        {
+            loadingParkings = false;
+        }
+    }
+
+    private async Task LoadHotelData()
+    {
+        loadingHotels = true;
+        try
+        {
+            var response = await Http.GetAsync("api/hotel/get-all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                hotels = await response.Content.ReadFromJsonAsync<List<HotelResponse>>() ?? new List<HotelResponse>();
+                Console.WriteLine($"Loaded {hotels.Count} hotels");
+                
+                foreach (var hotel in hotels)
+                {
+                    hotelNamesCache[hotel.Id] = hotel.Name;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Console.WriteLine("Brak autoryzacji do ładowania hoteli");
+                NavigationManager.NavigateTo("/login");
+            }
+            else
+            {
+                Console.WriteLine($"Błąd ładowania hoteli: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania hoteli: {ex.Message}");
+        }
+        finally
+        {
+            loadingHotels = false;
+        }
+    }
+
+    private async Task LoadHotelNamesForParkings()
+    {
+        if (allParkings?.Any() != true) return;
+
+        var uniqueHotelIds = allParkings.Select(p => p.HotelId).Distinct().ToList();
+        var tasks = uniqueHotelIds.Select(hotelId => LoadHotelName(hotelId)).ToArray();
+        
+        try
+        {
+            await Task.WhenAll(tasks);
+            Console.WriteLine($"Załadowano nazwy dla {uniqueHotelIds.Count} hoteli");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania nazw hoteli: {ex.Message}");
+        }
+    }
+
+    private async Task<string> LoadHotelName(int hotelId)
+    {
+        if (hotelNamesCache.ContainsKey(hotelId))
+        {
+            return hotelNamesCache[hotelId];
+        }
+
+        if (loadingHotelNames.Contains(hotelId))
+        {
+            return "Ładowanie...";
+        }
+
+        loadingHotelNames.Add(hotelId);
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.GetAsync($"api/hotel/{hotelId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var hotelDetails = await response.Content.ReadFromJsonAsync<HotelResponse>();
+                if (hotelDetails != null && !string.IsNullOrEmpty(hotelDetails.Name))
+                {
+                    hotelNamesCache[hotelId] = hotelDetails.Name;
+                    Console.WriteLine($"Załadowano nazwę hotelu {hotelId}: {hotelDetails.Name}");
+                    return hotelDetails.Name;
+                }
+                else
+                {
+                    hotelNamesCache[hotelId] = $"Hotel #{hotelId}";
+                    return $"Hotel #{hotelId}";
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Błąd pobierania szczegółów hotelu {hotelId}: {response.StatusCode}");
+                hotelNamesCache[hotelId] = $"Hotel #{hotelId}";
+                return $"Hotel #{hotelId}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania nazwy hotelu {hotelId}: {ex.Message}");
+            hotelNamesCache[hotelId] = $"Hotel #{hotelId}";
+            return $"Hotel #{hotelId}";
+        }
+        finally
+        {
+            loadingHotelNames.Remove(hotelId);
+            StateHasChanged();
+        }
+    }
+
+    private string GetHotelName(int hotelId)
+    {
+        if (hotelNamesCache.ContainsKey(hotelId))
+        {
+            return hotelNamesCache[hotelId];
+        }
+
+        _ = Task.Run(async () => await LoadHotelName(hotelId));
+        
+        return $"Hotel #{hotelId}";
+    }
+
+    private void ApplyFilters()
+    {
+        if (allParkings == null)
+        {
+            filteredParkings = new List<HotelParkingResponse>();
+            return;
+        }
+
+        var filtered = allParkings.AsEnumerable();
+
+        if (selectedHotelFilter > 0)
+        {
+            filtered = filtered.Where(p => p.HotelId == selectedHotelFilter);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filtered = filtered.Where(p => 
+                (!string.IsNullOrEmpty(p.Description) && p.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                GetHotelName(p.HotelId).Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        filtered = priceSortOrder switch
+        {
+            "asc" => filtered.OrderBy(p => p.Price),
+            "desc" => filtered.OrderByDescending(p => p.Price),
+            _ => filtered.OrderBy(p => p.Id)
+        };
+
+        filteredParkings = filtered.ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedHotelFilter = 0;
+        searchText = "";
+        priceSortOrder = "none";
+        ApplyFilters();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return selectedHotelFilter > 0 || !string.IsNullOrWhiteSpace(searchText) || priceSortOrder != "none";
+    }
+
+    private string HighlightSearchText(string text, string searchTerm)
+    {
+        if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchTerm))
+            return text;
+
+        var index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
+        if (index < 0) return text;
+
+        var before = text.Substring(0, index);
+        var match = text.Substring(index, searchTerm.Length);
+        var after = text.Substring(index + searchTerm.Length);
+
+        return $"{before}<mark class=\"bg-warning\">{match}</mark>{after}";
+    }
+
+    private void ShowAddForm()
+    {
+        parkingModel = new ParkingModel();
+        isEditMode = false;
+        showForm = true;
+    }
+
+    private void EditParking(HotelParkingResponse parking)
+    {
+        parkingModel = new ParkingModel
+        {
+            Id = parking.Id,
+            HotelId = parking.HotelId,
+            CarSpaces = parking.CarSpaces,
+            Description = parking.Description,
+            Price = parking.Price
+        };
+        isEditMode = true;
+        showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        isEditMode = false;
+        parkingModel = new ParkingModel();
+    }
+
+    private async Task SaveParking()
+    {
+        isSubmitting = true;
+        try
+        {
+            HttpResponseMessage response;
+
+            if (isEditMode)
+            {
+                response = await Http.PutAsJsonAsync("api/hotel-parkings", parkingModel);
+            }
+            else
+            {
+                response = await Http.PostAsJsonAsync("api/hotel-parkings", parkingModel);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Parking został {(isEditMode ? "zaktualizowany" : "dodany")} pomyślnie!");
+                CancelForm();
+                await LoadParkingData();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Nie masz uprawnień do {(isEditMode ? "edycji" : "dodawania")} parkingów.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", isEditMode ? "Parking nie został znaleziony." : "Hotel nie został znaleziony.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd {(isEditMode ? "aktualizacji" : "dodawania")} parkingu: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in SaveParking: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas {(isEditMode ? "aktualizacji" : "dodawania")} parkingu: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteParking(int parkingId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz usunąć ten parking? Ta operacja jest nieodwracalna.");
+        if (!confirmed) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/hotel-parkings/{parkingId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Parking został usunięty pomyślnie!");
+                await LoadParkingData();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do usuwania parkingów.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Parking nie został znaleziony.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania parkingu: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in DeleteParking: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania parkingu: {ex.Message}");
+        }
+    }
+
+    private void GoToHotels()
+    {
+        NavigationManager.NavigateTo("/hotels");
+    }
+
+    public class HotelParkingResponse
+    {
+        public int Id { get; set; }
+        public int HotelId { get; set; }
+        public int CarSpaces { get; set; }
+        public string Description { get; set; } = "";
+        public int Price { get; set; }
+    }
+
+    public class HotelResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Street { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Rating { get; set; }
+        public List<string>? HotelImages { get; set; }
+    }
+
+    public class ParkingModel
+    {
+        public int Id { get; set; }
+        
+        [Required(ErrorMessage = "Hotel jest wymagany")]
+        [Range(1, int.MaxValue, ErrorMessage = "Wybierz hotel")]
+        public int HotelId { get; set; }
+        
+        [Required(ErrorMessage = "Liczba miejsc parkingowych jest wymagana")]
+        [Range(1, 1000, ErrorMessage = "Liczba miejsc musi być między 1 a 1000")]
+        public int CarSpaces { get; set; }
+        
+        [Required(ErrorMessage = "Opis parkingu jest wymagany")]
+        [StringLength(500, ErrorMessage = "Opis nie może być dłuższy niż 500 znaków")]
+        public string Description { get; set; } = "";
+        
+        [Required(ErrorMessage = "Cena jest wymagana")]
+        [Range(1, 999999, ErrorMessage = "Cena musi być między 1 a 999 999 zł")]
+        public int Price { get; set; }
+    }
+}

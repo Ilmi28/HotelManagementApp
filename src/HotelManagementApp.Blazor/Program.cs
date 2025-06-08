@@ -28,7 +28,17 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<CustomAuthStateProvider>());
 builder.Services.AddScoped<AuthTokenHandler>();
 
-// ✅ POPRAWNA konfiguracja HttpClient z AuthTokenHandler
+// Rejestracja usługi do komunikacji między komponentami
+builder.Services.AddSingleton<IEventBusService, EventBusService>();
+
+// ✅ HttpClient dla refresh tokenów (BEZ AuthTokenHandler, żeby uniknąć nieskończonej pętli)
+builder.Services.AddHttpClient("RefreshClient", client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// ✅ POPRAWNA konfiguracja HttpClient z AuthTokenHandler dla normalnych żądań
 builder.Services.AddHttpClient("HotelApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

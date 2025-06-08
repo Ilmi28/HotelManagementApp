@@ -1,0 +1,884 @@
+@page "/hotel-management"
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager,Admin")]
+
+<PageTitle>Zarządzanie hotelami</PageTitle>
+
+<div class="container-fluid my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h2">
+                        <i class="bi bi-building"></i> Zarządzanie hotelami
+                    </h1>
+                </div>
+                <button class="btn btn-primary" @onclick="ShowAddHotelModal">
+                    <i class="bi bi-plus"></i> Dodaj nowy hotel
+                </button>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-lg text-primary" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Ładowanie hoteli...</p>
+                </div>
+            }
+            else
+            {
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="searchInput" class="form-label">Wyszukaj hotel:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchInput" 
+                                           @bind="searchTerm" @oninput="OnSearchChanged"
+                                           placeholder="Nazwa hotelu lub miasto...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter" class="form-label">Status:</label>
+                                <select class="form-select" id="statusFilter" @bind="selectedStatusFilter" @bind:after="ApplyFilters">
+                                    <option value="">Wszystkie</option>
+                                    <option value="active">Aktywne</option>
+                                    <option value="inactive">Nieaktywne</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="countryFilter" class="form-label">Kraj:</label>
+                                <select class="form-select" id="countryFilter" @bind="selectedCountryFilter" @bind:after="ApplyFilters">
+                                    <option value="">Wszystkie kraje</option>
+                                    @if (countries?.Any() == true)
+                                    {
+                                        @foreach (var country in countries)
+                                        {
+                                            <option value="@country">@country</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                                    <i class="bi bi-x-circle"></i> Wyczyść
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredHotels?.Count ?? 0)</h5>
+                                <p class="card-text">Łącznie hoteli</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredHotels?.Count(h => h.IsActive) ?? 0)</h5>
+                                <p class="card-text">Aktywne</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-secondary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(filteredHotels?.Count(h => !h.IsActive) ?? 0)</h5>
+                                <p class="card-text">Nieaktywne</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center bg-info text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">@(countries?.Count ?? 0)</h5>
+                                <p class="card-text">Krajów</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list"></i> Lista hoteli
+                            @if (filteredHotels?.Any() == true)
+                            {
+                                <span class="badge bg-primary ms-2">@filteredHotels.Count</span>
+                            }
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (filteredHotels?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Zdjęcie</th>
+                                            <th>Nazwa</th>
+                                            <th>Kraj/Miasto</th>
+                                            <th>Adres</th>
+                                            <th>Kontakt</th>
+                                            <th>Status</th>
+                                            <th>Ocena</th>
+                                            <th>Pokoje</th>
+                                            <th>Akcje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var hotel in filteredHotels)
+                                        {
+                                            <tr>
+                                                <td><strong>#@hotel.Id</strong></td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(hotel.ImageUrl))
+                                                    {
+                                                        <img src="@hotel.ImageUrl" class="rounded" 
+                                                             style="width: 60px; height: 40px; object-fit: cover;" 
+                                                             alt="Hotel" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center text-white" 
+                                                             style="width: 60px; height: 40px;">
+                                                            <i class="bi bi-building"></i>
+                                                        </div>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <strong>@hotel.Name</strong>
+                                                        @if (!string.IsNullOrEmpty(hotel.Description) && hotel.Description.Length > 50)
+                                                        {
+                                                            <br><small class="text-muted">@(hotel.Description.Substring(0, 50))...</small>
+                                                        }
+                                                        else if (!string.IsNullOrEmpty(hotel.Description))
+                                                        {
+                                                            <br><small class="text-muted">@hotel.Description</small>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        @if (!string.IsNullOrEmpty(hotel.Country))
+                                                        {
+                                                            <small class="text-primary"><i class="bi bi-globe"></i> @hotel.Country</small><br>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(hotel.City))
+                                                        {
+                                                            <small><i class="bi bi-geo-alt"></i> @hotel.City</small>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <small>@hotel.Address</small>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        @if (!string.IsNullOrEmpty(hotel.PhoneNumber))
+                                                        {
+                                                            <small><i class="bi bi-telephone"></i> @hotel.PhoneNumber</small><br>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(hotel.Email))
+                                                        {
+                                                            <small><i class="bi bi-envelope"></i> @hotel.Email</small>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge @(hotel.IsActive ? "bg-success" : "bg-secondary")">
+                                                        @(hotel.IsActive ? "Aktywny" : "Nieaktywny")
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if (hotel.Rating.HasValue)
+                                                    {
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="bi bi-star-fill text-warning me-1"></i>
+                                                            <span>@hotel.Rating.Value.ToString("0.0")</span>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Brak ocen</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">@(hotel.RoomCount ?? 0)</span>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button class="btn btn-outline-primary" 
+                                                                @onclick="() => ShowEditHotelModal(hotel)" 
+                                                                title="Edytuj">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-warning" 
+                                                                @onclick="() => ShowImageModal(hotel)" 
+                                                                title="Zarządzaj zdjęciami">
+                                                            <i class="bi bi-images"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" 
+                                                                @onclick="() => DeleteHotel(hotel)" 
+                                                                title="Usuń">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">Brak hoteli</h5>
+                                <p class="text-muted">Nie znaleziono hoteli spełniających kryteria wyszukiwania.</p>
+                                <button class="btn btn-primary" @onclick="ShowAddHotelModal">
+                                    <i class="bi bi-plus"></i> Dodaj pierwszy hotel
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (showHotelModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-building"></i> @(isEditMode ? "Edytuj hotel" : "Dodaj nowy hotel")
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseHotelModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @onsubmit="SaveHotel" @onsubmit:preventDefault="true">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="hotelName" class="form-label">Nazwa hotelu:</label>
+                                    <input type="text" class="form-control" id="hotelName" 
+                                           @bind="hotelForm.Name" required maxlength="100">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="countrySelect" class="form-label">Kraj:</label>
+                                    <select class="form-select" id="countrySelect" 
+                                            @bind="selectedCountryForForm" @bind:after="OnCountryChanged" required>
+                                        <option value="">-- Wybierz kraj --</option>
+                                        @if (countries?.Any() == true)
+                                        {
+                                            @foreach (var country in countries.OrderBy(c => c))
+                                            {
+                                                <option value="@country">@country</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="citySelect" class="form-label">Miasto:</label>
+                                    <select class="form-select" id="citySelect" @bind="hotelForm.CityId" required
+                                            disabled="@(loadingCities || string.IsNullOrEmpty(selectedCountryForForm))">
+                                        <option value="0">-- Wybierz miasto --</option>
+                                        @if (availableCities?.Any() == true)
+                                        {
+                                            @foreach (var city in availableCities.OrderBy(c => c.Name))
+                                            {
+                                                <option value="@city.Id">@city.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                    @if (loadingCities)
+                                    {
+                                        <div class="form-text">
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                            Ładowanie miast...
+                                        </div>
+                                    }
+                                    else if (string.IsNullOrEmpty(selectedCountryForForm))
+                                    {
+                                        <div class="form-text">Najpierw wybierz kraj</div>
+                                    }
+                                    else if (availableCities?.Any() != true)
+                                    {
+                                        <div class="form-text text-warning">Brak dostępnych miast dla tego kraju</div>
+                                    }
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="hotelAddress" class="form-label">Adres:</label>
+                                    <input type="text" class="form-control" id="hotelAddress" 
+                                           @bind="hotelForm.Address" required maxlength="200">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="hotelPhone" class="form-label">Numer telefonu:</label>
+                                    <input type="tel" class="form-control" id="hotelPhone" 
+                                           @bind="hotelForm.PhoneNumber" maxlength="20">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="hotelEmail" class="form-label">Email:</label>
+                                    <input type="email" class="form-control" id="hotelEmail" 
+                                           @bind="hotelForm.Email" maxlength="100">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="hotelDescription" class="form-label">Opis:</label>
+                                <textarea class="form-control" id="hotelDescription" rows="4" 
+                                          @bind="hotelForm.Description" maxlength="1000"
+                                          placeholder="Wprowadź opis hotelu..."></textarea>
+                                <div class="form-text">Maksymalnie 1000 znaków</div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseHotelModal">Anuluj</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveHotel" 
+                                disabled="@(isSubmitting || loadingCities)">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-save"></i> @(isEditMode ? "Zapisz zmiany" : "Dodaj hotel")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showImageModal && selectedHotel != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-images"></i> Zarządzanie zdjęciami - @selectedHotel.Name
+                        </h5>
+                        <button type="button" class="btn-close" @onclick="CloseImageModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="imageUpload" class="form-label">Wybierz nowe zdjęcia:</label>
+                            <InputFile class="form-control" multiple accept="image/*" OnChange="OnImagesSelected" />
+                            <div class="form-text">Wybierz maksymalnie 10 zdjęć (JPG, PNG, GIF, max 5MB każde)</div>
+                        </div>
+                        
+                        @if (selectedHotel.Images?.Any() == true)
+                        {
+                            <h6>Obecne zdjęcia:</h6>
+                            <div class="row">
+                                @foreach (var image in selectedHotel.Images)
+                                {
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card">
+                                            <img src="@image" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Hotel">
+                                            <div class="card-body p-2">
+                                                <button class="btn btn-danger btn-sm w-100" @onclick="() => RemoveImage(image)">
+                                                    <i class="bi bi-trash"></i> Usuń
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-images text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-2">Brak zdjęć dla tego hotelu</p>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseImageModal">Zamknij</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveImages" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-upload"></i> Zapisz zdjęcia
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Hotel>? allHotels;
+    private List<Hotel>? filteredHotels;
+    private List<string>? countries;
+    private List<City>? availableCities;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool loadingCities = false;
+    private bool showHotelModal = false;
+    private bool showImageModal = false;
+    private bool isEditMode = false;
+    private string searchTerm = string.Empty;
+    private string selectedStatusFilter = string.Empty;
+    private string selectedCountryFilter = string.Empty;
+    private string selectedCountryForForm = string.Empty;
+    
+    private HotelForm hotelForm = new();
+    private Hotel? selectedHotel;
+    private List<IBrowserFile>? selectedImages;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(
+            LoadHotels(),
+            LoadCountries()
+        );
+    }
+
+    private async Task LoadHotels()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetAsync("api/hotel/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                allHotels = JsonSerializer.Deserialize<List<Hotel>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                ApplyFilters();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania hoteli: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania listy hoteli.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCountries()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/city/get-countries");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                countries = JsonSerializer.Deserialize<List<string>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania krajów: {ex.Message}");
+        }
+    }
+
+    private async Task LoadCitiesByCountry(string countryName)
+    {
+        if (string.IsNullOrEmpty(countryName)) return;
+        
+        loadingCities = true;
+        try
+        {
+            var response = await Http.GetAsync($"api/city/get-by-country/{Uri.EscapeDataString(countryName)}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                availableCities = JsonSerializer.Deserialize<List<City>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                availableCities = new List<City>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania miast dla kraju {countryName}: {ex.Message}");
+            availableCities = new List<City>();
+        }
+        finally
+        {
+            loadingCities = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnCountryChanged()
+    {
+        hotelForm.CityId = 0;
+        availableCities = new List<City>();
+        
+        if (!string.IsNullOrEmpty(selectedCountryForForm))
+        {
+            await LoadCitiesByCountry(selectedCountryForForm);
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        if (allHotels == null)
+        {
+            filteredHotels = new List<Hotel>();
+            return;
+        }
+
+        var filtered = allHotels.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(h => 
+                h.Name?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                h.City?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                h.Country?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                h.Address?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedStatusFilter))
+        {
+            if (selectedStatusFilter == "active")
+                filtered = filtered.Where(h => h.IsActive);
+            else if (selectedStatusFilter == "inactive")
+                filtered = filtered.Where(h => !h.IsActive);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedCountryFilter))
+        {
+            filtered = filtered.Where(h => h.Country?.Equals(selectedCountryFilter, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        filteredHotels = filtered.OrderBy(h => h.Name).ToList();
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedStatusFilter = string.Empty;
+        selectedCountryFilter = string.Empty;
+        ApplyFilters();
+    }
+
+    private void ShowAddHotelModal()
+    {
+        hotelForm = new HotelForm();
+        selectedCountryForForm = string.Empty;
+        availableCities = new List<City>();
+        isEditMode = false;
+        showHotelModal = true;
+    }
+
+    private async Task ShowEditHotelModal(Hotel hotel)
+    {
+        hotelForm = new HotelForm
+        {
+            HotelId = hotel.Id,
+            Name = hotel.Name,
+            Address = hotel.Address,
+            CityId = hotel.CityId ?? 0,
+            PhoneNumber = hotel.PhoneNumber ?? string.Empty,
+            Email = hotel.Email ?? string.Empty,
+            Description = hotel.Description ?? string.Empty
+        };
+        
+        selectedCountryForForm = hotel.Country ?? string.Empty;
+        if (!string.IsNullOrEmpty(selectedCountryForForm))
+        {
+            await LoadCitiesByCountry(selectedCountryForForm);
+        }
+        
+        isEditMode = true;
+        showHotelModal = true;
+    }
+
+    private void CloseHotelModal()
+    {
+        showHotelModal = false;
+        hotelForm = new HotelForm();
+        selectedCountryForForm = string.Empty;
+        availableCities = new List<City>();
+        isEditMode = false;
+    }
+
+    private async Task SaveHotel()
+    {
+        if (string.IsNullOrWhiteSpace(hotelForm.Name) || 
+            string.IsNullOrWhiteSpace(hotelForm.Address) || 
+            hotelForm.CityId <= 0 ||
+            string.IsNullOrEmpty(selectedCountryForForm))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wszystkie wymagane pola muszą być wypełnione.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var requestData = new
+            {
+                hotelId = isEditMode ? hotelForm.HotelId : (int?)null,
+                name = hotelForm.Name,
+                address = hotelForm.Address,
+                cityId = hotelForm.CityId,
+                phoneNumber = hotelForm.PhoneNumber,
+                email = hotelForm.Email,
+                description = hotelForm.Description
+            };
+            
+            var json = JsonSerializer.Serialize(requestData);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            HttpResponseMessage response;
+            if (isEditMode)
+            {
+                response = await Http.PutAsync("api/hotel", content);
+            }
+            else
+            {
+                response = await Http.PostAsync("api/hotel", content);
+            }
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Hotel został {(isEditMode ? "zaktualizowany" : "dodany")} pomyślnie!");
+                CloseHotelModal();
+                await LoadHotels();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do tej operacji.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound && isEditMode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Hotel nie został znaleziony.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas {(isEditMode ? "aktualizacji" : "dodawania")} hotelu: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zapisywania hotelu: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania hotelu.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteHotel(Hotel hotel)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć hotel '{hotel.Name}'? Ta operacja jest nieodwracalna."))
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/hotel/{hotel.Id}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Hotel został usunięty pomyślnie!");
+                    await LoadHotels();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do usunięcia hotelu.");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Hotel nie został znaleziony.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania hotelu: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania hotelu: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania hotelu.");
+            }
+        }
+    }
+
+    private void ShowImageModal(Hotel hotel)
+    {
+        selectedHotel = hotel;
+        selectedImages = null;
+        showImageModal = true;
+    }
+
+    private void CloseImageModal()
+    {
+        showImageModal = false;
+        selectedHotel = null;
+        selectedImages = null;
+    }
+
+    private void OnImagesSelected(InputFileChangeEventArgs e)
+    {
+        selectedImages = e.GetMultipleFiles(10).ToList();
+        
+        foreach (var file in selectedImages)
+        {
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
+                selectedImages = null;
+                return;
+            }
+            
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży (max 5MB).");
+                selectedImages = null;
+                return;
+            }
+        }
+    }
+
+    private async Task SaveImages()
+    {
+        if (selectedHotel == null || selectedImages?.Any() != true)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wybierz zdjęcia do przesłania.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(selectedHotel.Id.ToString()), "HotelId");
+            
+            foreach (var file in selectedImages)
+            {
+                var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(streamContent, "HotelImages", file.Name);
+            }
+            
+            var response = await Http.PutAsync("api/hotel/images", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zdjęcia zostały zaktualizowane pomyślnie!");
+                CloseImageModal();
+                await LoadHotels();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji zdjęć: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji zdjęć: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas aktualizacji zdjęć.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void RemoveImage(string imageUrl)
+    {
+        if (selectedHotel?.Images != null)
+        {
+            selectedHotel.Images.Remove(imageUrl);
+            StateHasChanged();
+        }
+    }
+
+    public class Hotel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public int? CityId { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? Description { get; set; }
+        public bool IsActive { get; set; }
+        public int? RoomCount { get; set; }
+        public decimal? Rating { get; set; }
+        public string? ImageUrl { get; set; }
+        public List<string> Images { get; set; } = new();
+    }
+
+    public class City
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int CountryId { get; set; }
+        public string? CountryName { get; set; }
+    }
+
+    public class HotelForm
+    {
+        public int HotelId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public int CityId { get; set; } = 0;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+}

@@ -1,10 +1,9 @@
 @page "/order/{orderId:int}"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
 
@@ -284,41 +283,32 @@
                         </div>
                     </div>
 
-                    <!-- Additional services -->
-                    @if (CanEditOrder() && reservations?.Any() == true)
+                    <!-- Added Services Display (read-only) -->
+                    @if (reservationServices?.Any() == true || reservationParkings?.Any() == true)
                     {
                         <div class="card border-0 shadow-sm mb-4">
                             <div class="card-header bg-white border-0">
                                 <h5 class="mb-0">
-                                    <i class="bi bi-plus-circle text-primary"></i> Dodatkowe usługi
+                                    <i class="bi bi-plus-circle text-primary"></i> Wybrane usługi dodatkowe
                                 </h5>
                             </div>
                             <div class="card-body">
-                                @if (availableServices?.Any() == true)
+                                @if (reservationServices?.Any() == true)
                                 {
-                                    <div class="row g-3">
-                                        @foreach (var service in availableServices)
+                                    <h6 class="mb-3">Usługi:</h6>
+                                    <div class="row g-3 mb-3">
+                                        @foreach (var service in reservationServices)
                                         {
                                             <div class="col-md-6">
-                                                <div class="card h-100 border-light">
+                                                <div class="card border-light bg-light">
                                                     <div class="card-body p-3">
                                                         <div class="d-flex justify-content-between align-items-start mb-2">
-                                                            <h6 class="card-title mb-1">@service.Name</h6>
-                                                            <span class="badge bg-primary">@service.FinalPrice.ToString("C", polishCulture)</span>
+                                                            <h6 class="card-title mb-1">@service.ServiceName</h6>
+                                                            <span class="badge bg-success">x@service.Quantity</span>
                                                         </div>
-                                                        <p class="card-text small text-muted mb-2">@service.Description</p>
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <button class="btn btn-outline-danger btn-sm" 
-                                                                    @onclick="() => RemoveService(service.Id)"
-                                                                    disabled="@(!IsServiceAdded(service.Id) || updatingServices)">
-                                                                <i class="bi bi-dash"></i>
-                                                            </button>
-                                                            <span class="mx-2">@GetServiceQuantity(service.Id)</span>
-                                                            <button class="btn btn-outline-success btn-sm" 
-                                                                    @onclick="() => AddService(service.Id)"
-                                                                    disabled="@updatingServices">
-                                                                <i class="bi bi-plus"></i>
-                                                            </button>
+                                                        <div class="d-flex justify-content-between">
+                                                            <span class="text-muted">Koszt:</span>
+                                                            <strong>@(service.Price * service.Quantity).ToString("C", polishCulture)</strong>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -326,19 +316,38 @@
                                         }
                                     </div>
                                 }
-                                else if (loadingServices)
+
+                                @if (reservationParkings?.Any() == true)
                                 {
-                                    <div class="text-center py-3">
-                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span class="visually-hidden">Ładowanie usług...</span>
-                                        </div>
-                                        <p class="mt-2 text-muted small">Wczytywanie dostępnych usług...</p>
+                                    <h6 class="mb-3">Parking:</h6>
+                                    <div class="row g-3">
+                                        @foreach (var parking in reservationParkings)
+                                        {
+                                            <div class="col-md-6">
+                                                <div class="card border-light bg-light">
+                                                    <div class="card-body p-3">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <h6 class="card-title mb-1">@parking.ParkingType</h6>
+                                                            <span class="badge bg-success">x@parking.Quantity</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between">
+                                                            <span class="text-muted">Koszt:</span>
+                                                            <strong>@(parking.Price * parking.Quantity).ToString("C", polishCulture)</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
                                     </div>
                                 }
-                                else
-                                {
-                                    <p class="text-muted">Brak dostępnych usług dodatkowych.</p>
-                                }
+
+                                <div class="alert alert-info mt-3">
+                                    <small>
+                                        <i class="bi bi-info-circle"></i>
+                                        Usługi dodatkowe zostały wybrane podczas rezerwacji. 
+                                        Aby zmienić usługi, skontaktuj się z hotelem lub utwórz nową rezerwację.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     }
@@ -507,28 +516,24 @@
 
     private OrderViewModel? order;
     private List<ReservationResponse>? reservations;
-    private List<HotelServiceResponse>? availableServices;
     private List<ReservationServiceResponse>? reservationServices;
     private List<ReservationParkingResponse>? reservationParkings;
     private OrderEditModel editModel = new();
 
-    // NOWE POLA - dla obsługi nazw pokoi
+    // Pola dla obsługi nazw pokoi
     private Dictionary<int, string> roomNamesCache = new();
     private HashSet<int> loadingRoomNames = new();
 
     private bool isLoading = true;
     private bool loadingReservations = false;
-    private bool loadingServices = false;
     private bool isEditMode = false;
     private bool isUpdating = false;
-    private bool updatingServices = false;
     private bool confirmingOrder = false;
     private bool cancellingOrder = false;
     private string errorMessage = "";
     private string pageTitle = "Podsumowanie zamówienia - Hotel Management System";
     
     private readonly CultureInfo polishCulture = new("pl-PL");
-    private HttpClient httpClient = null!;
 
     private bool isEmailConfirmed = false;
     private bool emailVerificationChecked = false;
@@ -537,42 +542,27 @@
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
-            
             // Inicjalizuj kolekcje
             reservations = new List<ReservationResponse>();
-            availableServices = new List<HotelServiceResponse>();
             reservationServices = new List<ReservationServiceResponse>();
             reservationParkings = new List<ReservationParkingResponse>();
+
+            // Sprawdź autoryzację
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await CheckEmailVerificationStatus();
+            await LoadOrderData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await CheckEmailVerificationStatus();
-                await LoadOrderData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -580,8 +570,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -603,28 +593,26 @@
         }
     }
 
-    // NOWA METODA - pobiera nazwę pokoju z API /api/hotel-room/{roomId}
+    // Metoda pobierania nazwy pokoju
     private async Task<string> LoadRoomName(int roomId)
     {
-        // Sprawdź czy nazwa jest już w cache
         if (roomNamesCache.ContainsKey(roomId))
         {
             return roomNamesCache[roomId];
         }
 
-        // Sprawdź czy nie ładujemy już tej nazwy
         if (loadingRoomNames.Contains(roomId))
         {
             return "Ładowanie...";
         }
 
         loadingRoomNames.Add(roomId);
-        StateHasChanged(); // Odśwież UI aby pokazać spinner
+        StateHasChanged();
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-room/{roomId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-room/{roomId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -669,11 +657,10 @@
         finally
         {
             loadingRoomNames.Remove(roomId);
-            StateHasChanged(); // Odśwież UI aby ukryć spinner
+            StateHasChanged();
         }
     }
 
-    // NOWA METODA - pomocnicza do pobierania nazwy pokoju (synchroniczna)
     private string GetRoomName(int roomId)
     {
         if (roomNamesCache.ContainsKey(roomId))
@@ -681,10 +668,9 @@
             return roomNamesCache[roomId];
         }
 
-        // Jeśli nie ma w cache, rozpocznij ładowanie asynchroniczne
         _ = Task.Run(async () => await LoadRoomName(roomId));
         
-        return $"Pokój #{roomId}"; // Wartość domyślna podczas ładowania
+        return $"Pokój #{roomId}";
     }
 
     // Bezpieczne metody do pobierania danych
@@ -749,56 +735,6 @@
             _ => "bi-question-circle"
         };
     }
-    
-    private int GetServiceQuantity(int serviceId)
-    {
-        return reservationServices?.Where(rs => rs.ServiceId == serviceId).Sum(rs => rs.Quantity) ?? 0;
-    }
-    
-    private bool IsServiceAdded(int serviceId)
-    {
-        return GetServiceQuantity(serviceId) > 0;
-    }
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
 
     private async Task LoadOrderData()
     {
@@ -807,8 +743,8 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/order/{OrderId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/order/{OrderId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -825,15 +761,8 @@
                         LoadReservationParkings()
                     );
                     
-                    // Załaduj usługi z hotelu pierwszej rezerwacji
-                    if (reservations?.Any() == true)
-                    {
-                        var firstReservation = reservations.First();
-                        await LoadAvailableServices(firstReservation.HotelId);
-                        
-                        // NOWE - Załaduj nazwy pokoi dla wszystkich rezerwacji
-                        await LoadRoomNamesForReservations();
-                    }
+                    // Załaduj nazwy pokoi dla wszystkich rezerwacji
+                    await LoadRoomNamesForReservations();
                 }
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -868,7 +797,6 @@
         }
     }
 
-    // NOWA METODA - ładuje nazwy pokoi dla wszystkich rezerwacji
     private async Task LoadRoomNamesForReservations()
     {
         if (reservations?.Any() != true) return;
@@ -905,14 +833,13 @@
         }
     }
 
-    // ZAKTUALIZOWANA METODA - pobiera rzeczywiste dane rezerwacji z API
     private async Task LoadReservationData()
     {
         loadingReservations = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/reservation/{OrderId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/reservation/{OrderId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -942,14 +869,10 @@
         }
     }
 
-    // NOWA METODA - pobiera usługi rezerwacji z API
     private async Task LoadReservationServices()
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Pobierz usługi dla każdej rezerwacji
             var allServices = new List<ReservationServiceResponse>();
             
             if (reservations?.Any() == true)
@@ -958,7 +881,8 @@
                 {
                     try
                     {
-                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/services");
+                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/services");
                         if (response.IsSuccessStatusCode)
                         {
                             var services = await response.Content.ReadFromJsonAsync<List<ReservationServiceResponse>>() ?? new List<ReservationServiceResponse>();
@@ -981,14 +905,10 @@
         }
     }
 
-    // NOWA METODA - pobiera parking rezerwacji z API
     private async Task LoadReservationParkings()
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            
-            // Pobierz parking dla każdej rezerwacji
             var allParkings = new List<ReservationParkingResponse>();
             
             if (reservations?.Any() == true)
@@ -997,7 +917,8 @@
                 {
                     try
                     {
-                        var response = await authenticatedClient.GetAsync($"api/reservation/{reservation.Id}/parkings");
+                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/parkings");
                         if (response.IsSuccessStatusCode)
                         {
                             var parkings = await response.Content.ReadFromJsonAsync<List<ReservationParkingResponse>>() ?? new List<ReservationParkingResponse>();
@@ -1017,43 +938,6 @@
         {
             Console.WriteLine($"Błąd podczas ładowania parkingu rezerwacji: {ex.Message}");
             reservationParkings = new List<ReservationParkingResponse>();
-        }
-    }
-
-    // ZAKTUALIZOWANA METODA - pobiera rzeczywiste usługi hotelu z API
-    private async Task LoadAvailableServices(int hotelId)
-    {
-        loadingServices = true;
-        try
-        {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                availableServices = await response.Content.ReadFromJsonAsync<List<HotelServiceResponse>>() ?? new List<HotelServiceResponse>();
-                Console.WriteLine($"Loaded {availableServices.Count} services for hotel {hotelId}");
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                Console.WriteLine($"Hotel {hotelId} nie został znaleziony");
-                availableServices = new List<HotelServiceResponse>();
-            }
-            else
-            {
-                Console.WriteLine($"Błąd ładowania usług hotelu: {response.StatusCode}");
-                availableServices = new List<HotelServiceResponse>();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas ładowania usług hotelu: {ex.Message}");
-            availableServices = new List<HotelServiceResponse>();
-        }
-        finally
-        {
-            loadingServices = false;
-            StateHasChanged();
         }
     }
 
@@ -1079,12 +963,11 @@
         isUpdating = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PutAsJsonAsync("api/order", editModel);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PutAsJsonAsync("api/order", editModel);
 
             if (response.IsSuccessStatusCode)
             {
-                // Aktualizuj lokalny model
                 if (order != null)
                 {
                     order.FirstName = editModel.FirstName;
@@ -1118,100 +1001,6 @@
         }
     }
 
-    private async Task AddService(int serviceId)
-    {
-        if (!CanEditOrder() || reservations?.FirstOrDefault() == null) return;
-
-        updatingServices = true;
-        try
-        {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var requestData = new
-            {
-                reservationId = reservations.First().Id,
-                serviceId = serviceId,
-                quantity = 1
-            };
-
-            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/service/add", requestData);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                // Przeładuj usługi rezerwacji
-                await LoadReservationServices();
-                
-                // Przeładuj zamówienie aby uzyskać aktualną cenę
-                await LoadOrderData();
-                
-                Console.WriteLine($"Dodano usługę {serviceId} do rezerwacji {reservations.First().Id}");
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do dodawania usług do tej rezerwacji.");
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Błąd dodawania usługi: {response.StatusCode}");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Błąd dodawania usługi: {ex.Message}");
-        }
-        finally
-        {
-            updatingServices = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RemoveService(int serviceId)
-    {
-        if (!CanEditOrder() || reservations?.FirstOrDefault() == null) return;
-
-        updatingServices = true;
-        try
-        {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var requestData = new
-            {
-                reservationId = reservations.First().Id,
-                serviceId = serviceId
-            };
-
-            var response = await authenticatedClient.PostAsJsonAsync("api/reservation/service/remove", requestData);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                // Przeładuj usługi rezerwacji
-                await LoadReservationServices();
-                
-                // Przeładuj zamówienie aby uzyskać aktualną cenę
-                await LoadOrderData();
-                
-                Console.WriteLine($"Usunięto usługę {serviceId} z rezerwacji {reservations.First().Id}");
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do usuwania usług z tej rezerwacji.");
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania usługi: {response.StatusCode}");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Błąd usuwania usługi: {ex.Message}");
-        }
-        finally
-        {
-            updatingServices = false;
-            StateHasChanged();
-        }
-    }
-
-    // NOWA METODA - potwierdzanie zamówienia i przejście do płatności
     private async Task ConfirmOrderAndProceedToPayment()
     {
         if (!isEmailConfirmed)
@@ -1229,18 +1018,16 @@
         confirmingOrder = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PatchAsync($"api/order/confirm/{OrderId}", null);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PatchAsync($"api/order/confirm/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
             {
-                // Aktualizuj status zamówienia lokalnie
                 order.Status = "confirmed";
                 order.Confirmed = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
                 
                 Console.WriteLine($"Zamówienie {OrderId} zostało potwierdzone");
                 
-                // Przejdź do płatności
                 NavigationManager.NavigateTo($"/payment/{OrderId}");
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -1268,7 +1055,6 @@
         }
     }
 
-    // NOWA METODA - bezpośrednie przejście do płatności dla potwierdzonego zamówienia
     private async Task ProceedToPayment()
     {
         if (!isEmailConfirmed)
@@ -1280,7 +1066,6 @@
         NavigationManager.NavigateTo($"/payment/{OrderId}");
     }
 
-    // ZAKTUALIZOWANA METODA - anulowanie zamówienia z użyciem API
     private async Task CancelOrder()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz anulować to zamówienie? Ta operacja jest nieodwracalna.");
@@ -1295,19 +1080,17 @@
         cancellingOrder = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.PatchAsync($"api/order/cancel/{OrderId}", null);
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.PatchAsync($"api/order/cancel/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
             {
-                // Aktualizuj status zamówienia lokalnie
                 order.Status = "cancelled";
                 order.Cancelled = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
                 
                 Console.WriteLine($"Zamówienie {OrderId} zostało anulowane");
                 await JSRuntime.InvokeVoidAsync("alert", "Zamówienie zostało pomyślnie anulowane.");
                 
-                // Opcjonalnie przeładuj dane zamówienia
                 await LoadOrderData();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -1340,7 +1123,7 @@
         NavigationManager.NavigateTo("/hotels");
     }
 
-    // ZAKTUALIZOWANE MODELE - odpowiadają rzeczywistym responsom z API
+    // Modele danych
     public class OrderViewModel
     {
         public int Id { get; set; }
@@ -1383,7 +1166,6 @@
         public string Country { get; set; } = "";
     }
 
-    // NOWE MODELE - odpowiadają rzeczywistym responsom z API
     public class ReservationResponse
     {
         public int Id { get; set; }
@@ -1396,7 +1178,6 @@
         public string SpecialRequests { get; set; } = "";
     }
 
-    // NOWY MODEL - dla odpowiedzi z API /api/hotel-room/{roomId}
     public class HotelRoomResponse
     {
         public int Id { get; set; }
@@ -1407,17 +1188,6 @@
         public decimal FinalPrice { get; set; }
         public int HotelId { get; set; }
         public string[] RoomImages { get; set; } = Array.Empty<string>();
-    }
-
-    public class HotelServiceResponse
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
-        public decimal Price { get; set; }
-        public decimal Discount { get; set; }
-        public decimal FinalPrice { get; set; }
-        public int HotelId { get; set; }
     }
 
     public class ReservationServiceResponse

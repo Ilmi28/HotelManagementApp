@@ -1,8 +1,5 @@
-﻿@* 
-  Ten komponent jest głównym punktem wejścia dla UI Blazor.
-  NIE powinien zawierać tagów <html>, <head>, <body> ani <HeadOutlet />.
-  Te elementy są definiowane w Pages/_Host.cshtml.
-  Jego głównym zadaniem jest renderowanie komponentu Routes.
-*@
+﻿@using Microsoft.AspNetCore.Components.Authorization
 
-<Routes /> @* Renderuje komponent Routes.razor, który obsługuje routing i layouty *@
+<CascadingAuthenticationState>
+    <Routes />
+</CascadingAuthenticationState>

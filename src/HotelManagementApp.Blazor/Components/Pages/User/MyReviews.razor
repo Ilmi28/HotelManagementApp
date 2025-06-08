@@ -1,0 +1,704 @@
+@page "/my-reviews"
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Moje opinie</PageTitle>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">
+                    <i class="bi bi-chat-quote"></i> Moje opinie
+                </h1>
+                <button class="btn btn-primary" @onclick="ShowAddReviewForm" disabled="@(!reservedHotels?.Any() == true)">
+                    <i class="bi bi-plus-circle"></i> Dodaj opinię
+                </button>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                </div>
+            }
+            else if (reviews?.Any() == true)
+            {
+                <div class="row">
+                    @foreach (var review in reviews)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@review.HotelName</h6>
+                                    <div class="text-warning">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">@review.ReviewText</p>
+                                    
+                                    @if (review.Images?.Any() == true)
+                                    {
+                                        <div class="mb-3">
+                                            <div class="row g-2">
+                                                @foreach (var image in review.Images)
+                                                {
+                                                    <div class="col-6 col-md-4">
+                                                        <img src="@image" class="img-thumbnail review-image" 
+                                                             style="cursor: pointer; max-height: 80px; width: 100%; object-fit: cover;"
+                                                             @onclick="() => ShowImageModal(image)" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                    
+                                    <small class="text-muted">@review.Date</small>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="btn-group w-100" role="group">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => EditReview(review)">
+                                            <i class="bi bi-pencil"></i> Edytuj
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteReview(review.ReviewId)">
+                                            <i class="bi bi-trash"></i> Usuń
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Nie masz jeszcze żadnych opinii.
+                    </div>
+                    @if (reservedHotels?.Any() == true)
+                    {
+                        <p class="text-muted">Możesz dodać opinię o hotelach, które zarezerwowałeś.</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Aby dodać opinię, najpierw dokonaj rezerwacji w jednym z naszych hoteli.</p>
+                        <a href="/hotels" class="btn btn-outline-primary">
+                            <i class="bi bi-building"></i> Przeglądaj hotele
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (showReviewForm)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(editingReview != null ? "Edytuj opinię" : "Dodaj opinię")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseReviewForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @onsubmit="SubmitReview" @onsubmit:preventDefault="true">
+                            @if (editingReview == null)
+                            {
+                                <div class="mb-3">
+                                    <label for="hotelSelect" class="form-label">Hotel (tylko te, które zarezerwowałeś):</label>
+                                    <select @bind="newReview.HotelId" class="form-select" id="hotelSelect" required>
+                                        <option value="0">Wybierz hotel...</option>
+                                        @if (reservedHotels?.Any() == true)
+                                        {
+                                            @foreach (var hotel in reservedHotels)
+                                            {
+                                                <option value="@hotel.HotelId">@hotel.HotelName</option>
+                                            }
+                                        }
+                                    </select>
+                                    @if (reservedHotels?.Any() != true)
+                                    {
+                                        <div class="form-text text-muted">
+                                            Nie masz żadnych rezerwacji. <a href="/hotels">Zarezerwuj pobyt</a>, aby móc dodać opinię.
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Ocena:</label>
+                                <select @bind="newReview.Rating" class="form-select" id="rating" required>
+                                    <option value="0">Wybierz ocenę...</option>
+                                    <option value="1">⭐ 1 gwiazdka - Bardzo słabo</option>
+                                    <option value="2">⭐⭐ 2 gwiazdki - Słabo</option>
+                                    <option value="3">⭐⭐⭐ 3 gwiazdki - Średnio</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 gwiazdki - Dobrze</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 gwiazdek - Doskonale</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reviewText" class="form-label">Opinia:</label>
+                                <textarea @bind="newReview.Review" class="form-control" id="reviewText" rows="4" 
+                                          placeholder="Podziel się swoimi wrażeniami z pobytu..." required></textarea>
+                                <div class="form-text">
+                                    Opisz swoje wrażenia z pobytu, jakość obsługi, czystość pokoju, lokalizację itp.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reviewImages" class="form-label">Zdjęcia (opcjonalne):</label>
+                                <InputFile class="form-control" id="reviewImages" 
+                                          multiple accept="image/*" OnChange="OnImageFilesSelected" />
+                                <div class="form-text">
+                                    Możesz dodać maksymalnie 5 zdjęć (JPG, PNG, GIF). Maksymalny rozmiar pliku: 5MB.
+                                </div>
+                                
+                                @if (selectedImages?.Any() == true)
+                                {
+                                    <div class="mt-3">
+                                        <h6>Wybrane zdjęcia:</h6>
+                                        <div class="row g-2">
+                                            @for (int i = 0; i < selectedImages.Count; i++)
+                                            {
+                                                var index = i;
+                                                <div class="col-6 col-md-3">
+                                                    <div class="position-relative">
+                                                        <img src="@selectedImages[index].DataUrl" class="img-thumbnail" 
+                                                             style="max-height: 100px; width: 100%; object-fit: cover;" />
+                                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" 
+                                                                style="margin: 2px;" @onclick="() => RemoveSelectedImage(index)">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                    <small class="text-muted d-block">@selectedImages[index].Name</small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (editingReview?.Images?.Any() == true)
+                                {
+                                    <div class="mt-3">
+                                        <h6>Aktualne zdjęcia:</h6>
+                                        <div class="row g-2">
+                                            @for (int i = 0; i < editingReview.Images.Count; i++)
+                                            {
+                                                var index = i;
+                                                var imageUrl = editingReview.Images[index];
+                                                <div class="col-6 col-md-3">
+                                                    <div class="position-relative">
+                                                        <img src="@imageUrl" class="img-thumbnail" 
+                                                             style="max-height: 100px; width: 100%; object-fit: cover;" />
+                                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" 
+                                                                style="margin: 2px;" @onclick="() => RemoveExistingImage(index)">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseReviewForm">Anuluj</button>
+                        <button type="button" class="btn btn-primary" @onclick="SubmitReview" 
+                                disabled="@(newReview.HotelId == 0 || newReview.Rating == 0 || string.IsNullOrWhiteSpace(newReview.Review) || isSubmitting)">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            @(editingReview != null ? "Zaktualizuj" : "Dodaj") opinię
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showImageModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.8);" @onclick="CloseImageModal">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content bg-transparent border-0">
+                    <div class="modal-body p-0 text-center">
+                        <img src="@selectedImageUrl" class="img-fluid" style="max-height: 80vh;" />
+                        <button type="button" class="btn btn-light position-absolute top-0 end-0 m-3" @onclick="CloseImageModal">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Review>? reviews;
+    private List<ReservedHotel>? reservedHotels;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool showReviewForm = false;
+    private bool showImageModal = false;
+    private string selectedImageUrl = string.Empty;
+    private Review? editingReview;
+    private ReviewRequest newReview = new();
+    private string? currentUserId;
+    private string? currentUserName;
+    private List<ImageFile> selectedImages = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUser();
+        await LoadReviews();
+        await LoadReservedHotels();
+    }
+
+    private async Task GetCurrentUser()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                currentUserId = session?.Id;
+                currentUserName = session?.UserName;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania danych użytkownika: {ex.Message}");
+        }
+    }
+
+    private async Task LoadReviews()
+    {
+        isLoading = true;
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var response = await Http.GetAsync($"api/review/guest/{currentUserId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    reviews = JsonSerializer.Deserialize<List<Review>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania opinii: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadReservedHotels()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var response = await Http.GetAsync($"api/order/get-by-guest/{currentUserId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var orders = JsonSerializer.Deserialize<List<Order>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    reservedHotels = orders?
+                        .Where(o => o.Status?.ToLower() is "confirmed" or "completed")
+                        .GroupBy(o => o.HotelId)
+                        .Select(g => new ReservedHotel 
+                        { 
+                            HotelId = g.Key, 
+                            HotelName = g.First().HotelName ?? "Nieznany hotel"
+                        })
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania zarezerwowanych hoteli: {ex.Message}");
+        }
+    }
+
+    private void ShowAddReviewForm()
+    {
+        if (reservedHotels?.Any() != true)
+        {
+            JSRuntime.InvokeVoidAsync("alert", "Aby dodać opinię, najpierw dokonaj rezerwacji w jednym z naszych hoteli.");
+            return;
+        }
+        
+        editingReview = null;
+        newReview = new ReviewRequest();
+        selectedImages.Clear();
+        showReviewForm = true;
+    }
+
+    private void EditReview(Review review)
+    {
+        editingReview = review;
+        newReview = new ReviewRequest
+        {
+            ReviewId = review.ReviewId,
+            Rating = review.Rating,
+            Review = review.ReviewText,
+            UserName = currentUserName ?? ""
+        };
+        selectedImages.Clear();
+        showReviewForm = true;
+    }
+
+    private void CloseReviewForm()
+    {
+        showReviewForm = false;
+        editingReview = null;
+        newReview = new ReviewRequest();
+        selectedImages.Clear();
+    }
+
+    private void ShowImageModal(string imageUrl)
+    {
+        selectedImageUrl = imageUrl;
+        showImageModal = true;
+    }
+
+    private void CloseImageModal()
+    {
+        showImageModal = false;
+        selectedImageUrl = string.Empty;
+    }
+
+    private async Task OnImageFilesSelected(InputFileChangeEventArgs e)
+    {
+        if (e.FileCount > 5)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Możesz wybrać maksymalnie 5 zdjęć.");
+            return;
+        }
+
+        selectedImages.Clear();
+        
+        foreach (var file in e.GetMultipleFiles(5))
+        {
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
+                continue;
+            }
+            
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży. Maksymalny rozmiar to 5MB.");
+                continue;
+            }
+            
+            try
+            {
+                using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var buffer = new byte[file.Size];
+                await stream.ReadAsync(buffer);
+                
+                var base64String = Convert.ToBase64String(buffer);
+                var dataUrl = $"data:{file.ContentType};base64,{base64String}";
+                
+                selectedImages.Add(new ImageFile
+                {
+                    Name = file.Name,
+                    Size = file.Size,
+                    Type = file.ContentType,
+                    DataUrl = dataUrl,
+                    ByteArray = buffer
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas przetwarzania pliku {file.Name}: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas przetwarzania pliku {file.Name}");
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private void RemoveSelectedImage(int index)
+    {
+        if (index >= 0 && index < selectedImages.Count)
+        {
+            selectedImages.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveExistingImage(int index)
+    {
+        if (editingReview?.Images != null && index >= 0 && index < editingReview.Images.Count)
+        {
+            editingReview.Images.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitReview()
+    {
+        if (editingReview == null && newReview.HotelId == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę wybrać hotel.");
+            return;
+        }
+        
+        if (newReview.Rating == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę wybrać ocenę.");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(newReview.Review))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę napisać opinię.");
+            return;
+        }
+
+        isSubmitting = true;
+        
+        try
+        {
+            if (editingReview != null)
+            {
+                var updateRequest = new
+                {
+                    reviewId = newReview.ReviewId,
+                    userName = newReview.UserName,
+                    rating = newReview.Rating,
+                    review = newReview.Review
+                };
+                
+                var json = JsonSerializer.Serialize(updateRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await Http.PutAsync("api/review", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await UpdateReviewImages(newReview.ReviewId);
+                    
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została zaktualizowana!");
+                    await LoadReviews();
+                    CloseReviewForm();
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji opinii: {response.StatusCode}");
+                }
+            }
+            else
+            {
+                var addRequest = new
+                {
+                    userName = currentUserName,
+                    userId = currentUserId,
+                    rating = newReview.Rating,
+                    review = newReview.Review,
+                    hotelId = newReview.HotelId
+                };
+                
+                var json = JsonSerializer.Serialize(addRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await Http.PostAsync("api/review", content);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var reviewResponse = JsonSerializer.Deserialize<ReviewResponse>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    if (selectedImages.Any() && reviewResponse?.ReviewId > 0)
+                    {
+                        await UpdateReviewImages(reviewResponse.ReviewId);
+                    }
+                    
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została dodana!");
+                    await LoadReviews();
+                    CloseReviewForm();
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania opinii: {response.StatusCode}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zapisywania opinii: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania opinii.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task UpdateReviewImages(int reviewId)
+    {
+        try
+        {
+            var allImages = new List<string>();
+            
+            if (editingReview?.Images?.Any() == true)
+            {
+                allImages.AddRange(editingReview.Images);
+            }
+            
+            foreach (var image in selectedImages)
+            {
+                allImages.Add(image.DataUrl);
+            }
+            
+            var imageUpdateRequest = new
+            {
+                reviewId = reviewId,
+                reviewImages = allImages.ToArray()
+            };
+            
+            var json = JsonSerializer.Serialize(imageUpdateRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PutAsync("api/review/images", content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Błąd podczas aktualizacji zdjęć: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji zdjęć: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteReview(int reviewId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz usunąć tę opinię?"))
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/review/{reviewId}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Opinia została usunięta!");
+                    await LoadReviews();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania opinii: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania opinii: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania opinii.");
+            }
+        }
+    }
+
+    public class UserSession
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    public class Review
+    {
+        public int ReviewId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string ReviewText { get; set; } = string.Empty;
+        public string Date { get; set; } = string.Empty;
+        public List<string>? Images { get; set; }
+    }
+
+    public class ReviewRequest
+    {
+        public int ReviewId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string Review { get; set; } = string.Empty;
+        public int HotelId { get; set; }
+    }
+
+    public class ReviewResponse
+    {
+        public int ReviewId { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class Order
+    {
+        public int Id { get; set; }
+        public int HotelId { get; set; }
+        public string? HotelName { get; set; }
+        public string? Status { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public decimal? TotalAmount { get; set; }
+    }
+
+    public class ReservedHotel
+    {
+        public int HotelId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+    }
+
+    public class ImageFile
+    {
+        public string Name { get; set; } = string.Empty;
+        public long Size { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string DataUrl { get; set; } = string.Empty;
+        public byte[] ByteArray { get; set; } = Array.Empty<byte>();
+    }
+}

@@ -1,0 +1,750 @@
+@page "/account"
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject IEventBusService EventBus
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>Zarządzanie kontem</PageTitle>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">
+                    <i class="bi bi-person-gear"></i> Zarządzanie kontem
+                </h1>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                </div>
+            }
+            else if (currentUser != null)
+            {
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person-circle"></i> Profil użytkownika
+                                </h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    @if (!string.IsNullOrEmpty(currentUser.ProfilePicture))
+                                    {
+                                        <img src="@currentUser.ProfilePicture" class="rounded-circle mb-3" 
+                                             style="width: 120px; height: 120px; object-fit: cover;" 
+                                             alt="Zdjęcie profilowe" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white mx-auto mb-3" 
+                                             style="width: 120px; height: 120px; font-size: 3rem;">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                    }
+                                    
+                                    <div class="mb-3">
+                                        <InputFile class="form-control" accept="image/*" OnChange="OnProfilePictureSelected" />
+                                        <div class="form-text">Wybierz nowe zdjęcie profilowe (JPG, PNG, GIF, max 5MB)</div>
+                                    </div>
+                                </div>
+                                
+                                <h5>@currentUser.UserName</h5>
+                                <p class="text-muted">@currentUser.Email</p>
+                                
+                                @if (currentUser.Roles?.Any() == true)
+                                {
+                                    <div class="mb-3">
+                                        @foreach (var role in currentUser.Roles)
+                                        {
+                                            <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                        }
+                                    </div>
+                                }
+                                
+                                <div class="mb-3">
+                                    @if (currentUser.IsEmailConfirmed)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Email potwierdzony
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-exclamation-circle"></i> Email niepotwierdzony
+                                        </span>
+                                        <br>
+                                        <button class="btn btn-outline-warning btn-sm mt-2" @onclick="SendConfirmationEmail" disabled="@isSubmitting">
+                                            @if (isSubmitting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            Wyślij link potwierdzający
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-pencil-square"></i> Edycja danych
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form @onsubmit="UpdateProfile" @onsubmit:preventDefault="true">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="userName" class="form-label">Nazwa użytkownika:</label>
+                                            <input type="text" class="form-control" id="userName" 
+                                                   @bind="profileForm.UserName" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label">Email:</label>
+                                            <input type="email" class="form-control" id="email" 
+                                                   @bind="profileForm.Email" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                            @if (isSubmitting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="bi bi-save"></i> Zapisz zmiany
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-shield-lock"></i> Zmiana hasła
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form @onsubmit="ChangePassword" @onsubmit:preventDefault="true">
+                                    <div class="mb-3">
+                                        <label for="oldPassword" class="form-label">Aktualne hasło:</label>
+                                        <input type="password" class="form-control" id="oldPassword" 
+                                               @bind="passwordForm.OldPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">Nowe hasło:</label>
+                                        <input type="password" class="form-control" id="newPassword" 
+                                               @bind="passwordForm.NewPassword" required minlength="6">
+                                        <div class="form-text">Hasło musi mieć co najmniej 6 znaków</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Potwierdź nowe hasło:</label>
+                                        <input type="password" class="form-control" id="confirmPassword" 
+                                               @bind="passwordForm.ConfirmPassword" required>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-warning" disabled="@isSubmitting">
+                                            @if (isSubmitting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="bi bi-key"></i> Zmień hasło
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-clock-history"></i> Historia konta
+                                </h5>
+                                <button class="btn btn-outline-primary btn-sm" @onclick="LoadAccountHistory">
+                                    <i class="bi bi-arrow-clockwise"></i> Odśwież
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                @if (accountHistory?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Data i godzina</th>
+                                                    <th>Operacja</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var entry in accountHistory.OrderByDescending(x => x.OperationDate).Take(15))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <small>@entry.OperationDate.ToString("dd.MM.yyyy HH:mm:ss")</small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge @GetOperationBadgeClass(entry.Operation)">
+                                                                @GetPolishOperationName(entry.Operation)
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    @if (accountHistory.Count > 15)
+                                    {
+                                        <div class="text-center mt-3">
+                                            <small class="text-muted">
+                                                Wyświetlono ostatnie 15 z @accountHistory.Count operacji
+                                            </small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted text-center py-3">
+                                        <i class="bi bi-info-circle"></i> Brak historii aktywności
+                                    </p>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card mt-4 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-exclamation-triangle"></i> Strefa niebezpieczna
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">
+                                    <strong>Uwaga!</strong> Usunięcie konta jest nieodwracalne. Wszystkie Twoje dane zostaną trwale usunięte.
+                                </p>
+                                
+                                <button class="btn btn-outline-danger" @onclick="ShowDeleteAccountModal">
+                                    <i class="bi bi-trash"></i> Usuń konto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (showDeleteModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia konta
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <strong>To działanie jest nieodwracalne!</strong>
+                            <br>
+                            Po usunięciu konta stracisz dostęp do wszystkich swoich danych, rezerwacji i historii.
+                        </div>
+                        
+                        <form @onsubmit="DeleteAccount" @onsubmit:preventDefault="true">
+                            <div class="mb-3">
+                                <label for="deletePassword" class="form-label">
+                                    Wpisz swoje hasło, aby potwierdzić usunięcie:
+                                </label>
+                                <input type="password" class="form-control" id="deletePassword" 
+                                       @bind="deleteForm.Password" required
+                                       placeholder="Twoje aktualne hasło">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="confirmDelete" 
+                                           @bind="deleteForm.ConfirmDeletion" required>
+                                    <label class="form-check-label" for="confirmDelete">
+                                        Potwierdzam, że chcę usunąć swoje konto i rozumiem konsekwencje
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Anuluj</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteAccount" 
+                                disabled="@(isSubmitting || string.IsNullOrEmpty(deleteForm.Password) || !deleteForm.ConfirmDeletion)">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-trash"></i> Usuń konto na zawsze
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UserSession? currentUser;
+    private List<AccountHistoryOperation>? accountHistory;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool showDeleteModal = false;
+    
+    private ProfileUpdateForm profileForm = new();
+    private PasswordChangeForm passwordForm = new();
+    private AccountDeleteForm deleteForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        await LoadAccountHistory();
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                currentUser = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (currentUser != null)
+                {
+                    profileForm.UserName = currentUser.UserName;
+                    profileForm.Email = currentUser.Email;
+                    profileForm.UserId = currentUser.Id;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania danych użytkownika: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania danych użytkownika.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadAccountHistory()
+    {
+        if (currentUser == null) return;
+        
+        try
+        {
+            var response = await Http.GetAsync($"api/account/{currentUser.Id}/history");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Historia konta JSON: {json}");
+                
+                accountHistory = JsonSerializer.Deserialize<List<AccountHistoryOperation>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                Console.WriteLine($"Załadowano {accountHistory?.Count ?? 0} operacji");
+            }
+            else
+            {
+                Console.WriteLine($"Błąd API historii konta: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania historii konta: {ex.Message}");
+        }
+    }
+
+    private async Task OnProfilePictureSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wybierz plik obrazu (JPG, PNG, GIF).");
+            return;
+        }
+
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Plik jest za duży. Maksymalny rozmiar to 5MB.");
+            return;
+        }
+
+        if (currentUser == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Błąd: brak danych użytkownika.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            using var streamContent = new StreamContent(fileStream);
+            
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            
+            content.Add(streamContent, "File", file.Name);
+            
+            var response = await Http.PutAsync($"api/account/profile-picture?UserId={currentUser.Id}", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Zdjęcie profilowe zostało zaktualizowane!");
+                await LoadCurrentUser();
+                EventBus.NotifyProfileUpdated();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error response: {errorContent}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji zdjęcia: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji zdjęcia profilowego: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas aktualizacji zdjęcia.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task UpdateProfile()
+    {
+        if (string.IsNullOrWhiteSpace(profileForm.UserName) || string.IsNullOrWhiteSpace(profileForm.Email))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wszystkie pola są wymagane.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var updateRequest = new
+            {
+                userId = profileForm.UserId,
+                userName = profileForm.UserName,
+                email = profileForm.Email
+            };
+            
+            var json = JsonSerializer.Serialize(updateRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PutAsync("api/account/update", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Profil został zaktualizowany!");
+                await LoadCurrentUser();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do edycji tego konta.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji profilu: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji profilu: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas aktualizacji profilu.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (string.IsNullOrWhiteSpace(passwordForm.OldPassword) || 
+            string.IsNullOrWhiteSpace(passwordForm.NewPassword) || 
+            string.IsNullOrWhiteSpace(passwordForm.ConfirmPassword))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wszystkie pola hasła są wymagane.");
+            return;
+        }
+
+        if (passwordForm.NewPassword != passwordForm.ConfirmPassword)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Nowe hasła nie są identyczne.");
+            return;
+        }
+
+        if (passwordForm.NewPassword.Length < 6)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Nowe hasło musi mieć co najmniej 6 znaków.");
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var changeRequest = new
+            {
+                userId = currentUser?.Id,
+                oldPassword = passwordForm.OldPassword,
+                newPassword = passwordForm.NewPassword
+            };
+            
+            var json = JsonSerializer.Serialize(changeRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PatchAsync("api/account/change-password", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Hasło zostało zmienione!");
+                passwordForm = new PasswordChangeForm();
+                await LoadAccountHistory();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nieprawidłowe aktualne hasło lub brak uprawnień.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas zmiany hasła: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas zmiany hasła: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zmiany hasła.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task SendConfirmationEmail()
+    {
+        if (currentUser == null) return;
+
+        isSubmitting = true;
+        try
+        {
+            var confirmRequest = new
+            {
+                userId = currentUser.Id
+            };
+            
+            var json = JsonSerializer.Serialize(confirmRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PostAsync("api/account/send-confirmation-email", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Link potwierdzający został wysłany na Twój email!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas wysyłania emaila: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas wysyłania emaila potwierdzającego: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas wysyłania emaila.");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void ShowDeleteAccountModal()
+    {
+        deleteForm = new AccountDeleteForm();
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        deleteForm = new AccountDeleteForm();
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (currentUser == null) return;
+
+        if (string.IsNullOrWhiteSpace(deleteForm.Password))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Wpisz hasło, aby potwierdzić usunięcie.");
+            return;
+        }
+
+        if (!deleteForm.ConfirmDeletion)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić usunięcie konta.");
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz usunąć swoje konto? To działanie jest nieodwracalne!");
+        if (!confirmed) return;
+
+        isSubmitting = true;
+        try
+        {
+            var deleteRequest = new
+            {
+                userId = currentUser.Id,
+                password = deleteForm.Password
+            };
+            
+            var json = JsonSerializer.Serialize(deleteRequest);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PostAsync("api/account/delete", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Konto zostało usunięte. Żegnamy!");
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+                NavigationManager.NavigateTo("/", true);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nieprawidłowe hasło lub brak uprawnień.");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania konta: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas usuwania konta: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania konta.");
+        }
+        finally
+        {
+            isSubmitting = false;
+            CloseDeleteModal();
+        }
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-warning",
+            "Staff" => "bg-info",
+            "VIP" => "bg-warning",
+            "Guest" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetOperationBadgeClass(string operation)
+    {
+        return operation?.ToLower() switch
+        {
+            "login" => "bg-success",
+            "logout" => "bg-secondary",
+            "register" => "bg-primary",
+            "passwordchange" => "bg-warning",
+            "profileupdate" => "bg-info",
+            "emailconfirmation" => "bg-primary",
+            _ => "bg-light text-dark"
+        };
+    }
+
+    private string GetPolishOperationName(string operation)
+    {
+        return operation?.ToLower() switch
+        {
+            "login" => "Logowanie",
+            "logout" => "Wylogowanie",
+            "register" => "Rejestracja",
+            "passwordchange" => "Zmiana hasła",
+            "profileupdate" => "Aktualizacja profilu",
+            "emailconfirmation" => "Potwierdzenie emaila",
+            _ => operation ?? "Nieznana operacja"
+        };
+    }
+
+    public class UserSession
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    public class ProfileUpdateForm
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class PasswordChangeForm
+    {
+        public string OldPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    public class AccountDeleteForm
+    {
+        public string Password { get; set; } = string.Empty;
+        public bool ConfirmDeletion { get; set; } = false;
+    }
+    
+    public class AccountHistoryOperation
+    {
+        public string Operation { get; set; } = string.Empty;
+        public DateTime OperationDate { get; set; }
+    }
+}

@@ -1,7 +1,13 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.Text.Json
 @inject NavigationManager NavigationManager
 @inject HotelManagementApp.Blazor.Auth.ITokenService TokenService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject IEventBusService EventBus
+@implements IDisposable
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
@@ -40,17 +46,17 @@
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="staff/reservations">
-                                    <i class="bi bi-calendar-check"></i> Rezerwacje
+                                <NavLink class="dropdown-item" href="order-management">
+                                    <i class="bi bi-calendar-check"></i> Zamówienia
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="staff/guests">
+                                <NavLink class="dropdown-item" href="admin/guests">
                                     <i class="bi bi-people"></i> Goście
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="staff/payments">
+                                <NavLink class="dropdown-item" href="payment-management">
                                     <i class="bi bi-credit-card"></i> Płatności
                                 </NavLink>
                             </li>
@@ -70,32 +76,32 @@
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/staff">
+                                <NavLink class="dropdown-item" href="staff-management">
                                     <i class="bi bi-people"></i> Personel
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/hotel">
+                                <NavLink class="dropdown-item" href="hotel-management">
                                     <i class="bi bi-building"></i> Zarządzanie hotelem
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/rooms">
+                                <NavLink class="dropdown-item" href="room-management">
                                     <i class="bi bi-door-open"></i> Pokoje
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/services">
+                                <NavLink class="dropdown-item" href="service-management">
                                     <i class="bi bi-list-check"></i> Usługi
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/parking">
+                                <NavLink class="dropdown-item" href="parking-management">
                                     <i class="bi bi-p-square"></i> Parkingi
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="manager/discounts">
+                                <NavLink class="dropdown-item" href="discount-management">
                                     <i class="bi bi-percent"></i> Zniżki
                                 </NavLink>
                             </li>
@@ -132,20 +138,51 @@
             <AuthorizeView>
                 <Authorized>
                     <div class="d-flex align-items-center">
+                        <!-- Punkty lojalnościowe -->
+                        @if (loyaltyPoints.HasValue)
+                        {
+                            <div class="me-3">
+                                <NavLink href="loyalty-program" class="btn btn-outline-warning btn-sm">
+                                    <i class="bi bi-star-fill"></i> @loyaltyPoints pkt
+                                </NavLink>
+                            </div>
+                        }
+                        
                         <div class="dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <img src="images/user-avatar.jpg" alt="User Avatar" class="rounded-circle me-2" width="32" height="32">
-                                <span>@context.User.Identity?.Name</span>
+                                @if (!string.IsNullOrEmpty(userSession?.ProfilePicture))
+                                {
+                                    <img src="@userSession.ProfilePicture" alt="User Avatar" class="rounded-circle me-2" width="32" height="32" 
+                                         style="object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                         style="width: 32px; height: 32px; font-size: 14px;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                }
+                                <span>@(userSession?.UserName ?? context.User.Identity?.Name)</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
-                                    <NavLink class="dropdown-item" href="user/dashboard">
-                                        <i class="bi bi-person-circle"></i> Panel użytkownika
+                                    <NavLink class="dropdown-item" href="account">
+                                        <i class="bi bi-person-circle"></i> Konto
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink class="dropdown-item" href="reservations">
+                                    <NavLink class="dropdown-item" href="my-reservations">
                                         <i class="bi bi-journal-text"></i> Moje rezerwacje
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink class="dropdown-item" href="my-reviews">
+                                        <i class="bi bi-chat-quote"></i> Moje opinie
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink class="dropdown-item" href="loyalty-program">
+                                        <i class="bi bi-star"></i> Program lojalnościowy
                                     </NavLink>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -176,6 +213,28 @@
 @code {
     private bool collapseNavMenu = true;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private UserSession? userSession;
+    private int? loyaltyPoints;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserSession();
+        await LoadLoyaltyPoints();
+        
+        // Subskrybuj event aktualizacji profilu
+        EventBus.ProfileUpdated += OnProfileUpdated;
+    }
+
+    private async void OnProfileUpdated()
+    {
+        await LoadUserSession();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        EventBus.ProfileUpdated -= OnProfileUpdated;
+    }
 
     private void ToggleNavMenu()
     {
@@ -187,5 +246,110 @@
         await TokenService.RemoveTokensAsync();
         ((HotelManagementApp.Blazor.Auth.CustomAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
         NavigationManager.NavigateTo("/");
+    }
+
+    private async Task LoadUserSession()
+    {
+        try
+        {
+            var authenticatedClient = await GetAuthenticatedHttpClient();
+            var response = await authenticatedClient.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                userSession = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania sesji użytkownika: {ex.Message}");
+        }
+    }
+
+    private async Task LoadLoyaltyPoints()
+    {
+        try
+        {
+            if (userSession?.Id != null)
+            {
+                var authenticatedClient = await GetAuthenticatedHttpClient();
+                var response = await authenticatedClient.GetAsync($"api/loyalty-points/guests/{userSession.Id}/points");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var pointsData = JsonSerializer.Deserialize<LoyaltyPointsResponse>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    loyaltyPoints = pointsData?.Points ?? 0;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania punktów lojalnościowych: {ex.Message}");
+        }
+    }
+
+    private async Task<string?> GetTokenFromLocalStorage()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<string>("eval", "''");
+            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            return token;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+        {
+            await Task.Delay(500);
+            try
+            {
+                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                return token;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<HttpClient> GetAuthenticatedHttpClient()
+    {
+        var token = await GetTokenFromLocalStorage();
+        
+        if (!string.IsNullOrEmpty(token))
+        {
+            HttpClient.DefaultRequestHeaders.Authorization = null;
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        
+        return HttpClient;
+    }
+
+    public class UserSession
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string[] Roles { get; set; } = Array.Empty<string>();
+        public string ProfilePicture { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+    }
+
+    public class LoyaltyPointsResponse
+    {
+        public int Points { get; set; }
     }
 }

@@ -1,0 +1,622 @@
+@page "/manager-dashboard"
+@using System.Text.Json
+@using System.Globalization
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Manager,Admin")]
+
+<PageTitle>Dashboard menedżera</PageTitle>
+
+<div class="container-fluid my-4">
+    <div class="row">
+        <div class="col-12">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-lg text-primary" role="status">
+                        <span class="visually-hidden">Ładowanie...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Ładowanie danych...</p>
+                </div>
+            }
+            else
+            {
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Łączna liczba hoteli
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            @(hotels?.Count ?? 0)
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-building fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Oczekujące zamówienia
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            @(pendingOrders?.Count ?? 0)
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-hourglass-split fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Łączne przychody
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            @totalRevenue.ToString("C", new CultureInfo("pl-PL"))
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Aktywni goście
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            @(loyaltyPointsData?.Count ?? 0)
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="bi bi-building"></i> Hotele w systemie
+                                </h6>
+                                <a href="hotel-management" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus"></i> Zarządzaj
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                @if (hotels?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nazwa</th>
+                                                    <th>Miasto</th>
+                                                    <th>Status</th>
+                                                    <th>Pokoje</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var hotel in hotels.Take(5))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <strong>@hotel.Name</strong>
+                                                        </td>
+                                                        <td>@hotel.City</td>
+                                                        <td>
+                                                            <span class="badge @(hotel.IsActive ? "bg-success" : "bg-secondary")">
+                                                                @(hotel.IsActive ? "Aktywny" : "Nieaktywny")
+                                                            </span>
+                                                        </td>
+                                                        <td>@(hotel.RoomCount ?? 0)</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @if (hotels.Count > 5)
+                                    {
+                                        <div class="text-center mt-3">
+                                            <small class="text-muted">Pokazano 5 z @hotels.Count hoteli</small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-building text-muted" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2">Brak hoteli w systemie</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-warning">
+                                    <i class="bi bi-hourglass-split"></i> Oczekujące zamówienia
+                                </h6>
+                                <a href="/order-management" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-eye"></i> Wszystkie
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                @if (pendingOrders?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Gość</th>
+                                                    <th>Hotel</th>
+                                                    <th>Kwota</th>
+                                                    <th>Data</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var order in pendingOrders.Take(5))
+                                                {
+                                                    <tr>
+                                                        <td><small>#@order.Id</small></td>
+                                                        <td>@order.GuestName</td>
+                                                        <td>@order.HotelName</td>
+                                                        <td>
+                                                            <strong>@order.TotalAmount?.ToString("C", new CultureInfo("pl-PL"))</strong>
+                                                        </td>
+                                                        <td>
+                                                            <small>@order.OrderDate?.ToString("dd.MM.yyyy")</small>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @if (pendingOrders.Count > 5)
+                                    {
+                                        <div class="text-center mt-3">
+                                            <small class="text-muted">Pokazano 5 z @pendingOrders.Count zamówień</small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2">Brak oczekujących zamówień</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card shadow">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-info">
+                                    <i class="bi bi-credit-card"></i> Ostatnie płatności
+                                </h6>
+                                <a href="/payment-management" class="btn btn-info btn-sm">
+                                    <i class="bi bi-eye"></i> Wszystkie
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                @if (payments?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Zamówienie</th>
+                                                    <th>Kwota</th>
+                                                    <th>Status</th>
+                                                    <th>Metoda</th>
+                                                    <th>Data</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var payment in payments.OrderByDescending(p => p.PaymentDate).Take(8))
+                                                {
+                                                    <tr>
+                                                        <td><small>#@payment.Id</small></td>
+                                                        <td><small>#@payment.OrderId</small></td>
+                                                        <td>
+                                                            <strong>@payment.Amount?.ToString("C", new CultureInfo("pl-PL"))</strong>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge @GetPaymentStatusBadge(payment.Status)">
+                                                                @GetPaymentStatusText(payment.Status)
+                                                            </span>
+                                                        </td>
+                                                        <td>@payment.PaymentMethod</td>
+                                                        <td>
+                                                            <small>@payment.PaymentDate?.ToString("dd.MM.yyyy HH:mm")</small>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            Suma dzisiaj: <strong>@todayRevenue.ToString("C", new CultureInfo("pl-PL"))</strong> |
+                                            Suma ten miesiąc: <strong>@monthRevenue.ToString("C", new CultureInfo("pl-PL"))</strong>
+                                        </small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-credit-card text-muted" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2">Brak płatności</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 mb-4">
+                        <div class="card shadow">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-success">
+                                    <i class="bi bi-star-fill"></i> Top goście (punkty)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                @if (loyaltyPointsData?.Any() == true)
+                                {
+                                    @foreach (var guest in loyaltyPointsData.OrderByDescending(g => g.Points).Take(6))
+                                    {
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                @if (!string.IsNullOrEmpty(guest.ProfilePicture))
+                                                {
+                                                    <img src="@guest.ProfilePicture" class="rounded-circle" 
+                                                         style="width: 40px; height: 40px; object-fit: cover;" 
+                                                         alt="Gość" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                                         style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-person"></i>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <div class="fw-bold">@guest.GuestName</div>
+                                                <div class="small text-muted">@guest.Email</div>
+                                            </div>
+                                            <div class="flex-shrink-0">
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-star-fill"></i> @guest.Points
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-star text-muted" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2">Brak danych o punktach</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <button class="btn btn-outline-primary" @onclick="RefreshData" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-arrow-clockwise"></i> Odśwież dane
+                        </button>
+                        <small class="text-muted d-block mt-2">
+                            Ostatnia aktualizacja: @lastRefresh.ToString("dd.MM.yyyy HH:mm:ss")
+                        </small>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 4px solid #4e73df !important;
+    }
+    .border-left-warning {
+        border-left: 4px solid #f6c23e !important;
+    }
+    .border-left-info {
+        border-left: 4px solid #36b9cc !important;
+    }
+    .border-left-success {
+        border-left: 4px solid #1cc88a !important;
+    }
+    .text-gray-300 {
+        color: #dddfeb !important;
+    }
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+</style>
+
+@code {
+    private List<Hotel>? hotels;
+    private List<PendingOrder>? pendingOrders;
+    private List<Payment>? payments;
+    private List<LoyaltyPointsGuest>? loyaltyPointsData;
+    private bool isLoading = true;
+    private decimal totalRevenue = 0;
+    private decimal todayRevenue = 0;
+    private decimal monthRevenue = 0;
+    private DateTime lastRefresh = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllData();
+    }
+
+    private async Task LoadAllData()
+    {
+        isLoading = true;
+        try
+        {
+            await Task.WhenAll(
+                LoadHotels(),
+                LoadPendingOrders(),
+                LoadPayments(),
+                LoadLoyaltyPoints()
+            );
+            
+            CalculateRevenue();
+            lastRefresh = DateTime.Now;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadAllData();
+    }
+
+    private async Task LoadHotels()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/hotel/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                hotels = JsonSerializer.Deserialize<List<Hotel>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                Console.WriteLine($"Loaded {hotels?.Count ?? 0} hotels");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load hotels: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania hoteli: {ex.Message}");
+        }
+    }
+
+    private async Task LoadPendingOrders()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/order/pending");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                pendingOrders = JsonSerializer.Deserialize<List<PendingOrder>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                Console.WriteLine($"Loaded {pendingOrders?.Count ?? 0} pending orders");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load pending orders: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania oczekujących zamówień: {ex.Message}");
+        }
+    }
+
+    private async Task LoadPayments()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/payment/get-all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                payments = JsonSerializer.Deserialize<List<Payment>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                Console.WriteLine($"Loaded {payments?.Count ?? 0} payments");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load payments: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania płatności: {ex.Message}");
+        }
+    }
+
+    private async Task LoadLoyaltyPoints()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/loyalty-points/guests/points");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                loyaltyPointsData = JsonSerializer.Deserialize<List<LoyaltyPointsGuest>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                Console.WriteLine($"Loaded {loyaltyPointsData?.Count ?? 0} loyalty points records");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to load loyalty points: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas pobierania punktów lojalnościowych: {ex.Message}");
+        }
+    }
+
+    private void CalculateRevenue()
+    {
+        if (payments?.Any() != true) return;
+
+        var successfulPayments = payments.Where(p => p.Status?.ToLower() == "completed" || p.Status?.ToLower() == "success").ToList();
+        
+        totalRevenue = successfulPayments.Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Total revenue calculated: {totalRevenue}");
+        
+        var today = DateTime.Today;
+        todayRevenue = successfulPayments
+            .Where(p => p.PaymentDate?.Date == today)
+            .Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Today revenue: {todayRevenue}");
+            
+        var firstDayOfMonth = new DateTime(today.Year, today.Month, 1);
+        monthRevenue = successfulPayments
+            .Where(p => p.PaymentDate >= firstDayOfMonth && p.PaymentDate <= today.AddDays(1))
+            .Sum(p => p.Amount ?? 0);
+        Console.WriteLine($"Month revenue: {monthRevenue}");
+    }
+
+    private string GetPaymentStatusBadge(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" or "success" => "bg-success",
+            "pending" => "bg-warning",
+            "failed" or "error" => "bg-danger",
+            "cancelled" => "bg-secondary",
+            _ => "bg-light text-dark"
+        };
+    }
+
+    private string GetPaymentStatusText(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "Zakończona",
+            "success" => "Sukces",
+            "pending" => "Oczekująca",
+            "failed" => "Nieudana",
+            "error" => "Błąd",
+            "cancelled" => "Anulowana",
+            _ => status ?? "Nieznany"
+        };
+    }
+
+    public class Hotel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int? RoomCount { get; set; }
+        public decimal? Rating { get; set; }
+    }
+
+    public class PendingOrder
+    {
+        public int Id { get; set; }
+        public string GuestName { get; set; } = string.Empty;
+        public string HotelName { get; set; } = string.Empty;
+        public decimal? TotalAmount { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class Payment
+    {
+        public int Id { get; set; }
+        public int OrderId { get; set; }
+        public decimal? Amount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public DateTime? PaymentDate { get; set; }
+    }
+
+    public class LoyaltyPointsGuest
+    {
+        public string GuestId { get; set; } = string.Empty;
+        public string GuestName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? ProfilePicture { get; set; }
+        public int Points { get; set; }
+    }
+}

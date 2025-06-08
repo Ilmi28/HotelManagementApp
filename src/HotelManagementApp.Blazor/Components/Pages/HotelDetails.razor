@@ -1,10 +1,9 @@
 @page "/hotel/{hotelId:int}"
-@inject IHttpClientFactory HttpClientFactory
+@inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 
 <PageTitle>@pageTitle</PageTitle>
 
@@ -444,47 +443,31 @@
     private string errorMessage = "";
     private string pageTitle = "Szczegóły hotelu - Hotel Management System";
 
-    private HttpClient httpClient = null!;
-
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            httpClient = HttpClientFactory.CreateClient("HotelApi");
-            
             // Inicjalizuj kolekcje
             services = new List<string>();
             parkings = new List<string>();
             rooms = new List<RoomViewModel>();
             reviews = new List<ReviewViewModel>();
+
+            // Sprawdź autoryzację
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            await LoadAllData();
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd inicjalizacji: {ex.Message}";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-                if (!authState.User.Identity.IsAuthenticated)
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                await LoadAllData();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Błąd podczas ładowania: {ex.Message}";
-                isLoading = false;
-                StateHasChanged();
-            }
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -510,46 +493,6 @@
     private IEnumerable<string> GetSafeParkings() => parkings ?? Enumerable.Empty<string>();
     private IEnumerable<RoomViewModel> GetSafeRooms() => rooms?.Take(6) ?? Enumerable.Empty<RoomViewModel>();
     private IEnumerable<ReviewViewModel> GetSafeReviews() => reviews ?? Enumerable.Empty<ReviewViewModel>();
-
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = null;
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return httpClient;
-    }
 
     private async Task LoadAllData()
     {
@@ -591,8 +534,8 @@
 
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel/{HotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel/{HotelId}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -629,8 +572,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel/weather/{HotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel/weather/{HotelId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -648,8 +591,8 @@
         servicesLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-services/get-by-hotel/{HotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{HotelId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -672,8 +615,8 @@
         parkingsLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/hotel-parkings/get-by-hotel/{HotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{HotelId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -696,8 +639,8 @@
         roomsLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/hotel-room/get-all");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync("api/hotel-room/get-all");
             
             if (response.IsSuccessStatusCode)
             {
@@ -720,8 +663,8 @@
         reviewsLoading = true;
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync($"api/review/hotel/{HotelId}");
+            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            var response = await Http.GetAsync($"api/review/hotel/{HotelId}");
             
             if (response.IsSuccessStatusCode)
             {
