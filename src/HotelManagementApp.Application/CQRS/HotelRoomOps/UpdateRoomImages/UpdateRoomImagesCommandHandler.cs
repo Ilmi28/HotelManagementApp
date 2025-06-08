@@ -29,6 +29,7 @@ public class UpdateRoomImagesCommandHandler(
                 Room = room
             }, cancellationToken);
         }
+        await imageRepository.RemoveRoomImagesByRoomId(room.Id, cancellationToken);
 
     }
 }

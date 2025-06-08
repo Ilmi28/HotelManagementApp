@@ -30,5 +30,6 @@ public class UpdateHotelImagesCommandHandler(
                 Hotel = hotel
             }, cancellationToken);
         }
+        await imageRepository.RemoveHotelImagesByHotelId(hotel.Id, cancellationToken);
     }
 }
