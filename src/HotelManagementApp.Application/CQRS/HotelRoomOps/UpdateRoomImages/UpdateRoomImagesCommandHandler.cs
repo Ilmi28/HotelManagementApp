@@ -18,6 +18,7 @@ public class UpdateRoomImagesCommandHandler(
         var roomImages = await imageRepository.GetRoomImagesByRoomId(request.RoomId, cancellationToken);
         foreach (var roomImage in roomImages)
             fileService.DeleteFile("images", roomImage.FileName);
+        await imageRepository.RemoveRoomImagesByRoomId(room.Id, cancellationToken);
         foreach (var file in request.RoomImages)
         {
             using var stream = new MemoryStream();
@@ -29,7 +30,6 @@ public class UpdateRoomImagesCommandHandler(
                 Room = room
             }, cancellationToken);
         }
-        await imageRepository.RemoveRoomImagesByRoomId(room.Id, cancellationToken);
 
     }
 }

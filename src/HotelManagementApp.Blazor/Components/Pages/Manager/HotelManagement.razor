@@ -802,14 +802,14 @@
         try
         {
             using var content = new MultipartFormDataContent();
-            content.Add(new StringContent(selectedHotel.Id.ToString()), "hotelId");
+            content.Add(new StringContent(selectedHotel.Id.ToString()), "HotelId");
             
             foreach (var file in selectedImages)
             {
-                using var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-                using var streamContent = new StreamContent(fileStream);
+                var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var streamContent = new StreamContent(fileStream);
                 streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-                content.Add(streamContent, "images", file.Name);
+                content.Add(streamContent, "HotelImages", file.Name);
             }
             
             var response = await Http.PutAsync("api/hotel/images", content);
