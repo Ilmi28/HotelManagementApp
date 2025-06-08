@@ -18,6 +18,7 @@ public class UpdateReviewImagesCommandHandler(
         var reviewImages = await imageRepository.GetReviewImagesByReviewId(request.ReviewId, cancellationToken);
         foreach (var reviewImage in reviewImages)
             fileService.DeleteFile("images", reviewImage.FileName);
+        await imageRepository.RemoveReviewImagesByReviewId(review.Id, cancellationToken);
         foreach (var file in request.ReviewImages)
         {
             using var stream = new MemoryStream();
@@ -30,6 +31,5 @@ public class UpdateReviewImagesCommandHandler(
             }, cancellationToken);
         }
         review.LastModified = DateTime.Now;
-        await reviewRepository.UpdateReview(review, cancellationToken);
     }
 }
