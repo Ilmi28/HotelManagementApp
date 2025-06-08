@@ -12,7 +12,6 @@
 <div class="container mt-4">
     @try
     {
-        <!-- Loading state -->
         @if (isLoading)
         {
             <div class="text-center py-5">
@@ -39,9 +38,40 @@
                 </div>
             </div>
         }
-        else if (!isEmailConfirmed && emailVerificationChecked)
+        else if (!isGuestUser && userRoleChecked)
         {
-            <!-- Email not confirmed warning -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-lg-8">
+                    <div class="alert alert-danger border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-shield-exclamation me-3" style="font-size: 2rem; color: #dc3545;"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading mb-2">
+                                    <i class="bi bi-exclamation-triangle"></i> Brak uprawnień do rezerwacji
+                                </h5>
+                                <p class="mb-2">
+                                    Niestety, tylko użytkownicy z rolą "Guest" mogą dokonywać rezerwacji w naszym systemie.
+                                    Twoja obecna rola nie pozwala na dokonanie rezerwacji.
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Twoja rola:</strong> @(currentUserRole ?? "Nieokreślona")
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary" @onclick="GoToHotels">
+                                        <i class="bi bi-arrow-left"></i> Powrót do hoteli
+                                    </button>
+                                    <button class="btn btn-outline-secondary" @onclick="ContactSupport">
+                                        <i class="bi bi-envelope"></i> Skontaktuj się z obsługą
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!isEmailConfirmed && emailVerificationChecked && isGuestUser)
+        {
             <div class="row justify-content-center mb-4">
                 <div class="col-lg-8">
                     <div class="alert alert-warning border-0 shadow-sm">
@@ -69,9 +99,9 @@
                 </div>
             </div>
         }
-        else if (room != null)
+        else if (room != null && isGuestUser)
         {
-            <!-- Breadcrumb -->
+            <!-- Reszta kodu pozostaje bez zmian -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -90,7 +120,6 @@
                 </ol>
             </nav>
 
-            <!-- Room info header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -134,7 +163,6 @@
                 </div>
             </div>
 
-            <!-- Room images -->
             @if (HasRoomImages())
             {
                 <div class="row mb-4">
@@ -161,10 +189,8 @@
                 </div>
             }
 
-            <!-- Reservation form -->
             <div class="row">
                 <div class="col-lg-8">
-                    <!-- Date and guest selection -->
                     <div class="card border-0 shadow-sm mb-4 @(isEmailConfirmed ? "" : "opacity-50")">
                         <div class="card-header bg-white border-0">
                             <h5 class="mb-0">
@@ -181,24 +207,27 @@
                             <EditForm Model="@reservationModel" OnValidSubmit="@HandleSubmit">
                                 <DataAnnotationsValidator />
                                 
-                                <!-- Date selection -->
                                 <div class="row mb-4">
                                     <div class="col-md-6">
                                         <label for="checkInDate" class="form-label">
                                             <i class="bi bi-calendar-plus"></i> Data zameldowania
                                         </label>
-                                        <InputDate id="checkInDate" class="form-control" @bind-Value="reservationModel.CheckInDate" 
-                                                   min="@DateTime.Today.ToString("yyyy-MM-dd")" disabled="@(!isEmailConfirmed)" 
-                                                   @onchange="OnDateChanged" />
+                                        <input type="date" id="checkInDate" class="form-control" 
+                                               value="@reservationModel.CheckInDate.ToString("yyyy-MM-dd")"
+                                               min="@DateTime.Today.ToString("yyyy-MM-dd")" 
+                                               disabled="@(!isEmailConfirmed)"
+                                               @onchange="@OnCheckInDateChanged" />
                                         <ValidationMessage For="@(() => reservationModel.CheckInDate)" class="text-danger" />
                                     </div>
                                     <div class="col-md-6">
                                         <label for="checkOutDate" class="form-label">
                                             <i class="bi bi-calendar-minus"></i> Data wymeldowania
                                         </label>
-                                        <InputDate id="checkOutDate" class="form-control" @bind-Value="reservationModel.CheckOutDate" 
-                                                   min="@GetMinCheckOutDate()" disabled="@(!isEmailConfirmed)" 
-                                                   @onchange="OnDateChanged" />
+                                        <input type="date" id="checkOutDate" class="form-control" 
+                                               value="@reservationModel.CheckOutDate.ToString("yyyy-MM-dd")"
+                                               min="@GetMinCheckOutDate()" 
+                                               disabled="@(!isEmailConfirmed)"
+                                               @onchange="@OnCheckOutDateChanged" />
                                         <ValidationMessage For="@(() => reservationModel.CheckOutDate)" class="text-danger" />
                                         @if (!string.IsNullOrEmpty(dateValidationMessage))
                                         {
@@ -209,7 +238,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Availability status indicator -->
                                 @if (isEmailConfirmed && IsValidDateRange())
                                 {
                                     <div class="row mb-4">
@@ -257,7 +285,6 @@
                                     </div>
                                 }
 
-                                <!-- Guest count -->
                                 <div class="row mb-4">
                                     <div class="col-md-6">
                                         <label for="guestCount" class="form-label">
@@ -282,7 +309,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Special requests -->
                                 <div class="mb-4">
                                     <label for="specialRequests" class="form-label">
                                         <i class="bi bi-chat-dots"></i> Specjalne życzenia (opcjonalne)
@@ -295,7 +321,6 @@
                         </div>
                     </div>
 
-                    <!-- Additional services section -->
                     @if (isEmailConfirmed && availabilityResult == AvailabilityStatus.Available)
                     {
                         <div class="card border-0 shadow-sm mb-4">
@@ -354,7 +379,6 @@
                         </div>
                     }
 
-                    <!-- Action buttons -->
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -377,30 +401,40 @@
                                         }
                                     </button>
                                 }
-                                else
+                                else if (availabilityResult == AvailabilityStatus.Unavailable)
                                 {
-                                    <button type="button" class="btn btn-primary" disabled="@(!isEmailConfirmed || !IsValidDateRange() || checkingAvailability)" 
-                                            @onclick="CheckAvailabilityManually">
+                                    <button type="button" class="btn btn-outline-danger" disabled>
+                                        <i class="bi bi-x-circle"></i>
+                                        <span>Pokój niedostępny w wybranych datach</span>
+                                    </button>
+                                }
+                                else if (availabilityResult == AvailabilityStatus.Error)
+                                {
+                                    <button type="button" class="btn btn-outline-warning" @onclick="CheckAvailabilityManually" disabled="@checkingAvailability">
                                         @if (checkingAvailability)
                                         {
                                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                            <span>Sprawdzam dostępność...</span>
-                                        }
-                                        else if (!isEmailConfirmed)
-                                        {
-                                            <i class="bi bi-envelope-exclamation"></i>
-                                            <span>Potwierdź email aby kontynuować</span>
-                                        }
-                                        else if (!IsValidDateRange())
-                                        {
-                                            <i class="bi bi-calendar-x"></i>
-                                            <span>Wybierz prawidłowe daty</span>
+                                            <span>Sprawdzam ponownie...</span>
                                         }
                                         else
                                         {
-                                            <i class="bi bi-search"></i>
-                                            <span>Sprawdź dostępność</span>
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            <span>Spróbuj ponownie</span>
                                         }
+                                    </button>
+                                }
+                                else if (!isEmailConfirmed)
+                                {
+                                    <button type="button" class="btn btn-outline-warning" disabled>
+                                        <i class="bi bi-envelope-exclamation"></i>
+                                        <span>Potwierdź email aby kontynuować</span>
+                                    </button>
+                                }
+                                else if (!IsValidDateRange())
+                                {
+                                    <button type="button" class="btn btn-outline-secondary" disabled>
+                                        <i class="bi bi-calendar-x"></i>
+                                        <span>Wybierz prawidłowe daty</span>
                                     </button>
                                 }
                             </div>
@@ -408,7 +442,6 @@
                     </div>
                 </div>
 
-                <!-- Price summary -->
                 <div class="col-lg-4">
                     <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
                         <div class="card-header bg-primary text-white">
@@ -437,7 +470,6 @@
                                     <strong class="h6 text-primary">@GetAccommodationCost().ToString("C", polishCulture)</strong>
                                 </div>
 
-                                <!-- Services cost breakdown -->
                                 @if (selectedServices?.Any() == true)
                                 {
                                     <div class="border-top pt-2 mt-2">
@@ -505,9 +537,23 @@
                 </div>
             </div>
         }
+        else if (room != null && !isGuestUser && userRoleChecked)
+        {
+            <!-- Alternatywny widok dla użytkowników bez uprawnień - tylko podgląd -->
+            <div class="text-center py-5">
+                <i class="bi bi-shield-lock display-1 text-muted"></i>
+                <h3 class="mt-3">Brak uprawnień do rezerwacji</h3>
+                <p class="text-muted">
+                    Ten pokój jest dostępny do rezerwacji tylko dla użytkowników z rolą "Guest".<br/>
+                    Twoja obecna rola: <strong>@(currentUserRole ?? "Nieokreślona")</strong>
+                </p>
+                <button class="btn btn-primary" @onclick="GoToHotels">
+                    <i class="bi bi-arrow-left"></i> Powrót do hoteli
+                </button>
+            </div>
+        }
         else
         {
-            <!-- Empty state -->
             <div class="text-center py-5">
                 <i class="bi bi-door-closed display-1 text-muted"></i>
                 <h3 class="mt-3">Brak danych pokoju</h3>
@@ -560,14 +606,16 @@
 
     private RoomDetailsViewModel? room;
     private ReservationModel reservationModel = new();
-    
-    // Nowe pola dla usług dodatkowych
     private List<HotelServiceResponse>? availableServices;
-    private Dictionary<int, int> selectedServices = new(); // serviceId -> quantity
+    private Dictionary<int, int> selectedServices = new();
     private bool loadingServices = false;
     private bool updatingServices = false;
     
-    // Pola dla ulepszonej logiki dostępności
+    // Nowe zmienne dla sprawdzania roli użytkownika
+    private bool isGuestUser = false;
+    private bool userRoleChecked = false;
+    private string? currentUserRole = null;
+    
     private enum AvailabilityStatus
     {
         Unknown,
@@ -595,16 +643,13 @@
     {
         try
         {
-            // Ustaw domyślne daty
             reservationModel.CheckInDate = DateTime.Today.AddDays(1);
             reservationModel.CheckOutDate = DateTime.Today.AddDays(2);
             reservationModel.GuestCount = 1;
             
-            // Inicjalizuj kolekcje
             availableServices = new List<HotelServiceResponse>();
             selectedServices = new Dictionary<int, int>();
 
-            // Sprawdź autoryzację
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (!authState.User.Identity.IsAuthenticated)
             {
@@ -612,19 +657,27 @@
                 return;
             }
 
+            // Sprawdź rolę użytkownika
+            await CheckUserRole();
+            
+            if (!isGuestUser)
+            {
+                // Jeśli użytkownik nie ma roli Guest, załaduj tylko podstawowe dane pokoju do wyświetlenia
+                await LoadRoomData();
+                return;
+            }
+
             await CheckEmailVerificationStatus();
             await LoadRoomData();
             
-            // Załaduj usługi dla hotelu
             if (room != null)
             {
                 await LoadAvailableServices(room.HotelId);
             }
             
-            // Sprawdź dostępność dla domyślnych dat
             if (isEmailConfirmed && IsValidDateRange())
             {
-                await CheckAvailabilityWithDebounce();
+                await CheckAvailability();
             }
         }
         catch (Exception ex)
@@ -635,34 +688,211 @@
         }
     }
 
-    // NOWE METODY - dla usług dodatkowych
+    private async Task CheckUserRole()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/account/session");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessionData = await response.Content.ReadFromJsonAsync<SessionViewModel>();
+                if (sessionData?.Roles != null && sessionData.Roles.Length > 0)
+                {
+                    currentUserRole = string.Join(", ", sessionData.Roles);
+                    isGuestUser = sessionData.Roles.Contains("Guest", StringComparer.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    currentUserRole = "Brak roli";
+                    isGuestUser = false;
+                }
+            }
+            else
+            {
+                currentUserRole = "Nie można określić roli";
+                isGuestUser = false;
+            }
+            
+            userRoleChecked = true;
+        }
+        catch (Exception)
+        {
+            currentUserRole = "Błąd sprawdzania roli";
+            isGuestUser = false;
+            userRoleChecked = true;
+        }
+    }
+
+    private async Task ContactSupport()
+    {
+        // Możesz zaimplementować przekierowanie do strony kontaktu lub otworzenie modalnego okna
+        await JSRuntime.InvokeVoidAsync("alert", 
+            "Aby uzyskać dostęp do rezerwacji, skontaktuj się z administratorem systemu. " +
+            "Możliwe, że potrzebujesz zmiany roli na 'Guest' w swoim profilu.");
+    }
+
+    private async Task CreateOrderAndProceed()
+    {
+        // Dodatkowe sprawdzenie roli przed utworzeniem zamówienia
+        if (!isGuestUser)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Tylko użytkownicy z rolą 'Guest' mogą dokonywać rezerwacji.");
+            return;
+        }
+
+        if (room == null || availabilityResult != AvailabilityStatus.Available || !isEmailConfirmed) 
+        {
+            if (!isEmailConfirmed)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić swój adres email przed dokonaniem rezerwacji.");
+            }
+            else if (availabilityResult != AvailabilityStatus.Available)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Pokój nie jest dostępny w wybranych datach. Sprawdź dostępność ponownie.");
+            }
+            return;
+        }
+        
+        creatingOrder = true;
+        
+        try
+        {
+            var userId = "";
+            try
+            {
+                var sessionResponse = await Http.GetAsync("api/account/session");
+                if (sessionResponse.IsSuccessStatusCode)
+                {
+                    var sessionData = await sessionResponse.Content.ReadFromJsonAsync<SessionViewModel>();
+                    if (sessionData != null)
+                    {
+                        userId = sessionData.Id;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            var orderData = new
+            {
+                userId = userId,
+                firstName = "x",
+                lastName = "x",
+                phoneNumber = "123456789",
+                address = "x",
+                city = "x",
+                country = "x"
+            };
+
+            var response = await Http.PostAsJsonAsync("api/order", orderData);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                try
+                {
+                    var jsonDoc = System.Text.Json.JsonDocument.Parse(responseContent);
+                    var orderId = 0;
+                    
+                    if (jsonDoc.RootElement.TryGetProperty("orderId", out var orderIdProp))
+                    {
+                        orderId = orderIdProp.GetInt32();
+                    }
+                    else if (jsonDoc.RootElement.TryGetProperty("id", out var idProp))
+                    {
+                        orderId = idProp.GetInt32();
+                    }
+                    else if (int.TryParse(responseContent.Trim('"'), out var parsedId))
+                    {
+                        orderId = parsedId;
+                    }
+                    
+                    if (orderId > 0)
+                    {
+                        var reservationResult = await AddReservationToOrder(orderId);
+                        if (reservationResult.Success && reservationResult.ReservationId.HasValue)
+                        {
+                            if (selectedServices.Any())
+                            {
+                                await AddServicesToReservation(reservationResult.ReservationId.Value);
+                            }
+                            
+                            NavigationManager.NavigateTo($"/order/{orderId}");
+                        }
+                        else
+                        {
+                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
+                        }
+                    }
+                    else
+                    {
+                        errorMessage = "Nie udało się uzyskać ID zamówienia z odpowiedzi serwera.";
+                    }
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    if (int.TryParse(responseContent.Trim(), out var directId))
+                    {
+                        var reservationResult = await AddReservationToOrder(directId);
+                        
+                        if (reservationResult.Success && reservationResult.ReservationId.HasValue)
+                        {
+                            if (selectedServices.Any())
+                            {
+                                await AddServicesToReservation(reservationResult.ReservationId.Value);
+                            }
+                            
+                            NavigationManager.NavigateTo($"/order/{directId}");
+                        }
+                        else
+                        {
+                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
+                        }
+                    }
+                    else
+                    {
+                        errorMessage = $"Nieprawidłowa odpowiedź serwera: {responseContent}";
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = $"Błąd tworzenia zamówienia: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Błąd tworzenia zamówienia: {ex.Message}";
+        }
+        finally
+        {
+            creatingOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    // Reszta metod pozostaje bez zmian...
     private async Task LoadAvailableServices(int hotelId)
     {
         loadingServices = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{hotelId}");
 
             if (response.IsSuccessStatusCode)
             {
                 availableServices = await response.Content.ReadFromJsonAsync<List<HotelServiceResponse>>() ?? new List<HotelServiceResponse>();
-                Console.WriteLine($"Loaded {availableServices.Count} services for hotel {hotelId}");
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                Console.WriteLine($"Hotel {hotelId} nie został znaleziony");
-                availableServices = new List<HotelServiceResponse>();
             }
             else
             {
-                Console.WriteLine($"Błąd ładowania usług hotelu: {response.StatusCode}");
                 availableServices = new List<HotelServiceResponse>();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Błąd podczas ładowania usług hotelu: {ex.Message}");
             availableServices = new List<HotelServiceResponse>();
         }
         finally
@@ -731,9 +961,19 @@
         return GetAccommodationCost() + GetServicesCost();
     }
 
-    // ISTNIEJĄCE METODY - bez zmian
     private bool IsValidDateRange()
     {
+        if (reservationModel.CheckInDate < DateTime.Today)
+        {
+            reservationModel.CheckInDate = DateTime.Today;
+        }
+        
+        if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+        {
+            reservationModel.CheckOutDate = reservationModel.CheckInDate.AddDays(1);
+            StateHasChanged();
+        }
+        
         if (reservationModel.CheckInDate < DateTime.Today)
         {
             dateValidationMessage = "Data zameldowania nie może być wcześniejsza niż dzisiaj";
@@ -757,7 +997,43 @@
         return true;
     }
 
-    private async Task OnDateChanged(ChangeEventArgs e)
+    private async Task OnCheckInDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
+        {
+            reservationModel.CheckInDate = newDate;
+            
+            if (reservationModel.CheckInDate >= reservationModel.CheckOutDate)
+            {
+                reservationModel.CheckOutDate = reservationModel.CheckInDate.AddDays(1);
+            }
+            
+            await TriggerAvailabilityCheck();
+        }
+    }
+
+    private async Task OnCheckOutDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
+        {
+            reservationModel.CheckOutDate = newDate;
+            
+            if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+            {
+                reservationModel.CheckInDate = reservationModel.CheckOutDate.AddDays(-1);
+                
+                if (reservationModel.CheckInDate < DateTime.Today)
+                {
+                    reservationModel.CheckInDate = DateTime.Today;
+                    reservationModel.CheckOutDate = DateTime.Today.AddDays(1);
+                }
+            }
+            
+            await TriggerAvailabilityCheck();
+        }
+    }
+
+    private async Task TriggerAvailabilityCheck()
     {
         debounceTimer?.Stop();
         debounceTimer?.Dispose();
@@ -770,35 +1046,16 @@
             return;
         }
         
-        debounceTimer = new Timer(800);
+        debounceTimer = new Timer(300);
         debounceTimer.Elapsed += async (sender, e) =>
         {
             debounceTimer.Stop();
             await InvokeAsync(async () =>
             {
-                await CheckAvailabilityWithDebounce();
+                await CheckAvailability();
             });
         };
         debounceTimer.Start();
-    }
-
-    private async Task CheckAvailabilityWithDebounce()
-    {
-        if (!IsValidDateRange() || checkingAvailability)
-        {
-            return;
-        }
-
-        var cacheKey = GetCacheKey();
-        
-        if (availabilityCache.ContainsKey(cacheKey))
-        {
-            availabilityResult = availabilityCache[cacheKey];
-            StateHasChanged();
-            return;
-        }
-
-        await CheckAvailability();
     }
 
     private async Task CheckAvailabilityManually()
@@ -827,8 +1084,6 @@
         
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
-            
             var requestData = new
             {
                 roomId = RoomId,
@@ -841,27 +1096,32 @@
             if (response.IsSuccessStatusCode)
             {
                 var availableDays = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
-                
                 var requiredDays = GetRequiredDays();
-                var isFullyAvailable = requiredDays.All(day => availableDays.Contains(day));
+                
+                bool isFullyAvailable;
+                
+                if (availableDays.Count == 0)
+                {
+                    isFullyAvailable = false;
+                }
+                else
+                {
+                    isFullyAvailable = requiredDays.All(day => availableDays.Contains(day));
+                }
                 
                 availabilityResult = isFullyAvailable ? AvailabilityStatus.Available : AvailabilityStatus.Unavailable;
                 
                 var cacheKey = GetCacheKey();
                 availabilityCache[cacheKey] = availabilityResult;
-                
-                Console.WriteLine($"Availability check: {requiredDays.Count} required days, {availableDays.Count} available days, result: {availabilityResult}");
             }
             else
             {
                 availabilityResult = AvailabilityStatus.Error;
-                Console.WriteLine($"Error checking availability: {response.StatusCode}");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             availabilityResult = AvailabilityStatus.Error;
-            Console.WriteLine($"Exception during availability check: {ex.Message}");
         }
         finally
         {
@@ -906,17 +1166,12 @@
         {
             await CreateOrderAndProceed();
         }
-        else
-        {
-            await CheckAvailabilityManually();
-        }
     }
 
     private async Task CheckEmailVerificationStatus()
     {
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
@@ -931,9 +1186,8 @@
             
             emailVerificationChecked = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Błąd sprawdzania statusu weryfikacji email: {ex.Message}");
             isEmailConfirmed = false;
             emailVerificationChecked = true;
         }
@@ -950,7 +1204,7 @@
             
             if (IsValidDateRange())
             {
-                await CheckAvailabilityWithDebounce();
+                await CheckAvailability();
             }
         }
         else
@@ -963,7 +1217,6 @@
     {
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.PostAsync("api/account/send-verification-email", null);
             
             if (response.IsSuccessStatusCode)
@@ -981,150 +1234,6 @@
         }
     }
 
-    // ZAKTUALIZOWANA METODA - uwzględnia wybrane usługi
-    private async Task CreateOrderAndProceed()
-    {
-        if (room == null || availabilityResult != AvailabilityStatus.Available || !isEmailConfirmed) 
-        {
-            if (!isEmailConfirmed)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Musisz potwierdzić swój adres email przed dokonaniem rezerwacji.");
-            }
-            else if (availabilityResult != AvailabilityStatus.Available)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Pokój nie jest dostępny w wybranych datach. Sprawdź dostępność ponownie.");
-            }
-            return;
-        }
-        
-        creatingOrder = true;
-        
-        try
-        {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
-            
-            // Pobierz dane z session API
-            var userId = "";
-            try
-            {
-                var sessionResponse = await Http.GetAsync("api/account/session");
-                if (sessionResponse.IsSuccessStatusCode)
-                {
-                    var sessionData = await sessionResponse.Content.ReadFromJsonAsync<SessionViewModel>();
-                    if (sessionData != null)
-                    {
-                        userId = sessionData.Id;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd pobierania session: {ex.Message}");
-            }
-
-            // Utwórz zamówienie
-            var orderData = new
-            {
-                userId = userId,
-                firstName = "x",
-                lastName = "x",
-                phoneNumber = "123456789",
-                address = "x",
-                city = "x",
-                country = "x"
-            };
-
-            var response = await Http.PostAsJsonAsync("api/order", orderData);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
-                try
-                {
-                    var jsonDoc = System.Text.Json.JsonDocument.Parse(responseContent);
-                    var orderId = 0;
-                    
-                    if (jsonDoc.RootElement.TryGetProperty("orderId", out var orderIdProp))
-                    {
-                        orderId = orderIdProp.GetInt32();
-                    }
-                    else if (jsonDoc.RootElement.TryGetProperty("id", out var idProp))
-                    {
-                        orderId = idProp.GetInt32();
-                    }
-                    else if (int.TryParse(responseContent.Trim('"'), out var parsedId))
-                    {
-                        orderId = parsedId;
-                    }
-                    
-                    if (orderId > 0)
-                    {
-                        var reservationResult = await AddReservationToOrder(orderId);
-                        Console.WriteLine($"Reservation result: Success={reservationResult.Success}, ReservationId={reservationResult.ReservationId}, ErrorMessage={reservationResult.ErrorMessage}");
-                        if (reservationResult.Success && reservationResult.ReservationId.HasValue)
-                        {
-                            // Dodaj wybrane usługi do rezerwacji
-                            if (selectedServices.Any())
-                            {
-                                await AddServicesToReservation(reservationResult.ReservationId.Value);
-                            }
-                            
-                            NavigationManager.NavigateTo($"/order/{orderId}");
-                        }
-                        else
-                        {
-                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
-                        }
-                    }
-                    else
-                    {
-                        errorMessage = "Nie udało się uzyskać ID zamówienia z odpowiedzi serwera.";
-                    }
-                }
-                catch (System.Text.Json.JsonException)
-                {
-                    if (int.TryParse(responseContent.Trim(), out var directId))
-                    {
-                        var reservationResult = await AddReservationToOrder(directId);
-                        
-                        if (reservationResult.Success && reservationResult.ReservationId.HasValue)
-                        {
-                            if (selectedServices.Any())
-                            {
-                                await AddServicesToReservation(reservationResult.ReservationId.Value);
-                            }
-                            
-                            NavigationManager.NavigateTo($"/order/{directId}");
-                        }
-                        else
-                        {
-                            errorMessage = $"Błąd dodawania rezerwacji: {reservationResult.ErrorMessage}";
-                        }
-                    }
-                    else
-                    {
-                        errorMessage = $"Nieprawidłowa odpowiedź serwera: {responseContent}";
-                    }
-                }
-            }
-            else
-            {
-                errorMessage = $"Błąd tworzenia zamówienia: {response.StatusCode}";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Błąd tworzenia zamówienia: {ex.Message}";
-        }
-        finally
-        {
-            creatingOrder = false;
-            StateHasChanged();
-        }
-    }
-
-    // NOWA METODA - dodawanie usług do rezerwacji
     private async Task AddServicesToReservation(int reservationId)
     {
         foreach (var serviceSelection in selectedServices)
@@ -1140,18 +1249,11 @@
                         quantity = 1
                     };
 
-                    // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
-                    var response = await Http.PostAsJsonAsync("api/reservation/service/add", requestData);
-                    
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine($"Błąd dodawania usługi {serviceSelection.Key}: {response.StatusCode}");
-                    }
+                    await Http.PostAsJsonAsync("api/reservation/service/add", requestData);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Błąd dodawania usługi {serviceSelection.Key}: {ex.Message}");
             }
         }
     }
@@ -1185,7 +1287,6 @@
                 to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
             };
 
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.PostAsJsonAsync("api/reservation", reservationData);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.StatusCode == System.Net.HttpStatusCode.OK)
@@ -1196,21 +1297,15 @@
                 {
                     try
                     {
-                        // Spróbuj sparsować jako JSON
                         var jsonDoc = System.Text.Json.JsonDocument.Parse(responseContent);
                         if (jsonDoc.RootElement.TryGetProperty("reservationId", out var reservationIdProp))
                         {
                             var reservationId = reservationIdProp.GetInt32();
-                            Console.WriteLine($"Utworzono rezerwację z ID: {reservationId}");
                             return new ReservationResult { Success = true, ReservationId = reservationId };
                         }
                     }
-                    catch (System.Text.Json.JsonException ex)
+                    catch (System.Text.Json.JsonException)
                     {
-                        Console.WriteLine($"Błąd parsowania JSON odpowiedzi: {ex.Message}");
-                        Console.WriteLine($"Odpowiedź: {responseContent}");
-                        
-                        // Fallback - spróbuj sparsować jako zwykłą liczbę
                         if (int.TryParse(responseContent.Trim('"'), out var directId))
                         {
                             return new ReservationResult { Success = true, ReservationId = directId };
@@ -1218,7 +1313,6 @@
                     }
                 }
                 
-                // Jeśli nie udało się uzyskać ID, ale request był udany
                 return new ReservationResult { Success = true };
             }
             else
@@ -1247,7 +1341,6 @@
         debounceTimer?.Dispose();
     }
 
-    // NOWE MODELE - dla usług
     public class HotelServiceResponse
     {
         public int Id { get; set; }
@@ -1259,7 +1352,6 @@
         public int HotelId { get; set; }
     }
 
-    // Pomocnicze metody pozostają bez zmian
     private string GetSafeRoomName() => room?.RoomName ?? "Pokój";
     private string GetSafeRoomType() => room?.RoomType ?? "Typ pokoju";
     private bool HasRoomImages() => room?.RoomImages?.Any() == true;
@@ -1299,7 +1391,6 @@
 
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel-room/{RoomId}");
 
             if (response.IsSuccessStatusCode)
