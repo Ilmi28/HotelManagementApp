@@ -86,7 +86,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.ReviewTests
             _imageRepositoryMock.Verify(r => r.AddReviewImage(It.Is<HotelReviewImage>(img =>
                 img.FileName == "uploaded1.jpg" && img.HotelReview == review
             ), It.IsAny<CancellationToken>()), Times.Once);
-            _reviewRepositoryMock.Verify(r => r.UpdateReview(review, It.IsAny<CancellationToken>()), Times.Once);
+            _imageRepositoryMock.Verify(r => r.RemoveReviewImagesByReviewId(review.Id, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace HotelManagementApp.UnitTests.HandlerTests.ReviewTests
         {
             _reviewRepositoryMock.Setup(r => r.GetReviewById(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((HotelReview?)null);
-
+            
             var command = new UpdateReviewImagesCommand
             {
                 ReviewId = 2,
