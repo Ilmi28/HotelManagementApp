@@ -1,5 +1,4 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
 @using System.Text.Json
 @inject NavigationManager NavigationManager
 @inject HotelManagementApp.Blazor.Auth.ITokenService TokenService
@@ -34,6 +33,7 @@
                     </NavLink>
                 </li>
                 
+                <!-- Panel pracownika (Staff+) -->
                 <AuthorizeView Roles="Staff,Manager,Admin">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="staffDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -42,16 +42,18 @@
                         <ul class="dropdown-menu" aria-labelledby="staffDropdown">
                             <li>
                                 <NavLink class="dropdown-item" href="staff-dashboard">
-                                    <i class="bi bi-speedometer"></i> Panel
+                                    <i class="bi bi-speedometer"></i> Dashboard
                                 </NavLink>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Obsługa klientów</h6></li>
                             <li>
                                 <NavLink class="dropdown-item" href="order-management">
                                     <i class="bi bi-calendar-check"></i> Zamówienia
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink class="dropdown-item" href="admin/guests">
+                                <NavLink class="dropdown-item" href="guest-management">
                                     <i class="bi bi-people"></i> Goście
                                 </NavLink>
                             </li>
@@ -64,25 +66,23 @@
                     </li>
                 </AuthorizeView>
                 
+                <!-- Panel zarządzania (Manager+) -->
                 <AuthorizeView Roles="Manager,Admin">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="managerDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-briefcase"></i> Panel menedżera
+                        <a class="nav-link dropdown-toggle" href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-briefcase"></i> Zarządzanie
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="managerDropdown">
+                        <ul class="dropdown-menu" aria-labelledby="managementDropdown">
                             <li>
                                 <NavLink class="dropdown-item" href="manager-dashboard">
-                                    <i class="bi bi-graph-up"></i> Statystyki
+                                    <i class="bi bi-graph-up"></i> Dashboard menedżera
                                 </NavLink>
                             </li>
-                            <li>
-                                <NavLink class="dropdown-item" href="staff-management">
-                                    <i class="bi bi-people"></i> Personel
-                                </NavLink>
-                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Zasoby hotelowe</h6></li>
                             <li>
                                 <NavLink class="dropdown-item" href="hotel-management">
-                                    <i class="bi bi-building"></i> Zarządzanie hotelem
+                                    <i class="bi bi-building"></i> Hotele
                                 </NavLink>
                             </li>
                             <li>
@@ -100,29 +100,49 @@
                                     <i class="bi bi-p-square"></i> Parkingi
                                 </NavLink>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Marketing i personel</h6></li>
                             <li>
                                 <NavLink class="dropdown-item" href="discount-management">
                                     <i class="bi bi-percent"></i> Zniżki
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="loyalty-management">
+                                    <i class="bi bi-award"></i> Program lojalnościowy
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="staff-management">
+                                    <i class="bi bi-people-fill"></i> Zarządzanie personelem
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink class="dropdown-item" href="guest-status-management">
+                                    <i class="bi bi-person-lines-fill"></i> Statusy gości
                                 </NavLink>
                             </li>
                         </ul>
                     </li>
                 </AuthorizeView>
                 
+                <!-- Panel administratora -->
                 <AuthorizeView Roles="Admin">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-shield-lock"></i> Panel administratora
+                            <i class="bi bi-shield-lock"></i> Administracja
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                             <li>
                                 <NavLink class="dropdown-item" href="admin-dashboard">
-                                    <i class="bi bi-speedometer2"></i> Panel główny
+                                    <i class="bi bi-speedometer2"></i> Dashboard administratora
                                 </NavLink>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Zarządzanie kontami</h6></li>
                             <li>
                                 <NavLink class="dropdown-item" href="admin/users">
-                                    <i class="bi bi-people"></i> Użytkownicy
+                                    <i class="bi bi-people"></i> Wszyscy użytkownicy
                                 </NavLink>
                             </li>
                             <li>
@@ -165,11 +185,14 @@
                                 <span>@(userSession?.UserName ?? context.User.Identity?.Name)</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><h6 class="dropdown-header">Moje konto</h6></li>
                                 <li>
                                     <NavLink class="dropdown-item" href="account">
-                                        <i class="bi bi-person-circle"></i> Konto
+                                        <i class="bi bi-person-circle"></i> Ustawienia konta
                                     </NavLink>
                                 </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Moja aktywność</h6></li>
                                 <li>
                                     <NavLink class="dropdown-item" href="my-reservations">
                                         <i class="bi bi-journal-text"></i> Moje rezerwacje
@@ -187,8 +210,8 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <button class="dropdown-item" @onclick="BeginLogout">
-                                        <i class="bi bi-box-arrow-right"></i> Wyloguj
+                                    <button class="dropdown-item text-danger" @onclick="BeginLogout">
+                                        <i class="bi bi-box-arrow-right"></i> Wyloguj się
                                     </button>
                                 </li>
                             </ul>
@@ -198,10 +221,10 @@
                 <NotAuthorized>
                     <div class="d-flex">
                         <NavLink class="btn btn-outline-primary me-2" href="login">
-                            Zaloguj
+                            <i class="bi bi-box-arrow-in-right"></i> Zaloguj
                         </NavLink>
                         <NavLink class="btn btn-primary" href="register">
-                            Zarejestruj
+                            <i class="bi bi-person-plus"></i> Zarejestruj
                         </NavLink>
                     </div>
                 </NotAuthorized>
@@ -218,6 +241,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // NAJPIERW synchronizuj tokeny z localStorage
+        await SyncTokensFromLocalStorage();
+        // TYMCZASOWE DEBUGOWANIE
+        await DebugTokenStatus();
+        
         await LoadUserSession();
         await LoadLoyaltyPoints();
         
@@ -225,6 +253,46 @@
         EventBus.ProfileUpdated += OnProfileUpdated;
     }
 
+    // Tymczasowa metoda do debugowania
+    private async Task DebugTokenStatus()
+    {
+        try
+        {
+            var token = await TokenService.GetAccessTokenAsync();
+            var refreshToken = await TokenService.GetRefreshTokenAsync();
+            
+            Console.WriteLine($"=== DEBUG TOKEN STATUS ===");
+            Console.WriteLine($"Access Token: {(!string.IsNullOrEmpty(token) ? "ISTNIEJE" : "BRAK")}");
+            Console.WriteLine($"Refresh Token: {(!string.IsNullOrEmpty(refreshToken) ? "ISTNIEJE" : "BRAK")}");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine($"Token length: {token.Length}");
+                Console.WriteLine($"Token preview: {token.Substring(0, Math.Min(50, token.Length))}...");
+                
+                // Sprawdź czy token jest prawidłowy
+                var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                if (tokenHandler.CanReadToken(token))
+                {
+                    var jwtToken = tokenHandler.ReadJwtToken(token);
+                    Console.WriteLine($"Token expires: {jwtToken.ValidTo} UTC");
+                    Console.WriteLine($"Current time: {DateTime.UtcNow} UTC");
+                    Console.WriteLine($"Is expired: {jwtToken.ValidTo <= DateTime.UtcNow}");
+                }
+                else
+                {
+                    Console.WriteLine("Token format is invalid!");
+                }
+            }
+            
+            Console.WriteLine($"=== END DEBUG ===");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Debug error: {ex.Message}");
+        }
+    }
+    
     private async void OnProfileUpdated()
     {
         await LoadUserSession();
@@ -252,8 +320,8 @@
     {
         try
         {
-            var authenticatedClient = await GetAuthenticatedHttpClient();
-            var response = await authenticatedClient.GetAsync("api/account/session");
+            // Używamy HttpClient bezpośrednio - token jest dodawany automatycznie
+            var response = await HttpClient.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
             {
@@ -277,8 +345,8 @@
         {
             if (userSession?.Id != null)
             {
-                var authenticatedClient = await GetAuthenticatedHttpClient();
-                var response = await authenticatedClient.GetAsync($"api/loyalty-points/guests/{userSession.Id}/points");
+                // Używamy HttpClient bezpośrednio - token jest dodawany automatycznie
+                var response = await HttpClient.GetAsync($"api/loyalty-points/guests/{userSession.Id}/points");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -298,46 +366,6 @@
         }
     }
 
-    private async Task<string?> GetTokenFromLocalStorage()
-    {
-        try
-        {
-            await JSRuntime.InvokeAsync<string>("eval", "''");
-            var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            return token;
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
-        {
-            await Task.Delay(500);
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task<HttpClient> GetAuthenticatedHttpClient()
-    {
-        var token = await GetTokenFromLocalStorage();
-        
-        if (!string.IsNullOrEmpty(token))
-        {
-            HttpClient.DefaultRequestHeaders.Authorization = null;
-            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        
-        return HttpClient;
-    }
-
     public class UserSession
     {
         public string Id { get; set; } = string.Empty;
@@ -351,5 +379,35 @@
     public class LoyaltyPointsResponse
     {
         public int Points { get; set; }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Synchronizuj tokeny z localStorage do pamięci
+            await SyncTokensFromLocalStorage();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    
+    private async Task SyncTokensFromLocalStorage()
+    {
+        try
+        {
+            // Pobierz tokeny z localStorage i zsynchronizuj z pamięcią
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            var refreshToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+            
+            if (!string.IsNullOrEmpty(accessToken) && !string.IsNullOrEmpty(refreshToken))
+            {
+                Console.WriteLine("Synchronizing tokens from localStorage to memory...");
+                await TokenService.SetTokensAsync(accessToken, refreshToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error syncing tokens: {ex.Message}");
+        }
     }
 }

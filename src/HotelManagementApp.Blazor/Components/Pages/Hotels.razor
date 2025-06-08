@@ -126,7 +126,7 @@
                 {
                     <div class="col-lg-4 col-md-6">
                         <div class="card hotel-card h-100 border-0 shadow-sm">
-                            <img src="@(string.IsNullOrEmpty(hotel.ImageUrl) ? "images/hotel-placeholder.jpg" : hotel.ImageUrl)" 
+                            <img src="@GetHotelImageUrl(hotel)" 
                                 class="card-img-top" alt="@hotel.Name" style="height: 200px; object-fit: cover;" />
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -171,7 +171,7 @@
                         <div class="card hotel-card border-0 shadow-sm">
                             <div class="row g-0">
                                 <div class="col-md-3">
-                                    <img src="@(string.IsNullOrEmpty(hotel.ImageUrl) ? "images/hotel-placeholder.jpg" : hotel.ImageUrl)" 
+                                    <img src="@GetHotelImageUrl(hotel)" 
                                         class="img-fluid rounded-start h-100" alt="@hotel.Name" style="object-fit: cover;" />
                                 </div>
                                 <div class="col-md-9">
@@ -383,6 +383,19 @@
         NavigationManager.NavigateTo("/login");
     }
 
+    // Metoda do pobierania URL zdjęcia hotelu
+    private string GetHotelImageUrl(HotelViewModel hotel)
+    {
+        // Sprawdź czy hotel ma zdjęcia w tablicy images
+        if (hotel.Images != null && hotel.Images.Any())
+        {
+            return hotel.Images.First(); // Zwróć pierwsze zdjęcie
+        }
+        
+        // Fallback do domyślnego obrazka
+        return "images/hotel-placeholder.jpg";
+    }
+
     public class HotelViewModel
     {
         public int Id { get; set; }
@@ -391,6 +404,11 @@
         public string Country { get; set; } = "";
         public string Description { get; set; } = "";
         public int Rating { get; set; }
+        
+        // Dodana właściwość Images zgodna z API
+        public List<string> Images { get; set; } = new List<string>();
+        
+        // Zachowana właściwość ImageUrl dla kompatybilności wstecznej (opcjonalnie)
         public string ImageUrl { get; set; } = "";
     }
 

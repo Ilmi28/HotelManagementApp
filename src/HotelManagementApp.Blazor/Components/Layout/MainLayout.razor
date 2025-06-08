@@ -1,5 +1,4 @@
 ﻿@inherits LayoutComponentBase
-@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
 <div class="modern-page">
@@ -8,7 +7,7 @@
     </header>
 
     <main class="modern-main">
-        <div class="container">
+        <div class="container-fluid px-4">
             @Body
         </div>
     </main>
@@ -18,26 +17,26 @@
             <div class="row">
                 <div class="col-md-4">
                     <h5>Hotel Management System</h5>
-                    <p>Kompleksowy system zarządzania hotelem.</p>
+                    <p class="text-muted">Kompleksowy system zarządzania hotelem.</p>
                 </div>
                 <div class="col-md-4">
                     <h5>Kontakt</h5>
-                    <p>
-                        <i class="bi bi-envelope"></i> kontakt@hotelmanagement.pl<br />
-                        <i class="bi bi-telephone"></i> +48 123 456 789
+                    <p class="text-muted">
+                        <i class="bi bi-envelope me-2"></i> kontakt@hotelmanagement.pl<br />
+                        <i class="bi bi-telephone me-2"></i> +48 123 456 789
                     </p>
                 </div>
                 <div class="col-md-4">
                     <h5>Linki</h5>
                     <ul class="list-unstyled">
-                        <li><a href="/about">O nas</a></li>
-                        <li><a href="/privacy">Polityka prywatności</a></li>
-                        <li><a href="/terms">Regulamin</a></li>
+                        <li><a href="/about" class="text-decoration-none text-muted">O nas</a></li>
+                        <li><a href="/privacy" class="text-decoration-none text-muted">Polityka prywatności</a></li>
+                        <li><a href="/terms" class="text-decoration-none text-muted">Regulamin</a></li>
                     </ul>
                 </div>
             </div>
-            <hr />
-            <p class="text-center">&copy; 2025 Hotel Management System. Wszelkie prawa zastrzeżone.</p>
+            <hr class="my-4" />
+            <p class="text-center text-muted mb-0">&copy; 2025 Hotel Management System. Wszelkie prawa zastrzeżone.</p>
         </div>
     </footer>
 </div>
@@ -47,15 +46,3 @@
     <a href="" class="reload">Odśwież</a>
     <a class="dismiss">🗙</a>
 </div>
-
-@code {
-    [Inject] HotelManagementApp.Blazor.Auth.ITokenService TokenService { get; set; }
-
-    private async Task BeginLogout()
-    {
-        await TokenService.RemoveTokensAsync();
-        var customAuthStateProvider = AuthStateProvider as HotelManagementApp.Blazor.Auth.CustomAuthStateProvider;
-        customAuthStateProvider?.NotifyAuthenticationStateChanged();
-        NavigationManager.NavigateTo("/");
-    }
-}

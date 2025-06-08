@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Http; // ✅ Dodaj to dla HttpClientFactoryOptions
 using HotelManagementApp.Blazor.Services;
 using HotelManagementApp.Blazor.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Konfiguracja Odczytu Ustawień ---
-var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? builder.Configuration["BaseUrl"] ?? "http://localhost:5075/";
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? builder.Configuration["BaseUrl"] ?? "https://localhost:7227/";
 
 // --- Dodawanie Usług do Kontenera ---
 
@@ -26,30 +27,40 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<CustomAuthStateProvider>());
-builder.Services.AddScoped<AuthTokenHandler>();
+
+builder.Services.AddSingleton<ITokenStore, InMemoryTokenStore>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+// ✅ WAŻNE: Zarejestruj AuthTokenHandler jako Transient (potrzebne dla każdego HttpClient)
+builder.Services.AddTransient<AuthTokenHandler>();
 
 // Rejestracja usługi do komunikacji między komponentami
 builder.Services.AddSingleton<IEventBusService, EventBusService>();
+
+// ✅ HttpClient Factory - podstawowy do tworzenia różnych klientów
+builder.Services.AddHttpClient();
 
 // ✅ HttpClient dla refresh tokenów (BEZ AuthTokenHandler, żeby uniknąć nieskończonej pętli)
 builder.Services.AddHttpClient("RefreshClient", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// ✅ POPRAWNA konfiguracja HttpClient z AuthTokenHandler dla normalnych żądań
+// ✅ HttpClient dla normalnych operacji API (Z AuthTokenHandler)
 builder.Services.AddHttpClient("HotelApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
-// ✅ WAŻNE: Zamień domyślny HttpClient na ten z AuthTokenHandler
+// ✅ WAŻNE: Domyślny HttpClient dla DI - używa HotelApi (z AuthTokenHandler)
 builder.Services.AddScoped<HttpClient>(serviceProvider =>
 {
     var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-    return httpClientFactory.CreateClient("HotelApi"); // Używa klienta z AuthTokenHandler
+    return httpClientFactory.CreateClient("HotelApi");
 });
 
 // Usługi Autentykacji i Autoryzacji
@@ -80,6 +91,20 @@ app.UseAuthorization();
 // Mapowanie endpointów
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+// Dodaj to przed app.Run() do debugowania
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+        Console.WriteLine($"=== API Request ===");
+        Console.WriteLine($"Path: {context.Request.Path}");
+        Console.WriteLine($"Auth Header: {(authHeader != null ? "PRESENT" : "MISSING")}");
+        Console.WriteLine($"==================");
+    }
+    await next();
+});
 
 // --- Uruchomienie Aplikacji ---
 app.Run();

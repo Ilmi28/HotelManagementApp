@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Components;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text;
 
 namespace HotelManagementApp.Blazor.Auth
 {
@@ -10,12 +12,21 @@ namespace HotelManagementApp.Blazor.Auth
         private readonly ITokenService _tokenService;
         private readonly NavigationManager _navigationManager;
         private readonly ILogger<CustomAuthStateProvider> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
-        public CustomAuthStateProvider(ITokenService tokenService, NavigationManager navigationManager, ILogger<CustomAuthStateProvider> logger)
+        public CustomAuthStateProvider(
+            ITokenService tokenService, 
+            NavigationManager navigationManager, 
+            ILogger<CustomAuthStateProvider> logger,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration)
         {
             _tokenService = tokenService;
             _navigationManager = navigationManager;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -89,15 +100,23 @@ namespace HotelManagementApp.Blazor.Auth
                     return false;
                 }
 
-                using var httpClient = new HttpClient();
-                httpClient.BaseAddress = new Uri("https://localhost:7227/"); // Dostosuj do swojego API
+                // Użyj RefreshClient zamiast zwykłego HttpClient
+                using var httpClient = _httpClientFactory.CreateClient("RefreshClient");
 
                 var refreshRequest = new { RefreshToken = refreshToken };
-                var response = await httpClient.PostAsJsonAsync("api/auth/refresh", refreshRequest);
+                var json = JsonSerializer.Serialize(refreshRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await httpClient.PostAsync("api/auth/refresh", content);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var result = await response.Content.ReadFromJsonAsync<TokenRefreshResponse>();
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<TokenRefreshResponse>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
                     if (result != null && !string.IsNullOrEmpty(result.IdentityToken))
                     {
                         await _tokenService.SetTokensAsync(result.IdentityToken, result.RefreshToken ?? refreshToken);
