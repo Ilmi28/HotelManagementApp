@@ -129,19 +129,6 @@
                             <img src="@GetHotelImageUrl(hotel)" 
                                 class="card-img-top" alt="@hotel.Name" style="height: 200px; object-fit: cover;" />
                             <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge bg-primary rounded-pill">@hotel.City</span>
-                                    <div class="hotel-rating">
-                                        @for (int i = 0; i < hotel.Rating; i++)
-                                        {
-                                            <i class="bi bi-star-fill text-warning"></i>
-                                        }
-                                        @for (int i = hotel.Rating; i < 5; i++)
-                                        {
-                                            <i class="bi bi-star text-muted"></i>
-                                        }
-                                    </div>
-                                </div>
                                 <h5 class="card-title">@hotel.Name</h5>
                                 <p class="card-text text-muted">
                                     <i class="bi bi-geo-alt"></i> @hotel.City, @hotel.Country

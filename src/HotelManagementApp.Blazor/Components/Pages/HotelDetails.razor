@@ -4,6 +4,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json.Serialization
 
 <PageTitle>@pageTitle</PageTitle>
 
@@ -64,7 +65,7 @@
                                         @GetSafeHotelName()
                                     </h1>
                                     <p class="text-muted mb-3">
-                                        <i class="bi bi-geo-alt"></i> 
+                                        <i class="bi bi-geo-alt"></i>
                                         @GetSafeAddress()
                                     </p>
                                     @if (HasDescription())
@@ -153,8 +154,8 @@
                                     @foreach (var image in GetSafeImages())
                                     {
                                         <div class="col-lg-4 col-md-6">
-                                            <img src="@image" class="img-fluid rounded shadow-sm" 
-                                                 alt="@GetSafeHotelName()" style="height: 200px; width: 100%; object-fit: cover;" />
+                                            <img src="@image" class="img-fluid rounded shadow-sm"
+                                                 alt="@GetSafeHotelName()" style="height: 200px; width: 100%; object-fit: cover;"/>
                                         </div>
                                     }
                                 </div>
@@ -177,15 +178,14 @@
                             @if (HasRooms())
                             {
                                 <div class="row g-4">
-                                    @foreach (var room in GetSafeRooms())
+                                    @foreach (var room in rooms.Take(6))
                                     {
                                         <div class="col-lg-6 col-xl-4">
                                             <div class="card h-100 border border-light shadow-sm room-card">
-                                                <!-- Zdjęcie pokoju -->
                                                 <div class="position-relative">
-                                                    <img src="@GetRoomImage(room)" class="card-img-top" 
-                                                         style="height: 200px; object-fit: cover;" 
-                                                         alt="@GetRoomDisplayName(room)" />
+                                                    <img src="@GetRoomImage(room)" class="card-img-top"
+                                                         style="height: 200px; object-fit: cover;"
+                                                         alt="@GetRoomDisplayName(room)"/>
                                                     @if (room.DiscountPercent > 0)
                                                     {
                                                         <div class="position-absolute top-0 end-0 m-2">
@@ -193,7 +193,6 @@
                                                         </div>
                                                     }
                                                 </div>
-                                                
                                                 <div class="card-body">
                                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                                         <div>
@@ -202,36 +201,25 @@
                                                                 <i class="bi bi-tag"></i> @(room.RoomType ?? "Standardowy")
                                                             </small>
                                                         </div>
-                                                        @if (room.Price.HasValue)
-                                                        {
-                                                            <div class="text-end">
-                                                                @if (room.DiscountPercent > 0 && room.FinalPrice.HasValue)
-                                                                {
-                                                                    <div class="text-muted text-decoration-line-through small">
-                                                                        @room.Price.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
-                                                                    </div>
-                                                                    <div class="h6 text-success mb-0">
-                                                                        @room.FinalPrice.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
-                                                                    </div>
-                                                                }
-                                                                else
-                                                                {
-                                                                    <div class="h6 text-primary mb-0">
-                                                                        @room.Price.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
-                                                                    </div>
-                                                                }
-                                                                <small class="text-muted">za noc</small>
-                                                            </div>
-                                                        }
+                                                        <div class="text-end">
+                                                            @if (room.DiscountPercent > 0)
+                                                            {
+                                                                <div class="text-muted text-decoration-line-through small">
+                                                                    @room.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                </div>
+                                                                <div class="h6 text-success mb-0">
+                                                                    @room.FinalPrice.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="h6 text-primary mb-0">
+                                                                    @room.Price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                </div>
+                                                            }
+                                                            <small class="text-muted">za noc</small>
+                                                        </div>
                                                     </div>
-                                                    
-                                                    @if (!string.IsNullOrEmpty(room.Description))
-                                                    {
-                                                        <p class="card-text small text-muted mb-3">
-                                                            @(room.Description.Length > 100 ? room.Description.Substring(0, 100) + "..." : room.Description)
-                                                        </p>
-                                                    }
-                                                    
                                                     <AuthorizeView Roles="Guest">
                                                         <div class="d-grid">
                                                             <button class="btn btn-primary btn-sm" @onclick="() => GoToReservation(room.Id)">
@@ -245,11 +233,11 @@
                                     }
                                 </div>
                                 
-                                @if (GetSafeRooms().Count() > 6)
+                                @if (rooms.Count > 6)
                                 {
                                     <div class="text-center mt-4">
                                         <p class="text-muted">
-                                            Pokazano pierwsze 6 pokoi. Wszystkich dostępnych: @GetSafeRooms().Count()
+                                            Pokazano 6 z @rooms.Count() dostępnych pokoi.
                                         </p>
                                     </div>
                                 }
@@ -280,19 +268,19 @@
                         <div class="card-header bg-white border-0">
                             <ul class="nav nav-tabs card-header-tabs" id="hotelTabs" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="services-tab" data-bs-toggle="tab" 
+                                    <button class="nav-link active" id="services-tab" data-bs-toggle="tab"
                                             data-bs-target="#services" type="button" role="tab">
                                         <i class="bi bi-gear"></i> Usługi
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="parking-tab" data-bs-toggle="tab" 
+                                    <button class="nav-link" id="parking-tab" data-bs-toggle="tab"
                                             data-bs-target="#parking" type="button" role="tab">
                                         <i class="bi bi-car-front"></i> Parking
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" 
+                                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab"
                                             data-bs-target="#reviews" type="button" role="tab">
                                         <i class="bi bi-star"></i> Opinie
                                     </button>
@@ -319,17 +307,13 @@
                                     }
                                     else if (servicesLoading)
                                     {
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm" role="status"></div>
-                                            <span class="ms-2">Ładowanie usług...</span>
-                                        </div>
+                                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2">Ładowanie...</span></div>
                                     }
                                     else
                                     {
                                         <p class="text-muted">Brak dostępnych usług.</p>
                                     }
                                 </div>
-
                                 <!-- Parking tab -->
                                 <div class="tab-pane fade" id="parking" role="tabpanel">
                                     @if (HasParkings())
@@ -348,17 +332,13 @@
                                     }
                                     else if (parkingsLoading)
                                     {
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm" role="status"></div>
-                                            <span class="ms-2">Ładowanie informacji o parkingu...</span>
-                                        </div>
+                                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2">Ładowanie...</span></div>
                                     }
                                     else
                                     {
                                         <p class="text-muted">Brak dostępnego parkingu.</p>
                                     }
                                 </div>
-
                                 <!-- Reviews tab -->
                                 <div class="tab-pane fade" id="reviews" role="tabpanel">
                                     @if (HasReviews())
@@ -368,7 +348,7 @@
                                             <div class="border-bottom pb-3 mb-3">
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <div>
-                                                        <strong>@(review.GuestName ?? "Gość")</strong>
+                                                        <strong>@(review.UserName ?? "Gość")</strong>
                                                         <div class="d-flex align-items-center mt-1">
                                                             @for (int i = 0; i < review.Rating; i++)
                                                             {
@@ -381,24 +361,28 @@
                                                             <span class="ms-2 small text-muted">(@review.Rating/5)</span>
                                                         </div>
                                                     </div>
-                                                    <small class="text-muted">@review.CreatedAt.ToString("dd.MM.yyyy")</small>
+                                                    <small class="text-muted">@review.Created.ToString("dd.MM.yyyy")</small>
                                                 </div>
-                                                <p class="mb-0">@(review.Comment ?? "")</p>
+                                                <p class="mb-0">@(review.Content ?? "")</p>
+                                                @if (review.ReviewImages?.Any() == true)
+                                                {
+                                                    <div class="mt-2 d-flex flex-wrap gap-2">
+                                                        @foreach (var imageUrl in review.ReviewImages)
+                                                        {
+                                                            <img src="@imageUrl" class="rounded" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;" alt="Zdjęcie do opinii"/>
+                                                        }
+                                                    </div>
+                                                }
                                             </div>
                                         }
                                         @if (GetSafeReviews().Count() > 5)
                                         {
-                                            <p class="text-center mb-0">
-                                                <small class="text-muted">... i @(GetSafeReviews().Count() - 5) więcej opinii</small>
-                                            </p>
+                                            <p class="text-center mb-0"><small class="text-muted">... i @(GetSafeReviews().Count() - 5) więcej opinii</small></p>
                                         }
                                     }
                                     else if (reviewsLoading)
                                     {
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm" role="status"></div>
-                                            <span class="ms-2">Ładowanie opinii...</span>
-                                        </div>
+                                        <div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2">Ładowanie...</span></div>
                                     }
                                     else
                                     {
@@ -410,53 +394,36 @@
                     </div>
                 </div>
             </div>
-
             <!-- Action buttons -->
             <div class="row">
                 <div class="col-12 text-center">
-                    <button class="btn btn-outline-secondary me-2" @onclick="GoToHotels">
-                        <i class="bi bi-arrow-left"></i> Powrót do listy hoteli
-                    </button>
-                    <button class="btn btn-success" @onclick="LoadAllData">
-                        <i class="bi bi-arrow-clockwise"></i> Odśwież dane
-                    </button>
+                    <button class="btn btn-outline-secondary me-2" @onclick="GoToHotels"><i class="bi bi-arrow-left"></i> Powrót</button>
+                    <button class="btn btn-success" @onclick="LoadAllData"><i class="bi bi-arrow-clockwise"></i> Odśwież</button>
                 </div>
             </div>
         }
         else
         {
-            <!-- Empty state -->
             <div class="text-center py-5">
                 <i class="bi bi-building display-1 text-muted"></i>
                 <h3 class="mt-3">Brak danych hotelu</h3>
                 <p class="text-muted">Nie udało się załadować informacji o hotelu.</p>
-                <button class="btn btn-primary" @onclick="LoadAllData">
-                    <i class="bi bi-arrow-clockwise"></i> Spróbuj ponownie
-                </button>
+                <button class="btn btn-primary" @onclick="LoadAllData"><i class="bi bi-arrow-clockwise"></i> Spróbuj ponownie</button>
             </div>
         }
     }
     catch (Exception ex)
     {
         <div class="alert alert-danger">
-            <h5>Błąd renderowania strony</h5>
-            <p>@ex.Message</p>
-            <button class="btn btn-primary" @onclick="GoToHotels">
-                Powrót do listy hoteli
-            </button>
+            <h5>Błąd renderowania strony</h5><p>@ex.Message</p>
+            <button class="btn btn-primary" @onclick="GoToHotels">Powrót do listy hoteli</button>
         </div>
     }
 </div>
 
 <style>
-    .room-card:hover {
-        transform: translateY(-2px);
-        transition: transform 0.2s ease-in-out;
-    }
-    
-    .room-card {
-        transition: transform 0.2s ease-in-out;
-    }
+    .room-card:hover { transform: translateY(-2px); transition: transform 0.2s ease-in-out; }
+    .room-card { transition: transform 0.2s ease-in-out; }
 </style>
 
 @code {
@@ -481,20 +448,17 @@
     {
         try
         {
-            // Inicjalizuj kolekcje
             services = new List<string>();
             parkings = new List<string>();
             rooms = new List<RoomViewModel>();
             reviews = new List<ReviewViewModel>();
 
-            // Sprawdź autoryzację
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (!authState.User.Identity.IsAuthenticated)
             {
                 NavigationManager.NavigateTo("/login");
                 return;
             }
-
             await LoadAllData();
         }
         catch (Exception ex)
@@ -505,14 +469,12 @@
         }
     }
 
-    // Bezpieczne metody do pobierania danych
     private string GetSafeHotelName() => hotel?.Name ?? "Hotel";
     private string GetSafeCity() => hotel?.City ?? "mieście";
     private string GetSafeAddress() => $"{hotel?.Address ?? ""}, {hotel?.City ?? ""}, {hotel?.Country ?? ""}".Trim(' ', ',');
     private string GetSafeDescription() => hotel?.Description ?? "";
     private string GetSafePhoneNumber() => hotel?.PhoneNumber ?? "";
     private string GetSafeEmail() => hotel?.Email ?? "";
-    
     private bool HasDescription() => !string.IsNullOrEmpty(hotel?.Description);
     private bool HasPhoneNumber() => !string.IsNullOrEmpty(hotel?.PhoneNumber);
     private bool HasEmail() => !string.IsNullOrEmpty(hotel?.Email);
@@ -521,56 +483,31 @@
     private bool HasParkings() => parkings?.Any() == true;
     private bool HasRooms() => rooms?.Any() == true;
     private bool HasReviews() => reviews?.Any() == true;
-    
     private IEnumerable<string> GetSafeImages() => hotel?.Images?.Take(6) ?? Enumerable.Empty<string>();
     private IEnumerable<string> GetSafeServices() => services ?? Enumerable.Empty<string>();
     private IEnumerable<string> GetSafeParkings() => parkings ?? Enumerable.Empty<string>();
-    private IEnumerable<RoomViewModel> GetSafeRooms() => rooms?.Take(6) ?? Enumerable.Empty<RoomViewModel>();
     private IEnumerable<ReviewViewModel> GetSafeReviews() => reviews ?? Enumerable.Empty<ReviewViewModel>();
-
-    // Nowe metody dla pokoi
-    private string GetRoomImage(RoomViewModel room)
-    {
-        if (room.RoomImages?.Any() == true)
-        {
-            return room.RoomImages.First();
-        }
-        return "/images/room-placeholder.jpg";
-    }
-
-    private string GetRoomDisplayName(RoomViewModel room)
-    {
-        return !string.IsNullOrEmpty(room.RoomName) ? room.RoomName : $"Pokój {room.Id}";
-    }
+    private string GetRoomImage(RoomViewModel room) => room.RoomImages?.FirstOrDefault() ?? "/images/room-placeholder.jpg";
+    private string GetRoomDisplayName(RoomViewModel room) => !string.IsNullOrEmpty(room.RoomName) ? room.RoomName : $"Pokój {room.Id}";
 
     private async Task LoadAllData()
     {
         try
         {
             await LoadHotelDetails();
-            
             if (hotel != null)
             {
                 pageTitle = $"{GetSafeHotelName()} - Hotel Management System";
-                StateHasChanged();
-                
-                // Załaduj dane równolegle
-                var tasks = new List<Task>
-                {
-                    LoadWeather(),
-                    LoadServices(),
-                    LoadParkings(),
-                    LoadRooms(),
-                    LoadReviews()
-                };
-
+                var tasks = new List<Task> { LoadWeather(), LoadServices(), LoadParkings(), LoadRooms(), LoadReviews() };
                 await Task.WhenAll(tasks);
-                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Błąd ładowania danych: {ex.Message}";
+        }
+        finally
+        {
             isLoading = false;
             StateHasChanged();
         }
@@ -580,59 +517,24 @@
     {
         isLoading = true;
         errorMessage = "";
-
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel/{HotelId}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                hotel = await response.Content.ReadFromJsonAsync<HotelDetailsViewModel>();
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                errorMessage = $"Hotel o ID {HotelId} nie został znaleziony.";
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
-            }
-            else
-            {
-                errorMessage = $"Błąd ładowania hotelu: {response.StatusCode}";
-            }
+            if (response.IsSuccessStatusCode) hotel = await response.Content.ReadFromJsonAsync<HotelDetailsViewModel>();
+            else errorMessage = $"Błąd ładowania hotelu: {response.StatusCode}";
         }
-        catch (HttpRequestException ex)
-        {
-            errorMessage = $"Błąd połączenia z serwerem: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Wystąpił nieoczekiwany błąd: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
+        catch (Exception ex) { errorMessage = $"Błąd połączenia: {ex.Message}"; }
+        finally { isLoading = false; }
     }
 
     private async Task LoadWeather()
     {
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel/weather/{HotelId}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                weather = await response.Content.ReadFromJsonAsync<WeatherViewModel>();
-            }
+            if (response.IsSuccessStatusCode) weather = await response.Content.ReadFromJsonAsync<WeatherViewModel>();
         }
-        catch
-        {
-            // Ignoruj błędy pogody
-        }
+        catch { /* Ignoruj błędy */ }
     }
 
     private async Task LoadServices()
@@ -640,23 +542,15 @@
         servicesLoading = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel-services/get-by-hotel/{HotelId}");
-            
             if (response.IsSuccessStatusCode)
             {
                 var serviceObjects = await response.Content.ReadFromJsonAsync<List<ServiceViewModel>>();
                 services = serviceObjects?.Select(s => s.Name ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList() ?? new List<string>();
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading services: {ex.Message}");
-        }
-        finally
-        {
-            servicesLoading = false;
-        }
+        catch (Exception ex) { Console.WriteLine($"Error loading services: {ex.Message}"); }
+        finally { servicesLoading = false; }
     }
 
     private async Task LoadParkings()
@@ -664,42 +558,44 @@
         parkingsLoading = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{HotelId}");
-            
             if (response.IsSuccessStatusCode)
             {
                 var parkingObjects = await response.Content.ReadFromJsonAsync<List<ParkingViewModel>>();
                 parkings = parkingObjects?.Select(p => $"{p.Type} - {p.Capacity} miejsc").ToList() ?? new List<string>();
             }
         }
-        catch
-        {
-            // Ignoruj błędy
-        }
-        finally
-        {
-            parkingsLoading = false;
-        }
+        catch { /* Ignoruj błędy */ }
+        finally { parkingsLoading = false; }
     }
-
+    
+    // =====================================
+    // POPRAWIONA METODA ŁADOWANIA POKOI
+    // =====================================
     private async Task LoadRooms()
     {
         roomsLoading = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
+            // Pobierz wszystkie pokoje z systemu
             var response = await Http.GetAsync("api/hotel-room/get-all");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var allRooms = await response.Content.ReadFromJsonAsync<List<RoomViewModel>>();
+                // Filtruj po stronie klienta, aby wyświetlić tylko pokoje dla bieżącego hotelu
                 rooms = allRooms?.Where(r => r.HotelId == HotelId).ToList() ?? new List<RoomViewModel>();
             }
+            else
+            {
+                Console.WriteLine($"Error loading rooms from API: {response.StatusCode}");
+                rooms = new List<RoomViewModel>();
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignoruj błędy
+            Console.WriteLine($"Exception while loading rooms: {ex.Message}");
+            rooms = new List<RoomViewModel>();
         }
         finally
         {
@@ -712,86 +608,25 @@
         reviewsLoading = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/review/hotel/{HotelId}");
-            
             if (response.IsSuccessStatusCode)
             {
                 reviews = await response.Content.ReadFromJsonAsync<List<ReviewViewModel>>() ?? new List<ReviewViewModel>();
             }
         }
-        catch
-        {
-            // Ignoruj błędy
-        }
-        finally
-        {
-            reviewsLoading = false;
-        }
+        catch (Exception ex) { Console.WriteLine($"Error loading reviews: {ex.Message}"); }
+        finally { reviewsLoading = false; }
     }
 
-    private void GoToHotels()
-    {
-        NavigationManager.NavigateTo("/hotels");
-    }
+    private void GoToHotels() => NavigationManager.NavigateTo("/hotels");
+    private void GoToReservation(int roomId) => NavigationManager.NavigateTo($"/reservation/{roomId}");
 
-    private void GoToLogin()
-    {
-        NavigationManager.NavigateTo("/login");
-    }
+    public class HotelDetailsViewModel { public int Id { get; set; } public string Name { get; set; } = ""; public string Address { get; set; } = ""; public string City { get; set; } = ""; public string Country { get; set; } = ""; public string PhoneNumber { get; set; } = ""; public string Email { get; set; } = ""; public string Description { get; set; } = ""; public List<string> Images { get; set; } = new(); }
+    public class WeatherViewModel { public double Temperature { get; set; } }
+    public class ServiceViewModel { public string Name { get; set; } = ""; }
+    public class ParkingViewModel { public string Type { get; set; } = ""; public int Capacity { get; set; } }
 
-    private void GoToReservation(int roomId)
-    {
-        NavigationManager.NavigateTo($"/reservation/{roomId}");
-    }
+    public class RoomViewModel { public int Id { get; set; } public int HotelId { get; set; } public string RoomName { get; set; } = ""; public string RoomType { get; set; } = ""; public decimal Price { get; set; } public int DiscountPercent { get; set; } public decimal FinalPrice { get; set; } public List<string>? RoomImages { get; set; } = new(); }
 
-    public class HotelDetailsViewModel
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string City { get; set; } = "";
-        public string Country { get; set; } = "";
-        public string PhoneNumber { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Description { get; set; } = "";
-        public List<string> Images { get; set; } = new();
-    }
-
-    public class WeatherViewModel
-    {
-        public double Temperature { get; set; }
-    }
-
-    public class ServiceViewModel
-    {
-        public string Name { get; set; } = "";
-    }
-
-    public class ParkingViewModel
-    {
-        public string Type { get; set; } = "";
-        public int Capacity { get; set; }
-    }
-
-    public class RoomViewModel
-    {
-        public int Id { get; set; }
-        public int HotelId { get; set; }
-        public string RoomName { get; set; } = ""; // Dodane
-        public string RoomType { get; set; } = ""; // Zmienione z Type
-        public decimal? Price { get; set; }
-        public decimal DiscountPercent { get; set; } // Dodane
-        public decimal? FinalPrice { get; set; } // Dodane
-        public List<string> RoomImages { get; set; } = new(); // Dodane
-        public string Description { get; set; } = ""; // Dodane
-    }
-
-    public class ReviewViewModel
-    {
-        public string GuestName { get; set; } = "";
-        public int Rating { get; set; }
-        public string Comment { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
-    }
+    public class ReviewViewModel { [JsonPropertyName("id")] public int Id { get; set; } [JsonPropertyName("userName")] public string? UserName { get; set; } [JsonPropertyName("rating")] public int Rating { get; set; } [JsonPropertyName("review")] public string? Content { get; set; } [JsonPropertyName("created")] public DateTime Created { get; set; } [JsonPropertyName("reviewImages")] public List<string>? ReviewImages { get; set; } }
 }
