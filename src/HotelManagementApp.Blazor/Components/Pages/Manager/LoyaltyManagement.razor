@@ -1,6 +1,8 @@
 @page "/loyalty-management"
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @using System.Text
+@using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
@@ -22,73 +24,8 @@
         </div>
     </div>
 
-    <!-- Karty statystyk -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Dostępne nagrody</h6>
-                            <h3 class="mb-0">@(rewards?.Count ?? 0)</h3>
-                        </div>
-                        <div class="text-primary-emphasis">
-                            <i class="bi bi-gift display-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Aktywni goście</h6>
-                            <h3 class="mb-0">@(guestPoints?.Count ?? 0)</h3>
-                        </div>
-                        <div class="text-success-emphasis">
-                            <i class="bi bi-people display-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Łączne punkty</h6>
-                            <h3 class="mb-0">@totalPoints</h3>
-                        </div>
-                        <div class="text-warning-emphasis">
-                            <i class="bi bi-star display-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Średnie punkty</h6>
-                            <h3 class="mb-0">@averagePoints</h3>
-                        </div>
-                        <div class="text-info-emphasis">
-                            <i class="bi bi-graph-up display-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row">
-        <!-- Zarządzanie nagrodami -->
-        <div class="col-lg-8 mb-4">
+        <div class="col-lg-12 mb-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -128,7 +65,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reward in rewards)
+                                    @foreach (var reward in rewards.OrderBy(r => r.Id))
                                     {
                                         <tr>
                                             <td><strong>#@reward.Id</strong></td>
@@ -145,7 +82,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => EditReward(reward)">
+                                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => ShowEditRewardModal(reward)">
                                                         <i class="bi bi-pencil"></i> Edytuj
                                                     </button>
                                                     <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDeleteReward(reward.Id, reward.Name)">
@@ -172,120 +109,60 @@
                 </div>
             </div>
         </div>
-
-        <!-- Punkty gości -->
-        <div class="col-lg-4 mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-people"></i> Punkty gości
-                    </h5>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadGuestPoints" disabled="@isLoadingGuests">
-                        @if (isLoadingGuests)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-arrow-clockwise"></i>
-                        }
-                    </button>
-                </div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                    @if (isLoadingGuests)
-                    {
-                        <div class="text-center py-3">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <p class="mt-2 mb-0 text-muted small">Ładowanie punktów gości...</p>
-                        </div>
-                    }
-                    else if (guestPoints?.Any() == true)
-                    {
-                        @foreach (var guest in guestPoints.OrderByDescending(g => g.Points).Take(20))
-                        {
-                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                <div>
-                                    <div class="fw-bold">@guest.GuestName</div>
-                                    <small class="text-muted">ID: @guest.GuestId</small>
-                                </div>
-                                <div class="text-warning">
-                                    <strong>@guest.Points</strong>
-                                    <i class="bi bi-star-fill"></i>
-                                </div>
-                            </div>
-                        }
-                        @if (guestPoints.Count > 20)
-                        {
-                            <div class="text-center mt-3">
-                                <small class="text-muted">
-                                    Wyświetlono top 20 z @guestPoints.Count gości
-                                </small>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="text-center py-3">
-                            <i class="bi bi-people text-muted display-6"></i>
-                            <p class="mt-2 mb-0 text-muted">Brak danych o punktach gości</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
-<!-- Modal dodawania/edycji nagrody -->
 @if (showRewardModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
                         <i class="bi @(editingReward != null ? "bi-pencil" : "bi-plus-circle")"></i>
                         @(editingReward != null ? "Edytuj nagrodę" : "Dodaj nagrodę")
                     </h5>
-                    <button type="button" class="btn-close" @onclick="CloseRewardModal"></button>
+                    <button type="button" class="btn-close" @onclick="CloseRewardModal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form @onsubmit="SaveReward" @onsubmit:preventDefault="true">
+                    <EditForm Model="rewardForm" OnValidSubmit="SaveReward">
+                        <DataAnnotationsValidator />
                         <div class="mb-3">
                             <label for="rewardName" class="form-label">Nazwa nagrody:</label>
-                            <input type="text" class="form-control" id="rewardName" 
-                                   @bind="rewardForm.RewardName" required 
-                                   placeholder="np. Darmowy drink, Upgrade pokoju">
-                            <div class="form-text">Wprowadź atrakcyjną nazwę nagrody</div>
+                            <InputText id="rewardName" class="form-control" @bind-Value="rewardForm.RewardName" placeholder="np. Darmowy drink, Upgrade pokoju" />
+                            <ValidationMessage For="() => rewardForm.RewardName" />
+                            <div class="form-text">Wprowadź atrakcyjną nazwę nagrody.</div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="pointsRequired" class="form-label">Koszt w punktach:</label>
-                            <input type="number" class="form-control" id="pointsRequired" 
-                                   @bind="rewardForm.PointsRequired" required min="1" max="100000"
-                                   placeholder="np. 100">
-                            <div class="form-text">Ile punktów kosztuje ta nagroda</div>
+                            <InputNumber id="pointsRequired" class="form-control" @bind-Value="rewardForm.PointsRequired" placeholder="np. 100" />
+                            <ValidationMessage For="() => rewardForm.PointsRequired" />
+                            <div class="form-text">Ile punktów kosztuje ta nagroda (min. 1).</div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="description" class="form-label">Opis:</label>
-                            <textarea class="form-control" id="description" rows="3" 
-                                      @bind="rewardForm.Description" required
-                                      placeholder="Opisz szczegóły nagrody, warunki wykorzystania itp."></textarea>
-                            <div class="form-text">Szczegółowy opis nagrody i warunków jej wykorzystania</div>
+                            <InputTextArea id="description" class="form-control" rows="3" @bind-Value="rewardForm.Description" placeholder="Opisz szczegóły nagrody, warunki wykorzystania itp." />
+                            <ValidationMessage For="() => rewardForm.Description" />
+                            <div class="form-text">Szczegółowy opis nagrody i warunków jej wykorzystania.</div>
                         </div>
-                    </form>
+                         <button type="submit" class="visually-hidden">Submit</button>
+                    </EditForm>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseRewardModal">Anuluj</button>
                     <button type="button" class="btn btn-primary" @onclick="SaveReward" 
-                            disabled="@(isSubmitting || string.IsNullOrWhiteSpace(rewardForm.RewardName) || rewardForm.PointsRequired <= 0 || string.IsNullOrWhiteSpace(rewardForm.Description))">
+                            disabled="@isSubmitting">
                         @if (isSubmitting)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> <span>Przetwarzanie...</span>
                         }
-                        <i class="bi @(editingReward != null ? "bi-check-circle" : "bi-plus-circle")"></i>
-                        @(editingReward != null ? "Zaktualizuj" : "Dodaj") nagrodę
+                        else
+                        {
+                            <i class="bi @(editingReward != null ? "bi-check-circle" : "bi-plus-circle")"></i>
+                            <span>@(editingReward != null ? "Zaktualizuj" : "Dodaj") nagrodę</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -293,37 +170,41 @@
     </div>
 }
 
-<!-- Modal potwierdzenia usunięcia -->
 @if (showDeleteModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia
+                        <i class="bi bi-exclamation-triangle-fill"></i> Potwierdzenie usunięcia
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Uwaga!</strong> Ta operacja jest nieodwracalna.
+                    <div class="alert alert-warning d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
+                        <div>
+                           <strong>Uwaga!</strong> Ta operacja jest nieodwracalna.
+                        </div>
                     </div>
                     <p>Czy na pewno chcesz usunąć nagrodę:</p>
-                    <div class="bg-light p-3 rounded">
+                    <div class="bg-light p-3 rounded border">
                         <strong>@rewardToDeleteName</strong>
                     </div>
-                    <p class="mt-3 text-muted">Po usunięciu goście nie będą mogli już wymienić punktów na tę nagrodę.</p>
+                    <p class="mt-3 text-muted small">Po usunięciu goście nie będą mogli już wymienić punktów na tę nagrodę.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Anuluj</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal" disabled="@isDeletingReward">Anuluj</button>
                     <button type="button" class="btn btn-danger" @onclick="DeleteReward" disabled="@isDeletingReward">
                         @if (isDeletingReward)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> <span>Usuwanie...</span>
                         }
-                        <i class="bi bi-trash"></i> Usuń nagrodę
+                        else
+                        {
+                            <i class="bi bi-trash-fill"></i> <span>Usuń</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -333,25 +214,21 @@
 
 @code {
     private List<Reward>? rewards;
-    private List<GuestPoints>? guestPoints;
-    private bool isLoadingRewards = true;
-    private bool isLoadingGuests = true;
-    private bool isSubmitting = false;
-    private bool isDeletingReward = false;
+    private Reward? editingReward;
+    private RewardFormModel rewardForm = new RewardFormModel();
+
     private bool showRewardModal = false;
     private bool showDeleteModal = false;
-    
-    private Reward? editingReward;
-    private RewardForm rewardForm = new();
-    private int rewardToDeleteId = 0;
-    private string rewardToDeleteName = "";
-    
-    private int totalPoints => guestPoints?.Sum(g => g.Points) ?? 0;
-    private int averagePoints => guestPoints?.Any() == true ? (int)guestPoints.Average(g => g.Points) : 0;
+    private int rewardToDeleteId;
+    private string? rewardToDeleteName;
+
+    private bool isLoadingRewards = true;
+    private bool isSubmitting = false;
+    private bool isDeletingReward = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(LoadRewards(), LoadGuestPoints());
+        await LoadRewards();
     }
 
     private async Task LoadRewards()
@@ -360,24 +237,22 @@
         try
         {
             var response = await Http.GetAsync("api/loyalty-points/rewards");
-            
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                rewards = JsonSerializer.Deserialize<List<Reward>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                rewards = JsonSerializer.Deserialize<List<Reward>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas ładowania nagród: {response.StatusCode}");
+                rewards = new List<Reward>();
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas ładowania nagród: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas ładowania nagród: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas ładowania nagród.");
+            rewards = new List<Reward>();
+            await JSRuntime.InvokeVoidAsync("alert", $"Wyjątek podczas ładowania nagród: {ex.Message}");
+            Console.WriteLine($"Error loading rewards: {ex}");
         }
         finally
         {
@@ -386,62 +261,32 @@
         }
     }
 
-    private async Task LoadGuestPoints()
-    {
-        isLoadingGuests = true;
-        try
-        {
-            var response = await Http.GetAsync("api/loyalty-points/guests/points");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                guestPoints = JsonSerializer.Deserialize<List<GuestPoints>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas ładowania punktów gości: {response.StatusCode}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas ładowania punktów gości: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas ładowania punktów gości.");
-        }
-        finally
-        {
-            isLoadingGuests = false;
-            StateHasChanged();
-        }
-    }
-
     private void ShowCreateRewardModal()
     {
         editingReward = null;
-        rewardForm = new RewardForm();
+        rewardForm = new RewardFormModel();
         showRewardModal = true;
+        isSubmitting = false;
     }
 
-    private void EditReward(Reward reward)
+    private void ShowEditRewardModal(Reward rewardToEdit)
     {
-        editingReward = reward;
-        rewardForm = new RewardForm
+        editingReward = rewardToEdit;
+        rewardForm = new RewardFormModel
         {
-            RewardName = reward.Name,
-            PointsRequired = reward.PointsCost,
-            Description = reward.Description
+            RewardName = rewardToEdit.Name,
+            PointsRequired = rewardToEdit.PointsCost,
+            Description = rewardToEdit.Description
         };
         showRewardModal = true;
+        isSubmitting = false;
     }
 
     private void CloseRewardModal()
     {
         showRewardModal = false;
         editingReward = null;
-        rewardForm = new RewardForm();
+        rewardForm = new RewardFormModel();
     }
 
     private async Task SaveReward()
@@ -450,135 +295,125 @@
             rewardForm.PointsRequired <= 0 || 
             string.IsNullOrWhiteSpace(rewardForm.Description))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Wszystkie pola są wymagane i punkty muszą być większe od 0.");
+            await JSRuntime.InvokeVoidAsync("alert", "Wszystkie pola są wymagane, a koszt w punktach musi być dodatni.");
             return;
         }
 
         isSubmitting = true;
+        StateHasChanged();
+
+        HttpResponseMessage? response = null;
+        string apiUrl = "api/loyalty-points/rewards";
+
         try
         {
-            var requestData = new
-            {
-                rewardName = rewardForm.RewardName,
-                pointsRequired = rewardForm.PointsRequired,
-                description = rewardForm.Description
-            };
-
-            HttpResponseMessage response;
-            
             if (editingReward != null)
             {
-                // Aktualizacja istniejącej nagrody
-                var updateData = new
-                {
-                    loyaltyRewardId = editingReward.Id,
-                    rewardName = rewardForm.RewardName,
-                    pointsRequired = rewardForm.PointsRequired,
-                    description = rewardForm.Description
-                };
-                
-                var json = JsonSerializer.Serialize(updateData);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                response = await Http.PutAsync($"api/loyalty-points/rewards/{editingReward.Id}", content);
+                response = await Http.PutAsJsonAsync($"{apiUrl}/{editingReward.Id}", rewardForm);
             }
             else
             {
-                // Tworzenie nowej nagrody
-                var json = JsonSerializer.Serialize(requestData);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                response = await Http.PostAsync("api/loyalty-points/rewards", content);
+                response = await Http.PostAsJsonAsync(apiUrl, rewardForm);
             }
 
             if (response.IsSuccessStatusCode)
             {
-                await JSRuntime.InvokeVoidAsync("alert", 
-                    editingReward != null ? "Nagroda została zaktualizowana!" : "Nagroda została dodana!");
-                
                 CloseRewardModal();
                 await LoadRewards();
+                await JSRuntime.InvokeVoidAsync("alert", editingReward != null ? "Nagroda zaktualizowana pomyślnie!" : "Nagroda dodana pomyślnie!");
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                await JSRuntime.InvokeVoidAsync("alert", 
-                    $"Błąd podczas zapisywania nagrody: {response.StatusCode}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd: {response.ReasonPhrase}. Szczegóły: {errorContent}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas zapisywania nagrody: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania nagrody.");
+            await JSRuntime.InvokeVoidAsync("alert", $"Wystąpił wyjątek: {ex.Message}");
+            Console.WriteLine($"Error saving reward: {ex}");
         }
         finally
         {
             isSubmitting = false;
+            StateHasChanged();
         }
     }
 
-    private void ConfirmDeleteReward(int rewardId, string rewardName)
+    private void ConfirmDeleteReward(int id, string name)
     {
-        rewardToDeleteId = rewardId;
-        rewardToDeleteName = rewardName;
+        rewardToDeleteId = id;
+        rewardToDeleteName = name;
         showDeleteModal = true;
+        isDeletingReward = false;
     }
 
     private void CloseDeleteModal()
     {
         showDeleteModal = false;
-        rewardToDeleteId = 0;
-        rewardToDeleteName = "";
     }
 
     private async Task DeleteReward()
     {
-        if (rewardToDeleteId == 0) return;
-
         isDeletingReward = true;
+        StateHasChanged();
+
         try
         {
             var response = await Http.DeleteAsync($"api/loyalty-points/rewards/{rewardToDeleteId}");
-            
             if (response.IsSuccessStatusCode)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Nagroda została usunięta!");
                 CloseDeleteModal();
                 await LoadRewards();
+                await JSRuntime.InvokeVoidAsync("alert", $"Nagroda '{rewardToDeleteName}' została usunięta.");
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania nagrody: {response.StatusCode}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania nagrody: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas usuwania nagrody: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania nagrody.");
+            await JSRuntime.InvokeVoidAsync("alert", $"Wyjątek podczas usuwania nagrody: {ex.Message}");
+            Console.WriteLine($"Error deleting reward: {ex}");
         }
         finally
         {
             isDeletingReward = false;
+            StateHasChanged();
         }
     }
 
     public class Reward
     {
+        [JsonPropertyName("rewardId")]
         public int Id { get; set; }
+
+        [JsonPropertyName("rewardName")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("rewardDescription")]
         public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("points")]
         public int PointsCost { get; set; }
     }
 
-    public class GuestPoints
+    public class RewardFormModel
     {
-        public string GuestId { get; set; } = string.Empty;
-        public string GuestName { get; set; } = string.Empty;
-        public int Points { get; set; }
-    }
-
-    public class RewardForm
-    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nazwa nagrody jest wymagana.")]
+        [System.ComponentModel.DataAnnotations.StringLength(100, ErrorMessage = "Nazwa nagrody nie może przekraczać 100 znaków.")]
+        [JsonPropertyName("rewardName")]
         public string RewardName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Koszt w punktach jest wymagany.")]
+        [System.ComponentModel.DataAnnotations.Range(1, 100000, ErrorMessage = "Koszt musi być liczbą dodatnią (1-100000).")]
+        [JsonPropertyName("points")]
         public int PointsRequired { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Opis nagrody jest wymagany.")]
+        [System.ComponentModel.DataAnnotations.StringLength(500, ErrorMessage = "Opis nagrody nie może przekraczać 500 znaków.")]
+        [JsonPropertyName("rewardDescription")]
         public string Description { get; set; } = string.Empty;
     }
 }

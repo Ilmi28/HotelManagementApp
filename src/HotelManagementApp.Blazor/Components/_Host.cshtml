@@ -36,5 +36,18 @@
 </div>
 
 <script src="_framework/blazor.server.js"></script>
+<script>
+        window.downloadFileFromStream = async (fileName, contentType, contentStreamReference) => {
+            const arrayBuffer = await contentStreamReference.arrayBuffer();
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const anchorElement = document.createElement('a');
+            anchorElement.href = url;
+            anchorElement.download = fileName ?? ''; // Użyj pustego stringa, jeśli fileName to null/undefined
+            anchorElement.click();
+            anchorElement.remove(); // Usuń element po kliknięciu
+            URL.revokeObjectURL(url); // Zwolnij obiekt URL
+        }
+    </script>
 </body>
 </html>

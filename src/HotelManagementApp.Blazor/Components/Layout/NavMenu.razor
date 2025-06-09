@@ -158,18 +158,10 @@
             <AuthorizeView>
                 <Authorized>
                     <div class="d-flex align-items-center">
-                        <!-- Punkty lojalnościowe -->
-                        @if (loyaltyPoints.HasValue)
-                        {
-                            <div class="me-3">
-                                <NavLink href="loyalty-program" class="btn btn-outline-warning btn-sm">
-                                    <i class="bi bi-star-fill"></i> @loyaltyPoints pkt
-                                </NavLink>
-                            </div>
-                        }
+                        <!-- Punkty lojalnościowe zostały przeniesione do menu użytkownika -->
                         
                         <div class="dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" @onclick="RefreshLoyaltyPointsOnClick">
                                 @if (!string.IsNullOrEmpty(userSession?.ProfilePicture))
                                 {
                                     <img src="@userSession.ProfilePicture" alt="User Avatar" class="rounded-circle me-2" width="32" height="32" 
@@ -206,6 +198,10 @@
                                 <li>
                                     <NavLink class="dropdown-item" href="loyalty-program">
                                         <i class="bi bi-star"></i> Program lojalnościowy
+                                        @if (loyaltyPoints.HasValue)
+                                        {
+                                            <span class="badge rounded-pill bg-warning text-dark ms-2">@loyaltyPoints pkt</span>
+                                        }
                                     </NavLink>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -241,19 +237,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // NAJPIERW synchronizuj tokeny z localStorage
         await SyncTokensFromLocalStorage();
-        // TYMCZASOWE DEBUGOWANIE
         await DebugTokenStatus();
         
         await LoadUserSession();
-        await LoadLoyaltyPoints();
+        await LoadLoyaltyPoints(); // Ładuj punkty przy inicjalizacji komponentu
         
-        // Subskrybuj event aktualizacji profilu
         EventBus.ProfileUpdated += OnProfileUpdated;
     }
 
-    // Tymczasowa metoda do debugowania
     private async Task DebugTokenStatus()
     {
         try
@@ -270,7 +262,6 @@
                 Console.WriteLine($"Token length: {token.Length}");
                 Console.WriteLine($"Token preview: {token.Substring(0, Math.Min(50, token.Length))}...");
                 
-                // Sprawdź czy token jest prawidłowy
                 var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
                 if (tokenHandler.CanReadToken(token))
                 {
@@ -284,7 +275,6 @@
                     Console.WriteLine("Token format is invalid!");
                 }
             }
-            
             Console.WriteLine($"=== END DEBUG ===");
         }
         catch (Exception ex)
@@ -296,6 +286,9 @@
     private async void OnProfileUpdated()
     {
         await LoadUserSession();
+        // Po aktualizacji profilu, punkty lojalnościowe również mogą wymagać odświeżenia
+        // Jeśli LoadUserSession() nie pociąga za sobą aktualizacji punktów, można dodać:
+        // await LoadLoyaltyPoints(); 
         await InvokeAsync(StateHasChanged);
     }
 
@@ -313,6 +306,8 @@
     {
         await TokenService.RemoveTokensAsync();
         ((HotelManagementApp.Blazor.Auth.CustomAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+        userSession = null; // Wyczyść sesję użytkownika
+        loyaltyPoints = null; // Wyczyść punkty lojalnościowe
         NavigationManager.NavigateTo("/");
     }
 
@@ -320,9 +315,7 @@
     {
         try
         {
-            // Używamy HttpClient bezpośrednio - token jest dodawany automatycznie
             var response = await HttpClient.GetAsync("api/account/session");
-            
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -330,13 +323,18 @@
                 {
                     PropertyNameCaseInsensitive = true
                 });
-                StateHasChanged();
+            }
+            else
+            {
+                userSession = null; // Wyczyść sesję w przypadku błędu
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Błąd podczas pobierania sesji użytkownika: {ex.Message}");
+            userSession = null;
         }
+        // StateHasChanged() zostanie wywołane w LoadLoyaltyPoints lub RefreshLoyaltyPointsOnClick
     }
 
     private async Task LoadLoyaltyPoints()
@@ -345,9 +343,7 @@
         {
             if (userSession?.Id != null)
             {
-                // Używamy HttpClient bezpośrednio - token jest dodawany automatycznie
                 var response = await HttpClient.GetAsync($"api/loyalty-points/guests/{userSession.Id}/points");
-                
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
@@ -355,15 +351,43 @@
                     {
                         PropertyNameCaseInsensitive = true
                     });
-                    loyaltyPoints = pointsData?.Points ?? 0;
-                    StateHasChanged();
+
+                    if (pointsData != null)
+                    {
+                        loyaltyPoints = pointsData.Points;
+                    }
+                    else
+                    {
+                        loyaltyPoints = null; 
+                        Console.WriteLine("Failed to deserialize loyalty points data.");
+                    }
                 }
+                else
+                {
+                    Console.WriteLine($"Failed to load loyalty points, status: {response.StatusCode}");
+                    loyaltyPoints = null;
+                }
+            }
+            else
+            {
+                loyaltyPoints = null; 
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Błąd podczas pobierania punktów lojalnościowych: {ex.Message}");
+            loyaltyPoints = null;
         }
+        finally
+        {
+            await InvokeAsync(StateHasChanged); // Upewnij się, że UI jest aktualizowane
+        }
+    }
+
+    // Metoda do odświeżania punktów lojalnościowych po kliknięciu w dropdown użytkownika
+    private async Task RefreshLoyaltyPointsOnClick()
+    {
+        await LoadLoyaltyPoints();
     }
 
     public class UserSession
@@ -385,7 +409,6 @@
     {
         if (firstRender)
         {
-            // Synchronizuj tokeny z localStorage do pamięci
             await SyncTokensFromLocalStorage();
         }
         await base.OnAfterRenderAsync(firstRender);
@@ -395,7 +418,6 @@
     {
         try
         {
-            // Pobierz tokeny z localStorage i zsynchronizuj z pamięcią
             var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
             var refreshToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
             

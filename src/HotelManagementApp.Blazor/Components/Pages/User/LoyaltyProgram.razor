@@ -1,6 +1,8 @@
 @page "/loyalty-program"
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @using System.Text
+@using System.Globalization
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
@@ -47,20 +49,27 @@
                     else if (availableRewards?.Any() == true)
                     {
                         <div class="row">
-                            @foreach (var reward in availableRewards)
+                            @foreach (var reward in availableRewards.OrderBy(r => r.PointsCost))
                             {
                                 <div class="col-md-6 mb-3">
                                     <div class="card h-100">
-                                        <div class="card-body">
+                                        <div class="card-body d-flex flex-column">
                                             <h6 class="card-title">@reward.Name</h6>
-                                            <p class="card-text small">@reward.Description</p>
-                                            <p class="card-text">
+                                            <p class="card-text small flex-grow-1">@reward.Description</p>
+                                            <p class="card-text mt-auto">
                                                 <strong class="text-warning">@reward.PointsCost <i class="bi bi-star-fill"></i></strong>
                                             </p>
                                             <button class="btn btn-sm @(loyaltyPoints >= reward.PointsCost ? "btn-primary" : "btn-secondary")" 
                                                     @onclick="() => ExchangePoints(reward.Id)" 
-                                                    disabled="@(loyaltyPoints < reward.PointsCost)">
-                                                @(loyaltyPoints >= reward.PointsCost ? "Wymień" : "Za mało punktów")
+                                                    disabled="@(loyaltyPoints < reward.PointsCost || isExchangingPoints)">
+                                                @if (isExchangingPoints && exchangingRewardId == reward.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    @(loyaltyPoints >= reward.PointsCost ? "Wymień" : "Za mało punktów")
+                                                }
                                             </button>
                                         </div>
                                     </div>
@@ -96,12 +105,12 @@
                     }
                     else if (pointsHistory?.Any() == true)
                     {
-                        @foreach (var entry in pointsHistory)
+                        @foreach (var entry in pointsHistory.OrderByDescending(e => e.ParsedDate))
                         {
                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                 <div>
                                     <div class="fw-bold">@entry.Description</div>
-                                    <small class="text-muted">@entry.Date</small>
+                                    <small class="text-muted">@entry.ParsedDate.ToString("yyyy-MM-dd HH:mm")</small>
                                 </div>
                                 <div class="@(entry.Points > 0 ? "text-success" : "text-danger")">
                                     @(entry.Points > 0 ? "+" : "")@entry.Points
@@ -126,7 +135,7 @@
                     </h5>
                 </div>
                 <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                    @if (isLoadingAcquiredRewards)
+                    @if (isLoadingAcquiredRewards || isLoadingRewards) // Also wait for availableRewards
                     {
                         <div class="text-center">
                             <div class="spinner-border spinner-border-sm" role="status">
@@ -134,24 +143,40 @@
                             </div>
                         </div>
                     }
-                    else if (acquiredRewards?.Any() == true)
+                    else if (acquiredRewards?.Any() == true && availableRewards?.Any() == true)
                     {
-                        @foreach (var reward in acquiredRewards)
+                        @foreach (var acquiredItem in acquiredRewards.OrderByDescending(ar => ar.AcquiredDate))
                         {
-                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                <div>
-                                    <div class="fw-bold">@reward.Name</div>
-                                    <small class="text-muted">Zdobyte: @reward.AcquiredDate</small>
+                            var rewardDetails = availableRewards.FirstOrDefault(r => r.Id == acquiredItem.RewardId);
+                            if (rewardDetails != null)
+                            {
+                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                    <div>
+                                        <div class="fw-bold">@rewardDetails.Name</div>
+                                        <small class="text-muted">Zdobyte: @acquiredItem.AcquiredDate.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </div>
+                                    <div class="text-warning">
+                                        <i class="bi bi-trophy-fill"></i>
+                                    </div>
                                 </div>
-                                <div class="text-warning">
-                                    <i class="bi bi-trophy-fill"></i>
+                            }
+                            else
+                            {
+                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                    <div>
+                                        <div class="fw-bold text-muted">Nagroda ID: @acquiredItem.RewardId (Szczegóły niedostępne)</div>
+                                        <small class="text-muted">Zdobyte: @acquiredItem.AcquiredDate.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </div>
+                                     <div class="text-warning">
+                                        <i class="bi bi-trophy-fill"></i>
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         }
                     }
                     else
                     {
-                        <p class="text-muted">Nie zdobyłeś jeszcze żadnych nagród.</p>
+                        <p class="text-muted">Nie zdobyłeś jeszcze żadnych nagród lub lista nagród jest niedostępna.</p>
                     }
                 </div>
             </div>
@@ -187,21 +212,36 @@
 
 @code {
     private int loyaltyPoints = 0;
-    private List<Reward>? availableRewards;
-    private List<PointsHistoryEntry>? pointsHistory;
-    private List<AcquiredReward>? acquiredRewards;
+    private List<Reward> availableRewards = new List<Reward>();
+    private List<PointsHistoryEntry> pointsHistory = new List<PointsHistoryEntry>();
+    private List<AcquiredReward> acquiredRewards = new List<AcquiredReward>();
+
     private bool isLoadingRewards = true;
     private bool isLoadingHistory = true;
     private bool isLoadingAcquiredRewards = true;
     private string? currentUserId;
 
+    private bool isExchangingPoints = false;
+    private int exchangingRewardId = 0;
+
     protected override async Task OnInitializedAsync()
     {
         await GetCurrentUserId();
-        await LoadLoyaltyPoints();
-        await LoadRewards();
-        await LoadPointsHistory();
-        await LoadAcquiredRewards();
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await LoadRewards(); 
+            await Task.WhenAll(
+                LoadLoyaltyPoints(),
+                LoadPointsHistory(),
+                LoadAcquiredRewards()
+            );
+        }
+        else
+        {
+            isLoadingRewards = false;
+            isLoadingHistory = false;
+            isLoadingAcquiredRewards = false;
+        }
     }
 
     private async Task GetCurrentUserId()
@@ -209,148 +249,152 @@
         try
         {
             var response = await Http.GetAsync("api/account/session");
-            
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 currentUserId = session?.Id;
+            }
+            else
+            {
+                 Console.WriteLine($"Błąd pobierania ID użytkownika: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania ID użytkownika: {ex.Message}");
+            Console.WriteLine($"Wyjątek podczas pobierania ID użytkownika: {ex.Message}");
         }
     }
 
     private async Task LoadLoyaltyPoints()
     {
+        if (string.IsNullOrEmpty(currentUserId)) return;
         try
         {
-            if (!string.IsNullOrEmpty(currentUserId))
+            var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/points");
+            if (response.IsSuccessStatusCode)
             {
-                var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/points");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var pointsData = JsonSerializer.Deserialize<LoyaltyPointsResponse>(json, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                    loyaltyPoints = pointsData?.Points ?? 0;
-                }
+                var json = await response.Content.ReadAsStringAsync();
+                var pointsData = JsonSerializer.Deserialize<LoyaltyPointsResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                loyaltyPoints = pointsData?.Points ?? 0;
+            }
+            else
+            {
+                Console.WriteLine($"Błąd pobierania punktów: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania punktów lojalnościowych: {ex.Message}");
+            Console.WriteLine($"Wyjątek podczas pobierania punktów: {ex.Message}");
         }
     }
 
     private async Task LoadRewards()
     {
         isLoadingRewards = true;
+        StateHasChanged(); 
         try
         {
             var response = await Http.GetAsync("api/loyalty-points/rewards");
-            
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                availableRewards = JsonSerializer.Deserialize<List<Reward>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                availableRewards = JsonSerializer.Deserialize<List<Reward>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<Reward>();
+            }
+            else
+            {
+                availableRewards = new List<Reward>();
+                Console.WriteLine($"Błąd pobierania listy nagród: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania nagród: {ex.Message}");
+            availableRewards = new List<Reward>();
+            Console.WriteLine($"Wyjątek podczas pobierania listy nagród: {ex.Message}");
         }
         finally
         {
             isLoadingRewards = false;
+            StateHasChanged();
         }
     }
 
     private async Task LoadPointsHistory()
     {
+        if (string.IsNullOrEmpty(currentUserId)) return;
         isLoadingHistory = true;
+        StateHasChanged();
         try
         {
-            if (!string.IsNullOrEmpty(currentUserId))
+            var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/history");
+            if (response.IsSuccessStatusCode)
             {
-                var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/history");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    pointsHistory = JsonSerializer.Deserialize<List<PointsHistoryEntry>>(json, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
+                var json = await response.Content.ReadAsStringAsync();
+                pointsHistory = JsonSerializer.Deserialize<List<PointsHistoryEntry>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<PointsHistoryEntry>();
+            }
+             else
+            {
+                pointsHistory = new List<PointsHistoryEntry>();
+                Console.WriteLine($"Błąd pobierania historii punktów: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania historii punktów: {ex.Message}");
+            pointsHistory = new List<PointsHistoryEntry>();
+            Console.WriteLine($"Wyjątek podczas pobierania historii punktów: {ex.Message}");
         }
         finally
         {
             isLoadingHistory = false;
+            StateHasChanged();
         }
     }
 
     private async Task LoadAcquiredRewards()
     {
+        if (string.IsNullOrEmpty(currentUserId)) return;
         isLoadingAcquiredRewards = true;
+        StateHasChanged();
         try
         {
-            if (!string.IsNullOrEmpty(currentUserId))
+            var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/acquired-rewards");
+            if (response.IsSuccessStatusCode)
             {
-                var response = await Http.GetAsync($"api/loyalty-points/guests/{currentUserId}/acquired-rewards");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    acquiredRewards = JsonSerializer.Deserialize<List<AcquiredReward>>(json, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
+                var json = await response.Content.ReadAsStringAsync();
+                acquiredRewards = JsonSerializer.Deserialize<List<AcquiredReward>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<AcquiredReward>();
+            }
+            else
+            {
+                acquiredRewards = new List<AcquiredReward>();
+                Console.WriteLine($"Błąd pobierania zdobytych nagród: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania zdobytych nagród: {ex.Message}");
+            acquiredRewards = new List<AcquiredReward>();
+            Console.WriteLine($"Wyjątek podczas pobierania zdobytych nagród: {ex.Message}");
         }
         finally
         {
             isLoadingAcquiredRewards = false;
+            StateHasChanged();
         }
     }
 
     private async Task ExchangePoints(int rewardId)
     {
+        if (isExchangingPoints) return;
+
+        isExchangingPoints = true;
+        exchangingRewardId = rewardId;
+        StateHasChanged();
+
         if (await JSRuntime.InvokeAsync<bool>("confirm", "Czy na pewno chcesz wymienić punkty na tę nagrodę?"))
         {
             try
             {
-                var request = new
-                {
-                    guestId = currentUserId,
-                    rewardId = rewardId
-                };
-                
-                var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                var response = await Http.PostAsync("api/loyalty-points/exchange", content);
+                var request = new { guestId = currentUserId, rewardId = rewardId };
+                var response = await Http.PostAsJsonAsync("api/loyalty-points/exchange", request);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -359,23 +403,28 @@
                     await LoadPointsHistory();
                     await LoadAcquiredRewards();
                 }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Błąd podczas wymiany punktów. Status: {response.StatusCode}, Odpowiedź: {errorContent}");
+                    await JSRuntime.InvokeVoidAsync("alert", $"Wystąpił błąd podczas wymiany punktów: {response.ReasonPhrase}");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd podczas wymiany punktów: {ex.Message}");
+                Console.WriteLine($"Wyjątek podczas wymiany punktów: {ex.Message}");
                 await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas wymiany punktów.");
             }
         }
+        
+        isExchangingPoints = false;
+        exchangingRewardId = 0;
+        StateHasChanged();
     }
 
     public class UserSession
     {
         public string Id { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string[] Roles { get; set; } = Array.Empty<string>();
-        public string ProfilePicture { get; set; } = string.Empty;
-        public bool IsEmailConfirmed { get; set; }
     }
 
     public class LoyaltyPointsResponse
@@ -385,22 +434,42 @@
 
     public class Reward
     {
+        [JsonPropertyName("rewardId")]
         public int Id { get; set; }
+
+        [JsonPropertyName("rewardName")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("rewardDescription")]
         public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("points")]
         public int PointsCost { get; set; }
     }
 
     public class PointsHistoryEntry
     {
+        [JsonPropertyName("description")]
         public string Description { get; set; } = string.Empty;
+        
+        [JsonPropertyName("points")]
         public int Points { get; set; }
-        public string Date { get; set; } = string.Empty;
+        
+        [JsonPropertyName("date")]
+        public string DateString { get; set; } = string.Empty; 
+
+        public DateTime ParsedDate => DateTime.TryParse(DateString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date) ? date.ToLocalTime() : DateTime.MinValue;
     }
 
     public class AcquiredReward
     {
-        public string Name { get; set; } = string.Empty;
-        public string AcquiredDate { get; set; } = string.Empty;
+        [JsonPropertyName("guestId")]
+        public string GuestId { get; set; } = string.Empty;
+
+        [JsonPropertyName("rewardId")]
+        public int RewardId { get; set; }
+
+        [JsonPropertyName("date")]
+        public DateTime AcquiredDate { get; set; }
     }
 }

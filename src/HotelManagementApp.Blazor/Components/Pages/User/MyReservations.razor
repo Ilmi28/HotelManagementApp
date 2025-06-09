@@ -1,7 +1,9 @@
 @page "/my-reservations"
 @using System.Text.Json
-@inject HttpClient Http
-@inject IJSRuntime JSRuntime
+@using System.Text.Json.Serialization
+@using System.IO // Potrzebne dla MemoryStream
+@inject HttpClient Http 
+@inject IJSRuntime JSRuntime 
 @inject NavigationManager NavigationManager
 @attribute [Authorize]
 
@@ -33,7 +35,7 @@
                             <div class="card h-100">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">Zamówienie #@order.Id</h6>
-                                    <span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span>
+                                    <span class="badge @GetStatusBadgeClass(order.Status)">@GetPolishStatus(order.Status)</span>
                                 </div>
                                 <div class="card-body">
                                     <p><strong>Data:</strong> @order.OrderDate?.ToString("dd.MM.yyyy")</p>
@@ -45,12 +47,21 @@
                                 </div>
                                 <div class="card-footer">
                                     <div class="btn-group w-100" role="group">
-                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewDetails(order.Id)">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => NavigateToOrderDetails(order.Id)">
                                             <i class="bi bi-eye"></i> Szczegóły
                                         </button>
-                                        <button class="btn btn-outline-info btn-sm" @onclick="() => ViewPayment(order.Id)">
-                                            <i class="bi bi-credit-card"></i> Płatność
-                                        </button>
+                                        @if (order.Status?.ToLower() == "pending")
+                                        {
+                                            <button class="btn btn-outline-info btn-sm" @onclick="() => NavigateToPayment(order.Id)">
+                                                <i class="bi bi-credit-card"></i> Płatność
+                                            </button>
+                                        }
+                                        @if (order.Status?.ToLower() == "completed")
+                                        {
+                                            <button class="btn btn-outline-success btn-sm" @onclick="() => DownloadBill(order.Id)">
+                                                <i class="bi bi-file-earmark-arrow-down"></i> Pobierz rachunek
+                                            </button>
+                                        }
                                         @if (CanCancelOrder(order.Status))
                                         {
                                             <button class="btn btn-outline-danger btn-sm" @onclick="() => CancelOrder(order.Id)">
@@ -78,78 +89,10 @@
             }
         </div>
     </div>
-
-    @if (selectedReservation != null)
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Szczegóły rezerwacji #@selectedReservation.OrderId</h5>
-                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Informacje o rezerwacji:</h6>
-                                <p><strong>Check-in:</strong> @selectedReservation.CheckInDate?.ToString("dd.MM.yyyy")</p>
-                                <p><strong>Check-out:</strong> @selectedReservation.CheckOutDate?.ToString("dd.MM.yyyy")</p>
-                                <p><strong>Liczba gości:</strong> @selectedReservation.GuestCount</p>
-                                <p><strong>Pokój:</strong> @selectedReservation.RoomType</p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Dodatkowe usługi:</h6>
-                                @if (selectedReservation.Services?.Any() == true)
-                                {
-                                    <ul class="list-unstyled">
-                                        @foreach (var service in selectedReservation.Services)
-                                        {
-                                            <li><i class="bi bi-check-circle text-success"></i> @service</li>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <p class="text-muted">Brak dodatkowych usług</p>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Zamknij</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (selectedPayment != null)
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Płatność dla zamówienia #@selectedPayment.OrderId</h5>
-                        <button type="button" class="btn-close" @onclick="ClosePaymentModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p><strong>Kwota:</strong> @selectedPayment.Amount.ToString("C")</p>
-                        <p><strong>Metoda płatności:</strong> @selectedPayment.PaymentMethod</p>
-                        <p><strong>Data płatności:</strong> @selectedPayment.Date</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="ClosePaymentModal">Zamknij</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 </div>
 
 @code {
     private List<Order>? orders;
-    private Reservation? selectedReservation;
-    private Payment? selectedPayment;
     private bool isLoading = true;
     private string? currentUserId;
 
@@ -163,15 +106,11 @@
     {
         try
         {
-            var response = await Http.GetAsync("api/account/session");
-            
+            var response = await Http.GetAsync("api/account/session"); // Zakładam, że ten endpoint jest na tym samym API co reszta
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var session = JsonSerializer.Deserialize<UserSession>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 currentUserId = session?.Id;
             }
         }
@@ -184,71 +123,97 @@
     private async Task LoadOrders()
     {
         isLoading = true;
+        StateHasChanged();
         try
         {
             if (!string.IsNullOrEmpty(currentUserId))
             {
+                // Upewnij się, że Http jest skonfigurowany z poprawnym BaseAddress dla API
                 var response = await Http.GetAsync($"api/order/get-by-guest/{currentUserId}");
-                
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    orders = JsonSerializer.Deserialize<List<Order>>(json, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                    orders = JsonSerializer.Deserialize<List<Order>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
+                else
+                {
+                    orders = new List<Order>();
+                    Console.WriteLine($"Błąd API podczas pobierania zamówień: {response.StatusCode}");
+                }
+            }
+            else
+            {
+                orders = new List<Order>();
             }
         }
         catch (Exception ex)
         {
+            orders = new List<Order>();
             Console.WriteLine($"Błąd podczas pobierania zamówień: {ex.Message}");
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 
-    private async Task ViewDetails(int orderId)
+    private void NavigateToOrderDetails(int orderId)
+    {
+        NavigationManager.NavigateTo($"/order/{orderId}");
+    }
+
+    private void NavigateToPayment(int orderId)
+    {
+        NavigationManager.NavigateTo($"/payment/{orderId}");
+    }
+
+    private async Task DownloadBill(int orderId)
     {
         try
         {
-            var response = await Http.GetAsync($"api/reservation/{orderId}");
-            
+            // Użyj HttpClient, aby pobrać plik PDF. HttpClient automatycznie dołączy tokeny JWT.
+            // Upewnij się, że `Http` jest skonfigurowany z BaseAddress wskazującym na Twoje API (np. http://localhost:TWOJ_PORT_API)
+            var response = await Http.GetAsync($"api/order/{orderId}/bill");
+
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
-                selectedReservation = JsonSerializer.Deserialize<Reservation>(json, new JsonSerializerOptions
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"Rachunek_Zamowienie_{orderId}.pdf"; // Możesz spróbować odczytać nazwę z nagłówka Content-Disposition, jeśli jest dostępna i potrzebna
+
+                // Próba odczytania nazwy pliku z nagłówka Content-Disposition
+                if (response.Content.Headers.TryGetValues("Content-Disposition", out var cdValues))
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    var contentDisposition = System.Net.Http.Headers.ContentDispositionHeaderValue.Parse(cdValues.FirstOrDefault());
+                    if (contentDisposition != null && !string.IsNullOrEmpty(contentDisposition.FileNameStar))
+                    {
+                         fileName = contentDisposition.FileNameStar;
+                    }
+                    else if (contentDisposition != null && !string.IsNullOrEmpty(contentDisposition.FileName))
+                    {
+                         fileName = contentDisposition.FileName;
+                    }
+                    // Usuń cudzysłowy, jeśli istnieją
+                    fileName = fileName.Trim('"');
+                }
+
+
+                using var fileStream = new MemoryStream(fileBytes);
+                using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+                // Wywołaj funkcję JavaScript do pobrania pliku
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, "application/pdf", streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Nie udało się pobrać rachunku. Serwer odpowiedział: {response.StatusCode}");
+                Console.WriteLine($"Błąd API ({response.StatusCode}) podczas pobierania rachunku dla zamówienia #{orderId}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania szczegółów rezerwacji: {ex.Message}");
-        }
-    }
-
-    private async Task ViewPayment(int orderId)
-    {
-        try
-        {
-            var response = await Http.GetAsync($"api/payment/get-payment-by-order/{orderId}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                selectedPayment = JsonSerializer.Deserialize<Payment>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas pobierania płatności: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił krytyczny błąd podczas próby pobrania rachunku.");
+            Console.WriteLine($"Wyjątek podczas pobierania rachunku dla zamówienia #{orderId}: {ex.Message}");
         }
     }
 
@@ -259,30 +224,39 @@
             try
             {
                 var response = await Http.PatchAsync($"api/order/cancel/{orderId}", null);
-                
                 if (response.IsSuccessStatusCode)
                 {
                     await LoadOrders();
                     await JSRuntime.InvokeVoidAsync("alert", "Zamówienie zostało anulowane.");
                 }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Nie udało się anulować zamówienia. Status: {response.StatusCode}");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd podczas anulowania zamówienia: {ex.Message}");
+                Console.WriteLine($"Błąd podczas anulowania zamówienia #{orderId}: {ex.Message}");
                 await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas anulowania zamówienia.");
             }
         }
     }
 
-    private void CloseModal() => selectedReservation = null;
-    private void ClosePaymentModal() => selectedPayment = null;
+    private string GetPolishStatus(string? englishStatus) => englishStatus?.ToLower() switch
+    {
+        "completed" => "Zakończone",
+        "cancelled" => "Anulowane",
+        "confirmed" => "Potwierdzone",
+        "pending" => "Oczekujące",
+        _ => englishStatus ?? "Nieznany"
+    };
 
     private string GetStatusBadgeClass(string? status) => status?.ToLower() switch
     {
         "confirmed" => "bg-success",
-        "pending" => "bg-warning",
+        "pending" => "bg-warning text-dark",
         "cancelled" => "bg-danger",
-        "completed" => "bg-info",
+        "completed" => "bg-info text-dark",
         _ => "bg-secondary"
     };
 
@@ -301,28 +275,11 @@
     public class Order
     {
         public int Id { get; set; }
+        [JsonPropertyName("created")]
         public DateTime? OrderDate { get; set; }
+        [JsonPropertyName("totalPrice")]
         public decimal? TotalAmount { get; set; }
         public string Status { get; set; } = string.Empty;
         public string HotelName { get; set; } = string.Empty;
-    }
-
-    public class Reservation
-    {
-        public int OrderId { get; set; }
-        public DateTime? CheckInDate { get; set; }
-        public DateTime? CheckOutDate { get; set; }
-        public int GuestCount { get; set; }
-        public string RoomType { get; set; } = string.Empty;
-        public List<string> Services { get; set; } = new();
-    }
-
-    public class Payment
-    {
-        public int Id { get; set; }
-        public int OrderId { get; set; }
-        public string PaymentMethod { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-        public string Date { get; set; } = string.Empty;
     }
 }
