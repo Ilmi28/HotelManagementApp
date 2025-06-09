@@ -35,12 +35,12 @@ public class OrderPricingService(
     public async Task<decimal> CalculatePriceForRoom(HotelRoom hotelRoom, CancellationToken ct)
     {
         var roomDiscount = await roomDiscountService.CalculateDiscount(hotelRoom, ct);
-        return hotelRoom.Price - (roomDiscount * roomDiscount / 100m);
+        return hotelRoom.Price - (hotelRoom.Price * roomDiscount / 100m);
     }
 
     public async Task<decimal> CalculatePriceForService(HotelService hotelService, CancellationToken ct)
     {
         var serviceDiscount = await serviceDiscountService.CalculateDiscount(hotelService, ct);
-        return hotelService.Price - (serviceDiscount * serviceDiscount / 100m);
+        return hotelService.Price - (hotelService.Price * serviceDiscount / 100m);
     }
 }

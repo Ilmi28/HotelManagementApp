@@ -26,8 +26,7 @@ public class HotelReviewImageRepository(AppDbContext context) : IHotelReviewImag
     public async Task RemoveReviewImagesByReviewId(int reviewId, CancellationToken ct)
     {
         var reviewImages = await context.HotelReviewImages
-            .Include(x => x.HotelReview)
-            .Where(x => x.HotelReview.Id == reviewId).ToListAsync(ct);
+            .Where(x => x.HotelReviewId == reviewId).ToListAsync(ct);
         foreach (var reviewImage in reviewImages)
         {
             context.HotelReviewImages.Remove(reviewImage);

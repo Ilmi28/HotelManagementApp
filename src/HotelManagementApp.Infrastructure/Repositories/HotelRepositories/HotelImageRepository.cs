@@ -26,8 +26,7 @@ public class HotelImageRepository(AppDbContext context) : IHotelImageRepository
     public async Task RemoveHotelImagesByHotelId(int hotelId, CancellationToken ct)
     {
         var hotelImage = await context.HotelImages
-                            .Include(x => x.Hotel)
-                            .FirstOrDefaultAsync(x => x.Hotel.Id == hotelId, ct);
+                            .FirstOrDefaultAsync(x => x.HotelId == hotelId, ct);
         if (hotelImage != null)
         {
             context.HotelImages.Remove(hotelImage);
