@@ -1,4 +1,4 @@
-@page "/staff-management"
+@page "/manager-management"
 @using System.Text.Json
 @using System.Text
 @using Microsoft.AspNetCore.Components.Authorization
@@ -6,38 +6,54 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@attribute [Authorize(Roles = "Manager,Admin")]
+@attribute [Authorize(Roles = "Admin")]
 
-<PageTitle>Zarządzanie personelem</PageTitle>
+<PageTitle>Zarządzanie menedżerami</PageTitle>
 
 <div class="container my-4">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h2">
-                    <i class="bi bi-people-fill"></i> Zarządzanie personelem
+                    <i class="bi bi-briefcase-fill"></i> Zarządzanie menedżerami
                 </h1>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-success" @onclick="ShowAddStaffModal">
-                        <i class="bi bi-person-plus-fill"></i> Dodaj do personelu
+                    <button class="btn btn-primary" @onclick="ShowAddManagerModal">
+                        <i class="bi bi-briefcase"></i> Dodaj menedżera
+                    </button>
+                    <button class="btn btn-danger" @onclick="ShowAdminManagementModal">
+                        <i class="bi bi-shield-fill-check"></i> Zarządzaj adminami
                     </button>
                     <button class="btn btn-info" @onclick="ShowCreateAccountModal">
                         <i class="bi bi-person-add"></i> Utwórz nowe konto
                     </button>
-                    <AuthorizeView Roles="Admin">
-                        <NavLink class="btn btn-primary" href="/manager-management">
-                            <i class="bi bi-people"></i> Zarządzanie menedżerami
-                        </NavLink>
-                    </AuthorizeView>
+                    <NavLink class="btn btn-success" href="/staff-management">
+                        <i class="bi bi-people"></i> Zarządzanie personelem
+                    </NavLink>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Karty statystyk -->
-    <div class="row mb-4">
-        <div class="col-lg-6 col-md-6 mb-3">
-            <div class="card bg-info text-white">
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-6 col-lg-4 mb-3 d-flex justify-content-center">
+            <div class="card bg-primary text-white w-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Menedżerowie</h6>
+                            <h3 class="mb-0">@(managers?.Count ?? 0)</h3>
+                        </div>
+                        <div class="text-primary-emphasis">
+                            <i class="bi bi-briefcase display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4 mb-3 d-flex justify-content-center">
+            <div class="card bg-info text-white w-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -51,24 +67,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 col-md-6 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-1">Personel</h6>
-                            <h3 class="mb-0">@(staff?.Count ?? 0)</h3>
-                        </div>
-                        <div class="text-success-emphasis">
-                            <i class="bi bi-person-badge display-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Komunikaty -->
+    
     @if (!string.IsNullOrEmpty(successMessage))
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -88,15 +89,14 @@
     }
 
     <div class="row">
-        <!-- Lista Personelu -->
         <div class="col-lg-6 mb-4">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center bg-success text-white">
+                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
                     <h5 class="mb-0">
-                        <i class="bi bi-person-badge"></i> Personel
+                        <i class="bi bi-briefcase"></i> Menedżerowie
                     </h5>
-                    <button class="btn btn-outline-light btn-sm" @onclick="LoadStaff" disabled="@isLoadingStaff">
-                        @if (isLoadingStaff)
+                    <button class="btn btn-outline-light btn-sm" @onclick="LoadManagers" disabled="@isLoadingManagers">
+                        @if (isLoadingManagers)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                         }
@@ -108,14 +108,14 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    @if (isLoadingStaff)
+                    @if (isLoadingManagers)
                     {
                         <div class="text-center py-4">
-                            <div class="spinner-border text-success" role="status"></div>
-                            <p class="mt-2 mb-0 text-muted">Ładowanie personelu...</p>
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 mb-0 text-muted">Ładowanie menedżerów...</p>
                         </div>
                     }
-                    else if (staff?.Any() == true)
+                    else if (managers?.Any() == true)
                     {
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -123,11 +123,12 @@
                                     <tr>
                                         <th>Użytkownik</th>
                                         <th>Email</th>
+                                        <th>Role</th>
                                         <th>Akcje</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var user in staff)
+                                    @foreach (var user in managers)
                                     {
                                         <tr>
                                             <td>
@@ -139,9 +140,9 @@
                                                     }
                                                     else
                                                     {
-                                                        <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
                                                              style="width: 32px; height: 32px; font-size: 0.8rem;">
-                                                            <i class="bi bi-person-badge"></i>
+                                                            <i class="bi bi-briefcase"></i>
                                                         </div>
                                                     }
                                                     <div>
@@ -158,26 +159,35 @@
                                                 }
                                             </td>
                                             <td>
+                                                @if (user.Roles?.Any() == true)
+                                                {
+                                                    @foreach (var role in user.Roles)
+                                                    {
+                                                        <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                    }
+                                                }
+                                            </td>
+                                            <td>
                                                 <div class="btn-group btn-group-sm">
                                                     <button class="btn btn-outline-primary" 
                                                             @onclick="() => ShowEditUserModal(user)"
                                                             title="Edytuj">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <button class="btn btn-outline-danger" 
-                                                            @onclick="() => ConfirmRemoveFromStaff(user.Id, user.UserName)"
-                                                            disabled="@(removingStaffIds.Contains(user.Id))"
-                                                            title="Usuń z personelu">
-                                                        @if (removingStaffIds.Contains(user.Id))
+                                                    <button class="btn btn-outline-warning" 
+                                                            @onclick="() => ConfirmRemoveFromManagers(user.Id, user.UserName)"
+                                                            disabled="@(removingManagerIds.Contains(user.Id))"
+                                                            title="Usuń z menedżerów">
+                                                        @if (removingManagerIds.Contains(user.Id))
                                                         {
                                                             <span class="spinner-border spinner-border-sm" role="status"></span>
                                                         }
                                                         else
                                                         {
-                                                            <i class="bi bi-person-dash"></i>
+                                                            <i class="bi bi-briefcase-fill"></i>
                                                         }
                                                     </button>
-                                                    <button class="btn btn-outline-warning" 
+                                                    <button class="btn btn-outline-danger" 
                                                             @onclick="() => ConfirmDeleteAccount(user.Id, user.UserName)"
                                                             disabled="@(deletingUserIds.Contains(user.Id))"
                                                             title="Usuń konto">
@@ -201,15 +211,14 @@
                     else
                     {
                         <div class="text-center py-4">
-                            <i class="bi bi-person-badge text-muted display-4"></i>
-                            <p class="mt-3 mb-0 text-muted">Brak personelu</p>
+                            <i class="bi bi-briefcase text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Brak menedżerów</p>
                         </div>
                     }
                 </div>
             </div>
         </div>
 
-        <!-- Lista Kont bez ról -->
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
@@ -287,20 +296,20 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-outline-success" 
-                                                            @onclick="() => AddToStaff(user.Id, user.UserName)"
-                                                            disabled="@(addingStaffIds.Contains(user.Id))"
-                                                            title="Dodaj do personelu">
-                                                        @if (addingStaffIds.Contains(user.Id))
+                                                    <button class="btn btn-outline-primary" 
+                                                            @onclick="() => AddToManagers(user.Id, user.UserName)"
+                                                            disabled="@(addingManagerIds.Contains(user.Id))"
+                                                            title="Dodaj do menedżerów">
+                                                        @if (addingManagerIds.Contains(user.Id))
                                                         {
                                                             <span class="spinner-border spinner-border-sm" role="status"></span>
                                                         }
                                                         else
                                                         {
-                                                            <i class="bi bi-person-plus"></i>
+                                                            <i class="bi bi-briefcase-fill"></i>
                                                         }
                                                     </button>
-                                                    <button class="btn btn-outline-primary" 
+                                                    <button class="btn btn-outline-secondary" 
                                                             @onclick="() => ShowEditUserModal(user)"
                                                             title="Edytuj">
                                                         <i class="bi bi-pencil"></i>
@@ -348,7 +357,136 @@
     </div>
 </div>
 
-<!-- Modal tworzenia nowego konta -->
+@if (showAdminManagementModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-shield-fill-check"></i> Zarządzanie adminami
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAdminManagementModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-person-plus"></i> Dodaj admina
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Szukaj użytkownika:</label>
+                                        <input type="text" class="form-control" 
+                                               placeholder="Wprowadź nazwę użytkownika lub email..." 
+                                               value="@adminSearchText"
+                                               @oninput="OnAdminSearchChanged" />
+                                    </div>
+                                    
+                                    @if (adminFilteredUsers?.Any() == true)
+                                    {
+                                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                            @foreach (var user in adminFilteredUsers.Take(5))
+                                            {
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div class="d-flex align-items-center">
+                                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                        {
+                                                            <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                                 style="width: 32px; height: 32px; object-fit: cover;" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                                 style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                                <i class="bi bi-person"></i>
+                                                            </div>
+                                                        }
+                                                        <div>
+                                                            <div class="fw-bold">@user.UserName</div>
+                                                            <small class="text-muted">@user.Email</small>
+                                                        </div>
+                                                    </div>
+                                                    <button class="btn btn-sm btn-danger" 
+                                                            @onclick="() => AddToAdmins(user.Id, user.UserName)"
+                                                            disabled="@(addingAdminIds.Contains(user.Id))">
+                                                        @if (addingAdminIds.Contains(user.Id))
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                        }
+                                                        <i class="bi bi-shield-fill-check"></i>
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrEmpty(adminSearchText))
+                                    {
+                                        <div class="text-center py-3">
+                                            <i class="bi bi-search text-muted"></i>
+                                            <p class="mb-0 text-muted">Nie znaleziono użytkowników</p>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center py-3">
+                                            <i class="bi bi-shield-fill-check text-muted"></i>
+                                            <p class="mb-0 text-muted">Wprowadź nazwę użytkownika</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-person-dash"></i> Usuń admina
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <EditForm Model="@removeAdminModel" OnValidSubmit="RemoveFromAdmins">
+                                        <DataAnnotationsValidator />
+                                        <div class="mb-3">
+                                            <label for="removeAdminInput" class="form-label">ID lub nazwa użytkownika:</label>
+                                            <InputText id="removeAdminInput" class="form-control" 
+                                                      @bind-Value="removeAdminModel.UserIdentifier" 
+                                                      placeholder="Wprowadź ID użytkownika" />
+                                            <ValidationMessage For="@(() => removeAdminModel.UserIdentifier)" class="text-danger" />
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-warning w-100" disabled="@isRemovingAdmin">
+                                            @if (isRemovingAdmin)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            }
+                                            <i class="bi bi-shield-fill-x"></i> Usuń z adminów
+                                        </button>
+                                    </EditForm>
+                                    
+                                    <div class="mt-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle"></i>
+                                            Można wprowadzić pełny ID użytkownika lub jego nazwę użytkownika.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAdminManagementModal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (showCreateAccountModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -404,7 +542,6 @@
     </div>
 }
 
-<!-- Modal edycji użytkownika -->
 @if (showEditUserModal && editUserModel != null)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -452,17 +589,16 @@
     </div>
 }
 
-<!-- Modal dodawania do personelu -->
-@if (showAddStaffModal)
+@if (showAddManagerModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-person-plus-fill"></i> Dodaj do personelu
+                        <i class="bi bi-briefcase"></i> Dodaj menedżera
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddStaffModal"></button>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddManagerModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -507,13 +643,13 @@
                                             </small>
                                         </div>
                                     </div>
-                                    <button class="btn btn-success" @onclick="() => AddToStaffFromModal(user.Id, user.UserName)"
-                                            disabled="@(addingStaffIds.Contains(user.Id))">
-                                        @if (addingStaffIds.Contains(user.Id))
+                                    <button class="btn btn-primary" @onclick="() => AddToManagersFromModal(user.Id, user.UserName)"
+                                            disabled="@(addingManagerIds.Contains(user.Id))">
+                                        @if (addingManagerIds.Contains(user.Id))
                                         {
                                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                                         }
-                                        <i class="bi bi-person-plus"></i><text> Dodaj do personelu</text>
+                                        <i class="bi bi-briefcase"></i><text> Dodaj menedżera</text>
                                     </button>
                                 </div>
                             }
@@ -529,46 +665,45 @@
                     else
                     {
                         <div class="text-center py-4">
-                            <i class="bi bi-person-plus text-muted display-4"></i>
+                            <i class="bi bi-briefcase text-muted display-4"></i>
                             <p class="mt-3 mb-0 text-muted">Wprowadź nazwę użytkownika lub email</p>
                         </div>
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddStaffModal">Zamknij</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddManagerModal">Zamknij</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Modal potwierdzenia usunięcia z personelu -->
-@if (showRemoveStaffModal)
+@if (showRemoveManagerModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title">
-                        <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia z personelu
+                        <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia z menedżerów
                     </h5>
-                    <button type="button" class="btn-close" @onclick="CloseRemoveStaffModal"></button>
+                    <button type="button" class="btn-close" @onclick="CloseRemoveManagerModal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Czy na pewno chcesz usunąć z personelu:</p>
+                    <p>Czy na pewno chcesz usunąć z menedżerów:</p>
                     <div class="bg-light p-3 rounded">
                         <strong>@userToRemoveName</strong>
                     </div>
-                    <p class="mt-3 text-muted">Użytkownik straci uprawnienia personelu i zostanie kontem bez ról.</p>
+                    <p class="mt-3 text-muted">Użytkownik straci uprawnienia menedżera i zostanie kontem bez ról.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseRemoveStaffModal">Anuluj</button>
-                    <button type="button" class="btn btn-warning" @onclick="RemoveFromStaff" disabled="@isRemovingUser">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRemoveManagerModal">Anuluj</button>
+                    <button type="button" class="btn btn-warning" @onclick="RemoveFromManagers" disabled="@isRemovingUser">
                         @if (isRemovingUser)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                         }
-                        <i class="bi bi-person-dash"></i><text> Usuń z personelu</text>
+                        <i class="bi bi-briefcase-fill"></i><text> Usuń z menedżerów</text>
                     </button>
                 </div>
             </div>
@@ -576,7 +711,6 @@
     </div>
 }
 
-<!-- Modal potwierdzenia usunięcia konta -->
 @if (showDeleteAccountModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -616,38 +750,45 @@
 
 @code {
     private List<User>? accountsWithoutRoles;
-    private List<User>? staff;
+    private List<User>? managers;
     private List<User>? filteredAccountsWithoutRoles;
     private List<User>? modalFilteredAccounts;
+    private List<User>? adminFilteredUsers;
     
     private bool isLoadingAccountsWithoutRoles = true;
-    private bool isLoadingStaff = true;
+    private bool isLoadingManagers = true;
     private bool isRemovingUser = false;
     private bool isCreatingAccount = false;
     private bool isUpdatingUser = false;
     private bool isDeletingAccount = false;
+    private bool isRemovingAdmin = false;
     
-    private bool showAddStaffModal = false;
-    private bool showRemoveStaffModal = false;
+    private bool showAddManagerModal = false;
+    private bool showRemoveManagerModal = false;
     private bool showCreateAccountModal = false;
     private bool showEditUserModal = false;
     private bool showDeleteAccountModal = false;
+    private bool showAdminManagementModal = false;
     
-    private HashSet<string> addingStaffIds = new();
-    private HashSet<string> removingStaffIds = new();
+    private HashSet<string> addingManagerIds = new();
+    private HashSet<string> removingManagerIds = new();
     private HashSet<string> deletingUserIds = new();
+    private HashSet<string> addingAdminIds = new();
     
     private string accountSearchText = "";
     private string modalSearchText = "";
+    private string adminSearchText = "";
     private string userToRemoveId = "";
     private string userToRemoveName = "";
     private string userToDeleteId = "";
     private string userToDeleteName = "";
     private string successMessage = "";
     private string errorMessage = "";
+    private int adminCount = 0;
 
     private CreateAccountModel createAccountModel = new();
     private EditUserModel? editUserModel;
+    private RemoveAdminModel removeAdminModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -657,11 +798,10 @@
     private async Task LoadInitialData()
     {
         await Task.Delay(100);
-        await Task.WhenAll(LoadAccountsWithoutRoles(), LoadStaff());
+        await Task.WhenAll(LoadAccountsWithoutRoles(), LoadManagers());
         FilterAccountsWithoutRoles();
     }
 
-    // Event handlers dla wyszukiwania
     private async Task OnAccountSearchChanged(ChangeEventArgs e)
     {
         accountSearchText = e.Value?.ToString() ?? "";
@@ -676,7 +816,13 @@
         await Task.CompletedTask;
     }
 
-    // Ładowanie danych
+    private async Task OnAdminSearchChanged(ChangeEventArgs e)
+    {
+        adminSearchText = e.Value?.ToString() ?? "";
+        FilterAdminUsers();
+        await Task.CompletedTask;
+    }
+
     private async Task LoadAccountsWithoutRoles()
     {
         isLoadingAccountsWithoutRoles = true;
@@ -710,39 +856,38 @@
         }
     }
 
-    private async Task LoadStaff()
+    private async Task LoadManagers()
     {
-        isLoadingStaff = true;
+        isLoadingManagers = true;
         try
         {
-            var response = await Http.GetAsync("api/staff/all");
+            var response = await Http.GetAsync("api/manager/all");
             
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                staff = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                managers = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
             }
             else
             {
-                await HandleApiError(response, "Błąd podczas ładowania personelu");
+                await HandleApiError(response, "Błąd podczas ładowania menedżerów");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas ładowania personelu: {ex.Message}");
-            errorMessage = "Wystąpił błąd podczas ładowania listy personelu.";
+            Console.WriteLine($"Błąd podczas ładowania menedżerów: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy menedżerów.";
         }
         finally
         {
-            isLoadingStaff = false;
+            isLoadingManagers = false;
             StateHasChanged();
         }
     }
 
-    // Filtrowanie
     private void FilterAccountsWithoutRoles()
     {
         if (accountsWithoutRoles == null)
@@ -791,7 +936,28 @@
         StateHasChanged();
     }
 
-    // Tworzenie konta
+    private void FilterAdminUsers()
+    {
+        var allUsers = new List<User>();
+        if (accountsWithoutRoles != null) allUsers.AddRange(accountsWithoutRoles);
+        if (managers != null) allUsers.AddRange(managers);
+        
+        if (string.IsNullOrWhiteSpace(adminSearchText))
+        {
+            adminFilteredUsers = new List<User>();
+        }
+        else
+        {
+            var searchLower = adminSearchText.ToLower().Trim();
+            adminFilteredUsers = allUsers.Where(u => 
+                (!string.IsNullOrEmpty(u.UserName) && u.UserName.ToLower().Contains(searchLower)) ||
+                (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(searchLower))
+            ).ToList();
+        }
+        
+        StateHasChanged();
+    }
+
     private async Task CreateAccount()
     {
         isCreatingAccount = true;
@@ -822,7 +988,6 @@
         }
     }
 
-    // Edycja użytkownika
     private async Task UpdateUser()
     {
         if (editUserModel == null) return;
@@ -855,7 +1020,6 @@
         }
     }
 
-    // Usuwanie konta
     private async Task DeleteAccount()
     {
         if (string.IsNullOrEmpty(userToDeleteId)) return;
@@ -891,104 +1055,183 @@
         }
     }
 
-    // Zarządzanie personelem
-    private async Task AddToStaff(string userId, string userName)
+    private async Task AddToManagers(string userId, string userName)
     {
-        if (addingStaffIds.Contains(userId)) return;
+        if (addingManagerIds.Contains(userId)) return;
         
-        addingStaffIds.Add(userId);
+        addingManagerIds.Add(userId);
         try
         {
-            var response = await Http.PatchAsync($"api/staff/add/{userId}", null);
+            var response = await Http.PatchAsync($"api/manager/add/{userId}", null);
             
             if (response.IsSuccessStatusCode)
             {
-                successMessage = $"Użytkownik {userName} został dodany do personelu.";
+                successMessage = $"Użytkownik {userName} został dodany do menedżerów.";
                 await RefreshData();
             }
             else
             {
-                await HandleApiError(response, $"Błąd podczas dodawania {userName} do personelu");
+                await HandleApiError(response, $"Błąd podczas dodawania {userName} do menedżerów");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas dodawania do personelu: {ex.Message}");
-            errorMessage = $"Wystąpił błąd podczas dodawania {userName} do personelu.";
+            Console.WriteLine($"Błąd podczas dodawania do menedżerów: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas dodawania {userName} do menedżerów.";
         }
         finally
         {
-            addingStaffIds.Remove(userId);
+            addingManagerIds.Remove(userId);
             StateHasChanged();
         }
     }
 
-    private async Task AddToStaffFromModal(string userId, string userName)
+    private async Task AddToManagersFromModal(string userId, string userName)
     {
-        await AddToStaff(userId, userName);
-        CloseAddStaffModal();
+        await AddToManagers(userId, userName);
+        CloseAddManagerModal();
     }
 
-    private void ConfirmRemoveFromStaff(string userId, string userName)
+    private void ConfirmRemoveFromManagers(string userId, string userName)
     {
         userToRemoveId = userId;
         userToRemoveName = userName;
-        showRemoveStaffModal = true;
+        showRemoveManagerModal = true;
     }
 
-    private async Task RemoveFromStaff()
+    private async Task RemoveFromManagers()
     {
         if (string.IsNullOrEmpty(userToRemoveId)) return;
 
         isRemovingUser = true;
-        removingStaffIds.Add(userToRemoveId);
+        removingManagerIds.Add(userToRemoveId);
         
         try
         {
-            var response = await Http.PatchAsync($"api/staff/remove/{userToRemoveId}", null);
+            var response = await Http.PatchAsync($"api/manager/remove/{userToRemoveId}", null);
             
             if (response.IsSuccessStatusCode)
             {
-                successMessage = $"Użytkownik {userToRemoveName} został usunięty z personelu.";
+                successMessage = $"Użytkownik {userToRemoveName} został usunięty z menedżerów.";
                 await RefreshData();
-                CloseRemoveStaffModal();
+                CloseRemoveManagerModal();
             }
             else
             {
-                await HandleApiError(response, $"Błąd podczas usuwania {userToRemoveName} z personelu");
+                await HandleApiError(response, $"Błąd podczas usuwania {userToRemoveName} z menedżerów");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas usuwania z personelu: {ex.Message}");
-            errorMessage = $"Wystąpił błąd podczas usuwania {userToRemoveName} z personelu.";
+            Console.WriteLine($"Błąd podczas usuwania z menedżerów: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas usuwania {userToRemoveName} z menedżerów.";
         }
         finally
         {
             isRemovingUser = false;
-            removingStaffIds.Remove(userToRemoveId);
+            removingManagerIds.Remove(userToRemoveId);
             StateHasChanged();
         }
     }
 
-    // Modals
-    private void ShowAddStaffModal()
+    private async Task AddToAdmins(string userId, string userName)
+    {
+        if (addingAdminIds.Contains(userId)) return;
+        
+        addingAdminIds.Add(userId);
+        try
+        {
+            var response = await Http.PatchAsync($"api/admin/add/{userId}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Użytkownik {userName} został dodany do adminów.";
+                adminCount++;
+                await RefreshData();
+            }
+            else
+            {
+                await HandleApiError(response, $"Błąd podczas dodawania {userName} do adminów");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas dodawania do adminów: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas dodawania {userName} do adminów.";
+        }
+        finally
+        {
+            addingAdminIds.Remove(userId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveFromAdmins()
+    {
+        if (string.IsNullOrEmpty(removeAdminModel.UserIdentifier)) return;
+
+        isRemovingAdmin = true;
+        try
+        {
+            var response = await Http.PatchAsync($"api/admin/remove/{removeAdminModel.UserIdentifier}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Użytkownik {removeAdminModel.UserIdentifier} został usunięty z adminów.";
+                adminCount = Math.Max(0, adminCount - 1);
+                removeAdminModel.UserIdentifier = "";
+                await RefreshData();
+            }
+            else
+            {
+                await HandleApiError(response, $"Błąd podczas usuwania {removeAdminModel.UserIdentifier} z adminów");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas usuwania z adminów: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas usuwania {removeAdminModel.UserIdentifier} z adminów.";
+        }
+        finally
+        {
+            isRemovingAdmin = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAddManagerModal()
     {
         modalSearchText = "";
         modalFilteredAccounts = new List<User>();
-        showAddStaffModal = true;
+        showAddManagerModal = true;
     }
 
-    private void CloseAddStaffModal()
+    private void CloseAddManagerModal()
     {
-        showAddStaffModal = false;
+        showAddManagerModal = false;
         modalSearchText = "";
         modalFilteredAccounts = new List<User>();
     }
 
-    private void CloseRemoveStaffModal()
+    private void ShowAdminManagementModal()
     {
-        showRemoveStaffModal = false;
+        adminSearchText = "";
+        adminFilteredUsers = new List<User>();
+        removeAdminModel = new RemoveAdminModel();
+        showAdminManagementModal = true;
+    }
+
+    private void CloseAdminManagementModal()
+    {
+        showAdminManagementModal = false;
+        adminSearchText = "";
+        adminFilteredUsers = new List<User>();
+        removeAdminModel = new RemoveAdminModel();
+    }
+
+    private void CloseRemoveManagerModal()
+    {
+        showRemoveManagerModal = false;
         userToRemoveId = "";
         userToRemoveName = "";
     }
@@ -1036,13 +1279,25 @@
         userToDeleteName = "";
     }
 
-    // Utility
     private async Task RefreshData()
     {
-        addingStaffIds.Clear();
-        removingStaffIds.Clear();
+        addingManagerIds.Clear();
+        removingManagerIds.Clear();
         deletingUserIds.Clear();
-        await Task.WhenAll(LoadAccountsWithoutRoles(), LoadStaff());
+        addingAdminIds.Clear();
+        await Task.WhenAll(LoadAccountsWithoutRoles(), LoadManagers());
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-primary",
+            "Staff" => "bg-success",
+            "Guest" => "bg-info",
+            _ => "bg-secondary"
+        };
     }
 
     private async Task HandleApiError(HttpResponseMessage response, string defaultMessage)
@@ -1099,5 +1354,12 @@
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email jest wymagany")]
         [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Niepoprawny format email")]
         public string Email { get; set; } = string.Empty;
+    }
+
+    public class RemoveAdminModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "ID lub nazwa użytkownika jest wymagana")]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 1, ErrorMessage = "Identyfikator musi mieć od 1 do 100 znaków.")]
+        public string UserIdentifier { get; set; } = string.Empty;
     }
 }

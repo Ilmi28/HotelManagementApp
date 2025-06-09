@@ -125,7 +125,6 @@
             }
             else
             {
-                // Obsługa specyficznych kodów błędów API
                 errorMessage = response.StatusCode switch
                 {
                     System.Net.HttpStatusCode.BadRequest => await GetBadRequestErrorMessage(response),
@@ -136,7 +135,6 @@
                     _ => $"Wystąpił błąd podczas logowania (kod: {(int)response.StatusCode}). Spróbuj ponownie później."
                 };
                 
-                // Logowanie szczegółów dla dewelopera
                 var errorContent = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Błąd logowania ({(int)response.StatusCode}): {response.ReasonPhrase}. Szczegóły: {errorContent}");
             }
@@ -173,13 +171,11 @@
         {
             var errorContent = await response.Content.ReadAsStringAsync();
             
-            // Sprawdź czy odpowiedź zawiera szczegóły błędu
             if (errorContent.Contains("Invalid login data provided", StringComparison.OrdinalIgnoreCase))
             {
                 return "Wprowadzone dane są nieprawidłowe. Sprawdź format email i długość hasła.";
             }
             
-            // Sprawdź inne możliwe komunikaty błędów
             if (errorContent.Contains("email", StringComparison.OrdinalIgnoreCase))
             {
                 return "Nieprawidłowy format adresu email. Wprowadź poprawny adres email.";
@@ -190,7 +186,6 @@
                 return "Hasło nie spełnia wymagań. Hasło musi mieć co najmniej 6 znaków.";
             }
             
-            // Domyślny komunikat dla błędu 400
             return "Wprowadzone dane są nieprawidłowe. Sprawdź poprawność email i hasła.";
         }
         catch

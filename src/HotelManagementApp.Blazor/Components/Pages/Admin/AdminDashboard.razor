@@ -11,7 +11,6 @@
 <PageTitle>Panel Administratora</PageTitle>
 
 <div class="container-fluid my-4">
-    <!-- Nagłówek -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
@@ -38,7 +37,6 @@
         </div>
     </div>
 
-    <!-- Komunikaty -->
     @if (!string.IsNullOrEmpty(successMessage))
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -57,7 +55,6 @@
         </div>
     }
 
-    <!-- Statystyki główne -->
     <div class="row mb-4">
         <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
             <div class="card bg-gradient-primary text-white h-100">
@@ -114,7 +111,7 @@
                         <div>
                             <h6 class="card-title mb-1 text-white-50">Zespół zarządzający</h6>
                             <h2 class="mb-0 fw-bold">@managementTeamCount</h2>
-                            <small class="text-white-75">Staff + Manager + Admin</small>
+                            <small class="text-white-75">Staff + Manager</small>
                         </div>
                         <div class="text-white-50">
                             <i class="bi bi-people-fill display-4"></i>
@@ -125,9 +122,8 @@
         </div>
     </div>
 
-    <!-- Statystyki szczegółowe według ról -->
     <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-4 col-md-6 mb-3">
             <div class="card border-info h-100">
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
@@ -151,7 +147,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-4 col-md-6 mb-3">
             <div class="card border-success h-100">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
@@ -175,7 +171,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-4 col-md-6 mb-3">
             <div class="card border-primary h-100">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
@@ -199,25 +195,8 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-danger h-100">
-                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="bi bi-shield-lock"></i> Administratorzy
-                    </h6>
-                    <span class="badge bg-white text-danger">@adminCount</span>
-                </div>
-                <div class="card-body">
-                    <div class="text-center">
-                        <div class="fs-4 fw-bold text-danger">@adminCount</div>
-                        <small class="text-muted">Najwyższe uprawnienia</small>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Szybkie akcje -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -262,9 +241,7 @@
         </div>
     </div>
 
-    <!-- Tabele z danymi -->
     <div class="row">
-        <!-- Konta bez ról -->
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
@@ -371,7 +348,6 @@
             </div>
         </div>
 
-        <!-- Ostatnia aktywność -->
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -411,7 +387,6 @@
         </div>
     </div>
 
-    <!-- Szczegółowe tabele użytkowników -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -439,7 +414,6 @@
                 </div>
                 <div class="card-body">
                     <div class="tab-content">
-                        <!-- Tab Gości -->
                         @if (activeTab == "guests")
                         {
                             <div class="tab-pane fade show active">
@@ -561,7 +535,6 @@
                             </div>
                         }
 
-                        <!-- Tab Personelu -->
                         @if (activeTab == "staff")
                         {
                             <div class="tab-pane fade show active">
@@ -683,7 +656,6 @@
                             </div>
                         }
 
-                        <!-- Tab Menedżerów -->
                         @if (activeTab == "managers")
                         {
                             <div class="tab-pane fade show active">
@@ -878,11 +850,9 @@
     private string successMessage = "";
     private string errorMessage = "";
 
-    // Computed properties
-    private int totalUsers => (guests?.Count ?? 0) + (staff?.Count ?? 0) + (managers?.Count ?? 0) + adminCount;
-    private int activeUsers => GetActiveUsersCount(guests) + GetActiveUsersCount(staff) + GetActiveUsersCount(managers) + adminCount;
-    private int managementTeamCount => (staff?.Count ?? 0) + (managers?.Count ?? 0) + adminCount;
-    private int adminCount => 1; // Szacunkowa liczba - nie ma endpoint do pobierania adminów
+    private int totalUsers => (guests?.Count ?? 0) + (staff?.Count ?? 0) + (managers?.Count ?? 0);
+    private int activeUsers => GetActiveUsersCount(guests) + GetActiveUsersCount(staff) + GetActiveUsersCount(managers);
+    private int managementTeamCount => (staff?.Count ?? 0) + (managers?.Count ?? 0);
 
     protected override async Task OnInitializedAsync()
     {

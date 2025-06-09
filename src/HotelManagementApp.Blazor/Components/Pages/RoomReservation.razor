@@ -4,6 +4,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
 @using System.Globalization
 @using System.Timers
 
@@ -101,7 +102,6 @@
         }
         else if (room != null && isGuestUser)
         {
-            <!-- Reszta kodu pozostaje bez zmian -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -188,47 +188,45 @@
                     </div>
                 </div>
             }
-
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm mb-4 @(isEmailConfirmed ? "" : "opacity-50")">
-                        <div class="card-header bg-white border-0">
-                            <h5 class="mb-0">
-                                <i class="bi bi-calendar-event text-primary"></i> Szczegóły rezerwacji
-                                @if (!isEmailConfirmed)
-                                {
-                                    <span class="badge bg-warning text-dark ms-2">
-                                        <i class="bi bi-lock"></i> Wymagane potwierdzenie emaila
-                                    </span>
-                                }
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <EditForm Model="@reservationModel" OnValidSubmit="@HandleSubmit">
-                                <DataAnnotationsValidator />
-                                
+            <EditForm Model="@mainFormModel" OnValidSubmit="@HandleSubmit" Id="reservationForm">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card border-0 shadow-sm mb-4 @(isEmailConfirmed ? "" : "opacity-50")">
+                            <div class="card-header bg-white border-0">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-calendar-event text-primary"></i> Szczegóły rezerwacji
+                                    @if (!isEmailConfirmed)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-2">
+                                            <i class="bi bi-lock"></i> Wymagane potwierdzenie emaila
+                                        </span>
+                                    }
+                                </h5>
+                            </div>
+                            <div class="card-body">
                                 <div class="row mb-4">
                                     <div class="col-md-6">
                                         <label for="checkInDate" class="form-label">
                                             <i class="bi bi-calendar-plus"></i> Data zameldowania
                                         </label>
                                         <input type="date" id="checkInDate" class="form-control" 
-                                               value="@reservationModel.CheckInDate.ToString("yyyy-MM-dd")"
+                                               value="@mainFormModel.ReservationDetails.CheckInDate.ToString("yyyy-MM-dd")"
                                                min="@DateTime.Today.ToString("yyyy-MM-dd")" 
                                                disabled="@(!isEmailConfirmed)"
                                                @onchange="@OnCheckInDateChanged" />
-                                        <ValidationMessage For="@(() => reservationModel.CheckInDate)" class="text-danger" />
+                                        <ValidationMessage For="@(() => mainFormModel.ReservationDetails.CheckInDate)" class="text-danger" />
                                     </div>
                                     <div class="col-md-6">
                                         <label for="checkOutDate" class="form-label">
                                             <i class="bi bi-calendar-minus"></i> Data wymeldowania
                                         </label>
                                         <input type="date" id="checkOutDate" class="form-control" 
-                                               value="@reservationModel.CheckOutDate.ToString("yyyy-MM-dd")"
+                                               value="@mainFormModel.ReservationDetails.CheckOutDate.ToString("yyyy-MM-dd")"
                                                min="@GetMinCheckOutDate()" 
                                                disabled="@(!isEmailConfirmed)"
                                                @onchange="@OnCheckOutDateChanged" />
-                                        <ValidationMessage For="@(() => reservationModel.CheckOutDate)" class="text-danger" />
+                                        <ValidationMessage For="@(() => mainFormModel.ReservationDetails.CheckOutDate)" class="text-danger" />
                                         @if (!string.IsNullOrEmpty(dateValidationMessage))
                                         {
                                             <div class="text-danger small mt-1">
@@ -290,9 +288,9 @@
                                         <label for="guestCount" class="form-label">
                                             <i class="bi bi-people"></i> Liczba gości
                                         </label>
-                                        <InputNumber id="guestCount" class="form-control" @bind-Value="reservationModel.GuestCount" 
+                                        <InputNumber id="guestCount" class="form-control" @bind-Value="mainFormModel.ReservationDetails.GuestCount" 
                                                      min="1" max="10" disabled="@(!isEmailConfirmed)" />
-                                        <ValidationMessage For="@(() => reservationModel.GuestCount)" class="text-danger" />
+                                        <ValidationMessage For="@(() => mainFormModel.ReservationDetails.GuestCount)" class="text-danger" />
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Długość pobytu</label>
@@ -313,233 +311,283 @@
                                     <label for="specialRequests" class="form-label">
                                         <i class="bi bi-chat-dots"></i> Specjalne życzenia (opcjonalne)
                                     </label>
-                                    <InputTextArea id="specialRequests" class="form-control" @bind-Value="reservationModel.SpecialRequests" 
-                                                   rows="3" placeholder="Np. łóżko dziecięce, pokój dla niepalących, wysoki piętro..." 
+                                    <InputTextArea id="specialRequests" class="form-control" @bind-Value="mainFormModel.ReservationDetails.SpecialRequests" 
+                                                   rows="3" placeholder="Np. łóżko dziecięce, pokój dla niepalących, wysokie piętro..." 
                                                    disabled="@(!isEmailConfirmed)" />
                                 </div>
-                            </EditForm>
-                        </div>
-                    </div>
-
-                    @if (isEmailConfirmed && availabilityResult == AvailabilityStatus.Available)
-                    {
-                        <div class="card border-0 shadow-sm mb-4">
-                            <div class="card-header bg-white border-0">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-plus-circle text-primary"></i> Dodatkowe usługi (opcjonalne)
-                                </h5>
                             </div>
-                            <div class="card-body">
-                                @if (availableServices?.Any() == true)
-                                {
-                                    <div class="row g-3">
-                                        @foreach (var service in availableServices)
-                                        {
+                        </div>
+
+                        @if (isEmailConfirmed)
+                        {
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white border-0">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-person-fill text-primary"></i> Dane Klienta
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                        <div class="row mb-3">
                                             <div class="col-md-6">
-                                                <div class="card h-100 border-light">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                            <h6 class="card-title mb-1">@service.Name</h6>
-                                                            <span class="badge bg-primary">@service.FinalPrice.ToString("C", polishCulture)</span>
-                                                        </div>
-                                                        <p class="card-text small text-muted mb-2">@service.Description</p>
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <button class="btn btn-outline-danger btn-sm" 
-                                                                    @onclick="() => RemoveService(service.Id)"
-                                                                    disabled="@(!IsServiceAdded(service.Id) || updatingServices)">
-                                                                <i class="bi bi-dash"></i>
-                                                            </button>
-                                                            <span class="mx-2">@GetServiceQuantity(service.Id)</span>
-                                                            <button class="btn btn-outline-success btn-sm" 
-                                                                    @onclick="() => AddService(service.Id)"
-                                                                    disabled="@updatingServices">
-                                                                <i class="bi bi-plus"></i>
-                                                            </button>
+                                                <label for="firstName" class="form-label">Imię</label>
+                                                <InputText id="firstName" class="form-control" @bind-Value="mainFormModel.CustomerDetails.FirstName" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.FirstName)" class="text-danger" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="lastName" class="form-label">Nazwisko</label>
+                                                <InputText id="lastName" class="form-control" @bind-Value="mainFormModel.CustomerDetails.LastName" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.LastName)" class="text-danger" />
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="phoneNumber" class="form-label">Telefon</label>
+                                                <InputText id="phoneNumber" class="form-control" @bind-Value="mainFormModel.CustomerDetails.PhoneNumber" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.PhoneNumber)" class="text-danger" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="country" class="form-label">Kraj</label>
+                                                <InputText id="country" class="form-control" @bind-Value="mainFormModel.CustomerDetails.Country" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.Country)" class="text-danger" />
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="row mb-3">
+                                            <div class="col-md-8">
+                                                <label for="address" class="form-label">Adres</label>
+                                                <InputText id="address" class="form-control" @bind-Value="mainFormModel.CustomerDetails.Address" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.Address)" class="text-danger" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="city" class="form-label">Miasto</label>
+                                                <InputText id="city" class="form-control" @bind-Value="mainFormModel.CustomerDetails.City" />
+                                                <ValidationMessage For="@(() => mainFormModel.CustomerDetails.City)" class="text-danger" />
+                                            </div>
+                                        </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (isEmailConfirmed && availabilityResult == AvailabilityStatus.Available)
+                        {
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white border-0">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-plus-circle text-primary"></i> Dodatkowe usługi (opcjonalne)
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if (availableServices?.Any() == true)
+                                    {
+                                        <div class="row g-3">
+                                            @foreach (var service in availableServices)
+                                            {
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border-light">
+                                                        <div class="card-body p-3">
+                                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                <h6 class="card-title mb-1">@service.Name</h6>
+                                                                <span class="badge bg-primary">@service.FinalPrice.ToString("C", polishCulture)</span>
+                                                            </div>
+                                                            <p class="card-text small text-muted mb-2">@service.Description</p>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                                        @onclick="() => RemoveService(service.Id)"
+                                                                        disabled="@(!IsServiceAdded(service.Id) || updatingServices)">
+                                                                    <i class="bi bi-dash"></i>
+                                                                </button>
+                                                                <span class="mx-2">@GetServiceQuantity(service.Id)</span>
+                                                                <button type="button" class="btn btn-outline-success btn-sm" 
+                                                                        @onclick="() => AddService(service.Id)"
+                                                                        disabled="@updatingServices">
+                                                                    <i class="bi bi-plus"></i>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else if (loadingServices)
-                                {
-                                    <div class="text-center py-3">
-                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span class="visually-hidden">Ładowanie usług...</span>
+                                            }
                                         </div>
-                                        <p class="mt-2 text-muted small">Wczytywanie dostępnych usług...</p>
+                                    }
+                                    else if (loadingServices)
+                                    {
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">Ładowanie usług...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted small">Wczytywanie dostępnych usług...</p>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted">Brak dostępnych usług dodatkowych dla tego hotelu.</p>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-outline-secondary me-md-2" @onclick="GoBack">
+                                        <i class="bi bi-arrow-left"></i> Cofnij
+                                    </button>
+                                    
+                                    @if (availabilityResult == AvailabilityStatus.Available)
+                                    {
+                                        <button type="submit" class="btn btn-success" disabled="@(!isEmailConfirmed || creatingOrder)">
+                                            @if (creatingOrder)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Tworzę zamówienie...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-cart-plus"></i>
+                                                <span>Utwórz zamówienie</span>
+                                            }
+                                        </button>
+                                    }
+                                    else if (availabilityResult == AvailabilityStatus.Unavailable)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger" disabled>
+                                            <i class="bi bi-x-circle"></i>
+                                            <span>Pokój niedostępny w wybranych datach</span>
+                                        </button>
+                                    }
+                                    else if (availabilityResult == AvailabilityStatus.Error)
+                                    {
+                                        <button type="button" class="btn btn-outline-warning" @onclick="CheckAvailabilityManually" disabled="@checkingAvailability">
+                                            @if (checkingAvailability)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                <span>Sprawdzam ponownie...</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                                <span>Spróbuj ponownie</span>
+                                            }
+                                        </button>
+                                    }
+                                    else if (!isEmailConfirmed)
+                                    {
+                                        <button type="button" class="btn btn-outline-warning" disabled>
+                                            <i class="bi bi-envelope-exclamation"></i>
+                                            <span>Potwierdź email aby kontynuować</span>
+                                        </button>
+                                    }
+                                    else if (!IsValidDateRange())
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary" disabled>
+                                            <i class="bi bi-calendar-x"></i>
+                                            <span>Wybierz prawidłowe daty</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-calculator"></i> Podsumowanie kosztów
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                @if (GetStayDuration() > 0)
+                                {
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Cena za noc:</span>
+                                        <strong>@GetEffectivePrice().ToString("C", polishCulture)</strong>
                                     </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Liczba nocy:</span>
+                                        <strong>@GetStayDuration()</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Liczba gości:</span>
+                                        <strong>@mainFormModel.ReservationDetails.GuestCount</strong>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="h6">Koszt noclegu:</span>
+                                        <strong class="h6 text-primary">@GetAccommodationCost().ToString("C", polishCulture)</strong>
+                                    </div>
+
+                                    @if (selectedServices?.Any() == true)
+                                    {
+                                        <div class="border-top pt-2 mt-2">
+                                            <h6 class="mb-2">Usługi dodatkowe:</h6>
+                                            @foreach (var serviceSelection in selectedServices)
+                                            {
+                                                var service = availableServices?.FirstOrDefault(s => s.Id == serviceSelection.Key);
+                                                if (service != null)
+                                                {
+                                                    <div class="d-flex justify-content-between mb-1 small">
+                                                        <span>@service.Name x @serviceSelection.Value:</span>
+                                                        <span>@((service.FinalPrice * serviceSelection.Value).ToString("C", polishCulture))</span>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
+
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="h5">Łączny koszt:</span>
+                                        <strong class="h5 text-primary">@GetTotalCost().ToString("C", polishCulture)</strong>
+                                    </div>
+                                    
+                                    @if (room.DiscountPercent > 0)
+                                    {
+                                        <div class="alert alert-success">
+                                            <small>
+                                                <i class="bi bi-tag"></i> 
+                                                Oszczędzasz @GetSavingsAmount().ToString("C", polishCulture) 
+                                                dzięki zniżce @room.DiscountPercent%!
+                                            </small>
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
-                                    <p class="text-muted">Brak dostępnych usług dodatkowych dla tego hotelu.</p>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button type="button" class="btn btn-outline-secondary me-md-2" @onclick="GoBack">
-                                    <i class="bi bi-arrow-left"></i> Cofnij
-                                </button>
-                                
-                                @if (availabilityResult == AvailabilityStatus.Available)
-                                {
-                                    <button type="button" class="btn btn-success" @onclick="CreateOrderAndProceed" disabled="@(!isEmailConfirmed || creatingOrder)">
-                                        @if (creatingOrder)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                            <span>Tworzę zamówienie...</span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-cart-plus"></i>
-                                            <span>Utwórz zamówienie</span>
-                                        }
-                                    </button>
-                                }
-                                else if (availabilityResult == AvailabilityStatus.Unavailable)
-                                {
-                                    <button type="button" class="btn btn-outline-danger" disabled>
-                                        <i class="bi bi-x-circle"></i>
-                                        <span>Pokój niedostępny w wybranych datach</span>
-                                    </button>
-                                }
-                                else if (availabilityResult == AvailabilityStatus.Error)
-                                {
-                                    <button type="button" class="btn btn-outline-warning" @onclick="CheckAvailabilityManually" disabled="@checkingAvailability">
-                                        @if (checkingAvailability)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                            <span>Sprawdzam ponownie...</span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                            <span>Spróbuj ponownie</span>
-                                        }
-                                    </button>
-                                }
-                                else if (!isEmailConfirmed)
-                                {
-                                    <button type="button" class="btn btn-outline-warning" disabled>
-                                        <i class="bi bi-envelope-exclamation"></i>
-                                        <span>Potwierdź email aby kontynuować</span>
-                                    </button>
-                                }
-                                else if (!IsValidDateRange())
-                                {
-                                    <button type="button" class="btn btn-outline-secondary" disabled>
-                                        <i class="bi bi-calendar-x"></i>
-                                        <span>Wybierz prawidłowe daty</span>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-calculator"></i> Podsumowanie kosztów
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            @if (GetStayDuration() > 0)
-                            {
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Cena za noc:</span>
-                                    <strong>@GetEffectivePrice().ToString("C", polishCulture)</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Liczba nocy:</span>
-                                    <strong>@GetStayDuration()</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Liczba gości:</span>
-                                    <strong>@reservationModel.GuestCount</strong>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="h6">Koszt noclegu:</span>
-                                    <strong class="h6 text-primary">@GetAccommodationCost().ToString("C", polishCulture)</strong>
-                                </div>
-
-                                @if (selectedServices?.Any() == true)
-                                {
-                                    <div class="border-top pt-2 mt-2">
-                                        <h6 class="mb-2">Usługi dodatkowe:</h6>
-                                        @foreach (var serviceSelection in selectedServices)
-                                        {
-                                            var service = availableServices?.FirstOrDefault(s => s.Id == serviceSelection.Key);
-                                            if (service != null)
-                                            {
-                                                <div class="d-flex justify-content-between mb-1 small">
-                                                    <span>@service.Name x @serviceSelection.Value:</span>
-                                                    <span>@((service.FinalPrice * serviceSelection.Value).ToString("C", polishCulture))</span>
-                                                </div>
-                                            }
-                                        }
-                                    </div>
+                                    <p class="text-muted text-center">
+                                        <i class="bi bi-calendar-x"></i><br />
+                                        Wybierz daty pobytu aby zobaczyć koszt
+                                    </p>
                                 }
 
-                                <hr>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="h5">Łączny koszt:</span>
-                                    <strong class="h5 text-primary">@GetTotalCost().ToString("C", polishCulture)</strong>
-                                </div>
-                                
-                                @if (room.DiscountPercent > 0)
+                                @if (!isEmailConfirmed)
                                 {
-                                    <div class="alert alert-success">
+                                    <div class="alert alert-warning">
                                         <small>
-                                            <i class="bi bi-tag"></i> 
-                                            Oszczędzasz @GetSavingsAmount().ToString("C", polishCulture) 
-                                            dzięki zniżce @room.DiscountPercent%!
+                                            <i class="bi bi-exclamation-triangle"></i> 
+                                            Potwierdź email aby móc dokonać rezerwacji
                                         </small>
                                     </div>
                                 }
-                            }
-                            else
-                            {
-                                <p class="text-muted text-center">
-                                    <i class="bi bi-calendar-x"></i><br />
-                                    Wybierz daty pobytu aby zobaczyć koszt
-                                </p>
-                            }
-
-                            @if (!isEmailConfirmed)
-                            {
-                                <div class="alert alert-warning">
-                                    <small>
-                                        <i class="bi bi-exclamation-triangle"></i> 
-                                        Potwierdź email aby móc dokonać rezerwacji
-                                    </small>
-                                </div>
-                            }
-                            
-                            @if (availabilityResult == AvailabilityStatus.Available)
-                            {
-                                <div class="alert alert-success">
-                                    <small>
-                                        <i class="bi bi-check-circle"></i> 
-                                        Pokój dostępny w wybranych datach!
-                                    </small>
-                                </div>
-                            }
+                                
+                                @if (availabilityResult == AvailabilityStatus.Available)
+                                {
+                                    <div class="alert alert-success">
+                                        <small>
+                                            <i class="bi bi-check-circle"></i> 
+                                            Pokój dostępny w wybranych datach!
+                                        </small>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </EditForm>
         }
         else if (room != null && !isGuestUser && userRoleChecked)
         {
-            <!-- Alternatywny widok dla użytkowników bez uprawnień - tylko podgląd -->
             <div class="text-center py-5">
                 <i class="bi bi-shield-lock display-1 text-muted"></i>
                 <h3 class="mt-3">Brak uprawnień do rezerwacji</h3>
@@ -605,13 +653,14 @@
     [Parameter] public int RoomId { get; set; }
 
     private RoomDetailsViewModel? room;
-    private ReservationModel reservationModel = new();
+    private MainReservationFormModel mainFormModel = new(); // Główny model formularza
+    private EditContext? reservationEditContext;
+
     private List<HotelServiceResponse>? availableServices;
     private Dictionary<int, int> selectedServices = new();
     private bool loadingServices = false;
     private bool updatingServices = false;
     
-    // Nowe zmienne dla sprawdzania roli użytkownika
     private bool isGuestUser = false;
     private bool userRoleChecked = false;
     private string? currentUserRole = null;
@@ -641,11 +690,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        reservationEditContext = new EditContext(mainFormModel); // Inicjalizacja EditContext z głównym modelem
+
         try
         {
-            reservationModel.CheckInDate = DateTime.Today.AddDays(1);
-            reservationModel.CheckOutDate = DateTime.Today.AddDays(2);
-            reservationModel.GuestCount = 1;
+            mainFormModel.ReservationDetails.CheckInDate = DateTime.Today.AddDays(1);
+            mainFormModel.ReservationDetails.CheckOutDate = DateTime.Today.AddDays(2);
+            mainFormModel.ReservationDetails.GuestCount = 1;
             
             availableServices = new List<HotelServiceResponse>();
             selectedServices = new Dictionary<int, int>();
@@ -657,12 +708,10 @@
                 return;
             }
 
-            // Sprawdź rolę użytkownika
             await CheckUserRole();
             
             if (!isGuestUser)
             {
-                // Jeśli użytkownik nie ma roli Guest, załaduj tylko podstawowe dane pokoju do wyświetlenia
                 await LoadRoomData();
                 return;
             }
@@ -726,7 +775,6 @@
 
     private async Task ContactSupport()
     {
-        // Możesz zaimplementować przekierowanie do strony kontaktu lub otworzenie modalnego okna
         await JSRuntime.InvokeVoidAsync("alert", 
             "Aby uzyskać dostęp do rezerwacji, skontaktuj się z administratorem systemu. " +
             "Możliwe, że potrzebujesz zmiany roli na 'Guest' w swoim profilu.");
@@ -734,7 +782,12 @@
 
     private async Task CreateOrderAndProceed()
     {
-        // Dodatkowe sprawdzenie roli przed utworzeniem zamówienia
+        if (reservationEditContext == null || !reservationEditContext.Validate())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Proszę wypełnić wszystkie wymagane pola w formularzu rezerwacji i danych klienta.");
+            return;
+        }
+
         if (!isGuestUser)
         {
             await JSRuntime.InvokeVoidAsync("alert", "Tylko użytkownicy z rolą 'Guest' mogą dokonywać rezerwacji.");
@@ -771,19 +824,17 @@
                     }
                 }
             }
-            catch (Exception)
-            {
-            }
+            catch (Exception) { /* Ignoruj błąd pobierania sesji, userId pozostanie pusty */ }
 
             var orderData = new
             {
                 userId = userId,
-                firstName = "x",
-                lastName = "x",
-                phoneNumber = "123456789",
-                address = "x",
-                city = "x",
-                country = "x"
+                firstName = mainFormModel.CustomerDetails.FirstName,
+                lastName = mainFormModel.CustomerDetails.LastName,
+                phoneNumber = mainFormModel.CustomerDetails.PhoneNumber,
+                address = mainFormModel.CustomerDetails.Address,
+                city = mainFormModel.CustomerDetails.City,
+                country = mainFormModel.CustomerDetails.Country
             };
 
             var response = await Http.PostAsJsonAsync("api/order", orderData);
@@ -820,7 +871,7 @@
                                 await AddServicesToReservation(reservationResult.ReservationId.Value);
                             }
                             
-                            NavigationManager.NavigateTo($"/order/{orderId}");
+                            NavigationManager.NavigateTo($"/order/{orderId}"); // Przekierowanie do podsumowania zamówienia
                         }
                         else
                         {
@@ -860,7 +911,8 @@
             }
             else
             {
-                errorMessage = $"Błąd tworzenia zamówienia: {response.StatusCode}";
+                var errorBody = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Błąd tworzenia zamówienia: {response.StatusCode}. Szczegóły: {errorBody}";
             }
         }
         catch (Exception ex)
@@ -873,8 +925,7 @@
             StateHasChanged();
         }
     }
-
-    // Reszta metod pozostaje bez zmian...
+    
     private async Task LoadAvailableServices(int hotelId)
     {
         loadingServices = true;
@@ -963,37 +1014,38 @@
 
     private bool IsValidDateRange()
     {
-        if (reservationModel.CheckInDate < DateTime.Today)
+        if (mainFormModel.ReservationDetails.CheckInDate < DateTime.Today)
         {
-            reservationModel.CheckInDate = DateTime.Today;
+            mainFormModel.ReservationDetails.CheckInDate = DateTime.Today;
         }
         
-        if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+        if (mainFormModel.ReservationDetails.CheckOutDate <= mainFormModel.ReservationDetails.CheckInDate)
         {
-            reservationModel.CheckOutDate = reservationModel.CheckInDate.AddDays(1);
-            StateHasChanged();
+            mainFormModel.ReservationDetails.CheckOutDate = mainFormModel.ReservationDetails.CheckInDate.AddDays(1);
+            StateHasChanged(); // Ensure UI updates if dates are corrected
         }
         
-        if (reservationModel.CheckInDate < DateTime.Today)
+        // Validate again after potential corrections
+        if (mainFormModel.ReservationDetails.CheckInDate < DateTime.Today)
         {
             dateValidationMessage = "Data zameldowania nie może być wcześniejsza niż dzisiaj";
             return false;
         }
         
-        if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+        if (mainFormModel.ReservationDetails.CheckOutDate <= mainFormModel.ReservationDetails.CheckInDate)
         {
             dateValidationMessage = "Data wymeldowania musi być późniejsza niż data zameldowania";
             return false;
         }
         
-        var stayDuration = (reservationModel.CheckOutDate - reservationModel.CheckInDate).Days;
-        if (stayDuration > 30)
+        var stayDuration = (mainFormModel.ReservationDetails.CheckOutDate - mainFormModel.ReservationDetails.CheckInDate).Days;
+        if (stayDuration > 30) // Example: Max 30 days stay
         {
             dateValidationMessage = "Maksymalny okres pobytu to 30 dni";
             return false;
         }
         
-        dateValidationMessage = "";
+        dateValidationMessage = ""; // Clear message if all valid
         return true;
     }
 
@@ -1001,11 +1053,11 @@
     {
         if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
         {
-            reservationModel.CheckInDate = newDate;
+            mainFormModel.ReservationDetails.CheckInDate = newDate;
             
-            if (reservationModel.CheckInDate >= reservationModel.CheckOutDate)
+            if (mainFormModel.ReservationDetails.CheckInDate >= mainFormModel.ReservationDetails.CheckOutDate)
             {
-                reservationModel.CheckOutDate = reservationModel.CheckInDate.AddDays(1);
+                mainFormModel.ReservationDetails.CheckOutDate = mainFormModel.ReservationDetails.CheckInDate.AddDays(1);
             }
             
             await TriggerAvailabilityCheck();
@@ -1016,16 +1068,16 @@
     {
         if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
         {
-            reservationModel.CheckOutDate = newDate;
+            mainFormModel.ReservationDetails.CheckOutDate = newDate;
             
-            if (reservationModel.CheckOutDate <= reservationModel.CheckInDate)
+            if (mainFormModel.ReservationDetails.CheckOutDate <= mainFormModel.ReservationDetails.CheckInDate)
             {
-                reservationModel.CheckInDate = reservationModel.CheckOutDate.AddDays(-1);
+                mainFormModel.ReservationDetails.CheckInDate = mainFormModel.ReservationDetails.CheckOutDate.AddDays(-1);
                 
-                if (reservationModel.CheckInDate < DateTime.Today)
+                if (mainFormModel.ReservationDetails.CheckInDate < DateTime.Today) 
                 {
-                    reservationModel.CheckInDate = DateTime.Today;
-                    reservationModel.CheckOutDate = DateTime.Today.AddDays(1);
+                    mainFormModel.ReservationDetails.CheckInDate = DateTime.Today;
+                    mainFormModel.ReservationDetails.CheckOutDate = DateTime.Today.AddDays(1);
                 }
             }
             
@@ -1038,19 +1090,19 @@
         debounceTimer?.Stop();
         debounceTimer?.Dispose();
         
-        availabilityResult = AvailabilityStatus.Unknown;
-        StateHasChanged();
+        availabilityResult = AvailabilityStatus.Unknown; 
+        StateHasChanged(); 
         
         if (!isEmailConfirmed || !IsValidDateRange())
         {
             return;
         }
         
-        debounceTimer = new Timer(300);
+        debounceTimer = new Timer(300); 
         debounceTimer.Elapsed += async (sender, e) =>
         {
-            debounceTimer.Stop();
-            await InvokeAsync(async () =>
+            debounceTimer.Stop(); 
+            await InvokeAsync(async () => 
             {
                 await CheckAvailability();
             });
@@ -1066,7 +1118,7 @@
         }
         
         var cacheKey = GetCacheKey();
-        availabilityCache.Remove(cacheKey);
+        availabilityCache.Remove(cacheKey); 
         
         await CheckAvailability();
     }
@@ -1079,7 +1131,7 @@
         }
         
         checkingAvailability = true;
-        availabilityResult = AvailabilityStatus.Unknown;
+        availabilityResult = AvailabilityStatus.Unknown; 
         StateHasChanged();
         
         try
@@ -1087,8 +1139,8 @@
             var requestData = new
             {
                 roomId = RoomId,
-                from = reservationModel.CheckInDate.ToString("yyyy-MM-dd"),
-                to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
+                from = mainFormModel.ReservationDetails.CheckInDate.ToString("yyyy-MM-dd"),
+                to = mainFormModel.ReservationDetails.CheckOutDate.ToString("yyyy-MM-dd")
             };
 
             var response = await Http.PostAsJsonAsync("api/reservation/get-available-days", requestData);
@@ -1096,11 +1148,11 @@
             if (response.IsSuccessStatusCode)
             {
                 var availableDays = await response.Content.ReadFromJsonAsync<List<string>>() ?? new List<string>();
-                var requiredDays = GetRequiredDays();
+                var requiredDays = GetRequiredDays(); 
                 
                 bool isFullyAvailable;
                 
-                if (availableDays.Count == 0)
+                if (availableDays.Count == 0 && requiredDays.Any())
                 {
                     isFullyAvailable = false;
                 }
@@ -1116,26 +1168,26 @@
             }
             else
             {
-                availabilityResult = AvailabilityStatus.Error;
+                availabilityResult = AvailabilityStatus.Error; 
             }
         }
         catch (Exception)
         {
-            availabilityResult = AvailabilityStatus.Error;
+            availabilityResult = AvailabilityStatus.Error; 
         }
         finally
         {
             checkingAvailability = false;
-            StateHasChanged();
+            StateHasChanged(); 
         }
     }
 
     private List<string> GetRequiredDays()
     {
         var days = new List<string>();
-        var current = reservationModel.CheckInDate;
+        var current = mainFormModel.ReservationDetails.CheckInDate;
         
-        while (current < reservationModel.CheckOutDate)
+        while (current < mainFormModel.ReservationDetails.CheckOutDate) 
         {
             days.Add(current.ToString("yyyy-MM-dd"));
             current = current.AddDays(1);
@@ -1146,7 +1198,7 @@
 
     private string GetCacheKey()
     {
-        return $"{RoomId}_{reservationModel.CheckInDate:yyyy-MM-dd}_{reservationModel.CheckOutDate:yyyy-MM-dd}";
+        return $"{RoomId}_{mainFormModel.ReservationDetails.CheckInDate:yyyy-MM-dd}_{mainFormModel.ReservationDetails.CheckOutDate:yyyy-MM-dd}";
     }
 
     private string GetAvailabilityStatusClass()
@@ -1156,7 +1208,7 @@
             AvailabilityStatus.Available => "bg-success-light",
             AvailabilityStatus.Unavailable => "bg-danger-light",
             AvailabilityStatus.Error => "bg-warning-light",
-            _ => "bg-light"
+            _ => "bg-light" 
         };
     }
 
@@ -1164,6 +1216,7 @@
     {
         if (availabilityResult == AvailabilityStatus.Available)
         {
+            // Walidacja całego formularza (w tym danych klienta) odbywa się w CreateOrderAndProceed
             await CreateOrderAndProceed();
         }
     }
@@ -1181,22 +1234,22 @@
             }
             else
             {
-                isEmailConfirmed = false;
+                isEmailConfirmed = false; 
             }
             
-            emailVerificationChecked = true;
+            emailVerificationChecked = true; 
         }
         catch (Exception)
         {
-            isEmailConfirmed = false;
+            isEmailConfirmed = false; 
             emailVerificationChecked = true;
         }
     }
 
     private async Task CheckEmailStatus()
     {
-        await CheckEmailVerificationStatus();
-        StateHasChanged();
+        await CheckEmailVerificationStatus(); 
+        StateHasChanged(); 
         
         if (isEmailConfirmed)
         {
@@ -1238,22 +1291,29 @@
     {
         foreach (var serviceSelection in selectedServices)
         {
-            try
+            Console.WriteLine(serviceSelection.Value);
+            if (serviceSelection.Value > 0)
             {
-                for (int i = 0; i < serviceSelection.Value; i++)
+                try
                 {
                     var requestData = new
                     {
                         reservationId = reservationId,
                         serviceId = serviceSelection.Key,
-                        quantity = 1
+                        quantity = serviceSelection.Value 
                     };
 
-                    await Http.PostAsJsonAsync("api/reservation/service/add", requestData);
+                    var response = await Http.PostAsJsonAsync("api/reservation/service/add", requestData);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"Error adding service {serviceSelection.Key} (Quantity: {serviceSelection.Value}): {response.StatusCode}");
+                    }
                 }
-            }
-            catch (Exception)
-            {
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception adding service {serviceSelection.Key} (Quantity: {serviceSelection.Value}): {ex.Message}");
+                }
             }
         }
     }
@@ -1262,7 +1322,7 @@
     {
         public bool Success { get; set; }
         public string ErrorMessage { get; set; } = "";
-        public int? ReservationId { get; set; }
+        public int? ReservationId { get; set; } 
     }
 
     public class SessionViewModel
@@ -1283,13 +1343,15 @@
             {
                 orderId = orderId,
                 roomId = RoomId,
-                from = reservationModel.CheckInDate.ToString("yyyy-MM-dd"),
-                to = reservationModel.CheckOutDate.ToString("yyyy-MM-dd")
+                from = mainFormModel.ReservationDetails.CheckInDate.ToString("yyyy-MM-dd"),
+                to = mainFormModel.ReservationDetails.CheckOutDate.ToString("yyyy-MM-dd"),
+                guestCount = mainFormModel.ReservationDetails.GuestCount,
+                specialRequests = mainFormModel.ReservationDetails.SpecialRequests
             };
 
             var response = await Http.PostAsJsonAsync("api/reservation", reservationData);
 
-            if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.StatusCode == System.Net.HttpStatusCode.OK)
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent || response.StatusCode == System.Net.HttpStatusCode.OK || response.StatusCode == System.Net.HttpStatusCode.Created)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
                 
@@ -1301,6 +1363,11 @@
                         if (jsonDoc.RootElement.TryGetProperty("reservationId", out var reservationIdProp))
                         {
                             var reservationId = reservationIdProp.GetInt32();
+                            return new ReservationResult { Success = true, ReservationId = reservationId };
+                        }
+                        else if (jsonDoc.RootElement.TryGetProperty("id", out var idProp)) 
+                        {
+                             var reservationId = idProp.GetInt32();
                             return new ReservationResult { Success = true, ReservationId = reservationId };
                         }
                     }
@@ -1347,30 +1414,30 @@
         public string Name { get; set; } = "";
         public string Description { get; set; } = "";
         public decimal Price { get; set; }
-        public decimal Discount { get; set; }
-        public decimal FinalPrice { get; set; }
+        public decimal Discount { get; set; } 
+        public decimal FinalPrice { get; set; } 
         public int HotelId { get; set; }
     }
 
     private string GetSafeRoomName() => room?.RoomName ?? "Pokój";
     private string GetSafeRoomType() => room?.RoomType ?? "Typ pokoju";
     private bool HasRoomImages() => room?.RoomImages?.Any() == true;
-    private IEnumerable<string> GetSafeRoomImages() => room?.RoomImages?.Take(6) ?? Enumerable.Empty<string>();
-    private decimal GetEffectivePrice() => room?.FinalPrice ?? room?.Price ?? 0;
+    private IEnumerable<string> GetSafeRoomImages() => room?.RoomImages?.Take(6) ?? Enumerable.Empty<string>(); 
+    private decimal GetEffectivePrice() => room?.FinalPrice ?? room?.Price ?? 0; 
     
     private string GetMinCheckOutDate()
     {
-        var minDate = reservationModel.CheckInDate.AddDays(1);
+        var minDate = mainFormModel.ReservationDetails.CheckInDate.AddDays(1);
         return minDate.ToString("yyyy-MM-dd");
     }
     
     private int GetStayDuration()
     {
-        if (reservationModel.CheckOutDate > reservationModel.CheckInDate)
+        if (mainFormModel.ReservationDetails.CheckOutDate > mainFormModel.ReservationDetails.CheckInDate)
         {
-            return (reservationModel.CheckOutDate - reservationModel.CheckInDate).Days;
+            return (mainFormModel.ReservationDetails.CheckOutDate - mainFormModel.ReservationDetails.CheckInDate).Days;
         }
-        return 0;
+        return 0; 
     }
     
     private decimal GetAccommodationCost()
@@ -1380,7 +1447,7 @@
     
     private decimal GetSavingsAmount()
     {
-        if (room == null) return 0;
+        if (room == null || room.DiscountPercent <= 0) return 0;
         return (room.Price - room.FinalPrice) * GetStayDuration();
     }
 
@@ -1425,7 +1492,7 @@
         finally
         {
             isLoading = false;
-            StateHasChanged();
+            StateHasChanged(); 
         }
     }
 
@@ -1446,12 +1513,49 @@
         NavigationManager.NavigateTo("/hotels");
     }
 
+    // Główny model formularza łączący dane rezerwacji i klienta
+    public class MainReservationFormModel
+    {
+        public ReservationModel ReservationDetails { get; set; } = new();
+        public CustomerDetailsModel CustomerDetails { get; set; } = new();
+    }
+
     public class ReservationModel
     {
+        [Required(ErrorMessage = "Data zameldowania jest wymagana.")]
+        [Range(typeof(DateTime), "1900-01-01", "2999-12-31", ErrorMessage = "Nieprawidłowa data zameldowania.")]
         public DateTime CheckInDate { get; set; } = DateTime.Today.AddDays(1);
+
+        [Required(ErrorMessage = "Data wymeldowania jest wymagana.")]
+        [Range(typeof(DateTime), "1900-01-01", "2999-12-31", ErrorMessage = "Nieprawidłowa data wymeldowania.")]
         public DateTime CheckOutDate { get; set; } = DateTime.Today.AddDays(2);
+
+        [Required(ErrorMessage = "Liczba gości jest wymagana.")]
+        [Range(1, 10, ErrorMessage = "Liczba gości musi być między 1 a 10.")]
         public int GuestCount { get; set; } = 1;
         public string SpecialRequests { get; set; } = "";
+    }
+
+    public class CustomerDetailsModel
+    {
+        [Required(ErrorMessage = "Imię jest wymagane")]
+        public string FirstName { get; set; } = "";
+
+        [Required(ErrorMessage = "Nazwisko jest wymagane")]
+        public string LastName { get; set; } = "";
+
+        [Required(ErrorMessage = "Numer telefonu jest wymagany")]
+        [Phone(ErrorMessage = "Nieprawidłowy format numeru telefonu")]
+        public string PhoneNumber { get; set; } = "";
+
+        [Required(ErrorMessage = "Adres jest wymagany")]
+        public string Address { get; set; } = "";
+
+        [Required(ErrorMessage = "Miasto jest wymagane")]
+        public string City { get; set; } = "";
+
+        [Required(ErrorMessage = "Kraj jest wymagany")]
+        public string Country { get; set; } = "";
     }
 
     public class RoomDetailsViewModel
@@ -1460,9 +1564,9 @@
         public int HotelId { get; set; }
         public string RoomName { get; set; } = "";
         public string RoomType { get; set; } = "";
-        public decimal Price { get; set; }
-        public decimal FinalPrice { get; set; }
-        public int DiscountPercent { get; set; }
-        public List<string>? RoomImages { get; set; }
+        public decimal Price { get; set; } 
+        public decimal FinalPrice { get; set; } 
+        public int DiscountPercent { get; set; } 
+        public List<string>? RoomImages { get; set; } 
     }
 }

@@ -12,7 +12,6 @@
 <div class="container mt-4">
     @try
     {
-        <!-- Loading state -->
         @if (isLoading)
         {
             <div class="text-center py-5">
@@ -41,7 +40,6 @@
         }
         else if (!isEmailConfirmed && emailVerificationChecked)
         {
-            <!-- Email not confirmed warning -->
             <div class="row justify-content-center mb-4">
                 <div class="col-lg-8">
                     <div class="alert alert-warning border-0 shadow-sm">
@@ -63,7 +61,6 @@
         }
         else if (order != null)
         {
-            <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -77,7 +74,6 @@
                 </ol>
             </nav>
 
-            <!-- Order header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -100,9 +96,6 @@
                                             <i class="bi @GetStatusIcon()"></i> @GetStatusText()
                                         </span>
                                     </div>
-                                    <div class="h4 text-primary mt-2">
-                                        @order.TotalPrice.ToString("C", polishCulture)
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -111,9 +104,7 @@
             </div>
 
             <div class="row">
-                <!-- Left column - Order details -->
                 <div class="col-lg-8">
-                    <!-- Customer information -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <div class="d-flex justify-content-between align-items-center">
@@ -218,7 +209,6 @@
                         </div>
                     </div>
 
-                    <!-- Reservation details -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-white border-0">
                             <h5 class="mb-0">
@@ -232,7 +222,7 @@
                                 {
                                     <div class="reservation-item border rounded p-3 mb-3">
                                         <div class="row align-items-center">
-                                            <div class="col-md-8">
+                                            <div class="col-md-12">
                                                 <h6 class="mb-2">
                                                     <i class="bi bi-door-open"></i> 
                                                     @if (loadingRoomNames.Contains(reservation.RoomId))
@@ -250,18 +240,13 @@
                                                     @reservation.From.ToString("dd.MM.yyyy") - @reservation.To.ToString("dd.MM.yyyy")
                                                     (@GetNightCount(reservation) @(GetNightCount(reservation) == 1 ? "noc" : GetNightCount(reservation) < 5 ? "noce" : "nocy"))
                                                 </p>
+                                                
                                                 @if (!string.IsNullOrEmpty(reservation.SpecialRequests))
                                                 {
                                                     <p class="text-muted mb-0">
                                                         <i class="bi bi-chat-dots"></i> @reservation.SpecialRequests
                                                     </p>
                                                 }
-                                            </div>
-                                            <div class="col-md-4 text-end">
-                                                <div class="h6 text-primary">
-                                                    @reservation.TotalPrice.ToString("C", polishCulture)
-                                                </div>
-                                                <small class="text-muted">za pobyt</small>
                                             </div>
                                         </div>
                                     </div>
@@ -282,78 +267,8 @@
                             }
                         </div>
                     </div>
-
-                    <!-- Added Services Display (read-only) -->
-                    @if (reservationServices?.Any() == true || reservationParkings?.Any() == true)
-                    {
-                        <div class="card border-0 shadow-sm mb-4">
-                            <div class="card-header bg-white border-0">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-plus-circle text-primary"></i> Wybrane usługi dodatkowe
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                @if (reservationServices?.Any() == true)
-                                {
-                                    <h6 class="mb-3">Usługi:</h6>
-                                    <div class="row g-3 mb-3">
-                                        @foreach (var service in reservationServices)
-                                        {
-                                            <div class="col-md-6">
-                                                <div class="card border-light bg-light">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                            <h6 class="card-title mb-1">@service.ServiceName</h6>
-                                                            <span class="badge bg-success">x@service.Quantity</span>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between">
-                                                            <span class="text-muted">Koszt:</span>
-                                                            <strong>@(service.Price * service.Quantity).ToString("C", polishCulture)</strong>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-
-                                @if (reservationParkings?.Any() == true)
-                                {
-                                    <h6 class="mb-3">Parking:</h6>
-                                    <div class="row g-3">
-                                        @foreach (var parking in reservationParkings)
-                                        {
-                                            <div class="col-md-6">
-                                                <div class="card border-light bg-light">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                            <h6 class="card-title mb-1">@parking.ParkingType</h6>
-                                                            <span class="badge bg-success">x@parking.Quantity</span>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between">
-                                                            <span class="text-muted">Koszt:</span>
-                                                            <strong>@(parking.Price * parking.Quantity).ToString("C", polishCulture)</strong>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-
-                                <div class="alert alert-info mt-3">
-                                    <small>
-                                        <i class="bi bi-info-circle"></i>
-                                        Usługi dodatkowe zostały wybrane podczas rezerwacji. 
-                                        Aby zmienić usługi, skontaktuj się z hotelem lub utwórz nową rezerwację.
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    }
                 </div>
 
-                <!-- Right column - Order summary -->
                 <div class="col-lg-4">
                     <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
                         <div class="card-header bg-primary text-white">
@@ -361,54 +276,17 @@
                                 <i class="bi bi-receipt"></i> Podsumowanie
                             </h5>
                         </div>
+                        
                         <div class="card-body">
-                            <!-- Price breakdown -->
-                            @if (reservations?.Any() == true)
+                            @if (order != null)
                             {
-                                @foreach (var reservation in reservations)
-                                {
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Pobyt (@GetNightCount(reservation) @(GetNightCount(reservation) == 1 ? "noc" : "nocy")):</span>
-                                        <strong>@reservation.TotalPrice.ToString("C", polishCulture)</strong>
-                                    </div>
-                                }
-                            }
-
-                            @if (reservationServices?.Any() == true)
-                            {
-                                <div class="border-top pt-2 mt-2">
-                                    <h6 class="mb-2">Usługi dodatkowe:</h6>
-                                    @foreach (var service in reservationServices)
-                                    {
-                                        <div class="d-flex justify-content-between mb-1 small">
-                                            <span>@service.ServiceName x@service.Quantity:</span>
-                                            <span>@(service.Price * service.Quantity).ToString("C", polishCulture)</span>
-                                        </div>
-                                    }
+                                <div class="mb-3">
+                                    <p>Całkowita kwota:</p>
+                                    <p class="fs-4 fw-bold">
+                                        @order.TotalPrice.ToString("C", new CultureInfo("pl-PL"))
+                                    </p>
                                 </div>
                             }
-
-                            @if (reservationParkings?.Any() == true)
-                            {
-                                <div class="border-top pt-2 mt-2">
-                                    <h6 class="mb-2">Parking:</h6>
-                                    @foreach (var parking in reservationParkings)
-                                    {
-                                        <div class="d-flex justify-content-between mb-1 small">
-                                            <span>@parking.ParkingType x@parking.Quantity:</span>
-                                            <span>@(parking.Price * parking.Quantity).ToString("C", polishCulture)</span>
-                                        </div>
-                                    }
-                                </div>
-                            }
-
-                            <hr>
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="h5">Łączna kwota:</span>
-                                <strong class="h5 text-primary">@order.TotalPrice.ToString("C", polishCulture)</strong>
-                            </div>
-
-                            <!-- Action buttons -->
                             @if (CanEditOrder())
                             {
                                 <div class="d-grid gap-2">
@@ -438,7 +316,7 @@
                                     </button>
                                 </div>
                             }
-                            else if (order.Status?.ToLower() == "confirmed")
+                            else if (order?.Status?.ToLower() == "confirmed")
                             {
                                 <div class="d-grid gap-2">
                                     <button class="btn btn-success btn-lg" @onclick="ProceedToPayment">
@@ -477,7 +355,6 @@
         }
         else
         {
-            <!-- Empty state -->
             <div class="text-center py-5">
                 <i class="bi bi-cart-x display-1 text-muted"></i>
                 <h3 class="mt-3">Brak danych zamówienia</h3>
@@ -516,11 +393,8 @@
 
     private OrderViewModel? order;
     private List<ReservationResponse>? reservations;
-    private List<ReservationServiceResponse>? reservationServices;
-    private List<ReservationParkingResponse>? reservationParkings;
     private OrderEditModel editModel = new();
 
-    // Pola dla obsługi nazw pokoi
     private Dictionary<int, string> roomNamesCache = new();
     private HashSet<int> loadingRoomNames = new();
 
@@ -533,8 +407,6 @@
     private string errorMessage = "";
     private string pageTitle = "Podsumowanie zamówienia - Hotel Management System";
     
-    private readonly CultureInfo polishCulture = new("pl-PL");
-
     private bool isEmailConfirmed = false;
     private bool emailVerificationChecked = false;
     
@@ -542,12 +414,8 @@
     {
         try
         {
-            // Inicjalizuj kolekcje
             reservations = new List<ReservationResponse>();
-            reservationServices = new List<ReservationServiceResponse>();
-            reservationParkings = new List<ReservationParkingResponse>();
 
-            // Sprawdź autoryzację
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (!authState.User.Identity.IsAuthenticated)
             {
@@ -570,7 +438,6 @@
     {
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync("api/account/session");
             
             if (response.IsSuccessStatusCode)
@@ -593,7 +460,6 @@
         }
     }
 
-    // Metoda pobierania nazwy pokoju
     private async Task<string> LoadRoomName(int roomId)
     {
         if (roomNamesCache.ContainsKey(roomId))
@@ -611,7 +477,6 @@
 
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/hotel-room/{roomId}");
 
             if (response.IsSuccessStatusCode)
@@ -673,7 +538,6 @@
         return $"Pokój #{roomId}";
     }
 
-    // Bezpieczne metody do pobierania danych
     private string GetSafeFirstName() => order?.FirstName ?? "";
     private string GetSafeLastName() => order?.LastName ?? "";
     private string GetSafePhoneNumber() => order?.PhoneNumber ?? "Brak";
@@ -685,7 +549,7 @@
     {
         if (DateTime.TryParse(dateString, out var date))
         {
-            return date.ToString("dd.MM.yyyy HH:mm", polishCulture);
+            return date.ToString("dd.MM.yyyy HH:mm");
         }
         return dateString ?? "Brak daty";
     }
@@ -743,7 +607,6 @@
 
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/order/{OrderId}");
 
             if (response.IsSuccessStatusCode)
@@ -754,14 +617,7 @@
                     pageTitle = $"Zamówienie #{OrderId} - Hotel Management System";
                     InitializeEditModel();
                     
-                    // Załaduj powiązane dane z API
-                    await Task.WhenAll(
-                        LoadReservationData(),
-                        LoadReservationServices(),
-                        LoadReservationParkings()
-                    );
-                    
-                    // Załaduj nazwy pokoi dla wszystkich rezerwacji
+                    await LoadReservationData();
                     await LoadRoomNamesForReservations();
                 }
             }
@@ -823,13 +679,17 @@
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
-                FirstName = order.FirstName,
-                LastName = order.LastName,
-                PhoneNumber = order.PhoneNumber,
-                Address = order.Address,
-                City = order.City,
-                Country = order.Country
+                FirstName = order.FirstName ?? "",
+                LastName = order.LastName ?? "",
+                PhoneNumber = order.PhoneNumber ?? "",
+                Address = order.Address ?? "",
+                City = order.City ?? "",
+                Country = order.Country ?? ""
             };
+        }
+        else
+        {
+            editModel = new OrderEditModel();
         }
     }
 
@@ -838,7 +698,6 @@
         loadingReservations = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.GetAsync($"api/reservation/{OrderId}");
 
             if (response.IsSuccessStatusCode)
@@ -869,78 +728,6 @@
         }
     }
 
-    private async Task LoadReservationServices()
-    {
-        try
-        {
-            var allServices = new List<ReservationServiceResponse>();
-            
-            if (reservations?.Any() == true)
-            {
-                foreach (var reservation in reservations)
-                {
-                    try
-                    {
-                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
-                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/services");
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var services = await response.Content.ReadFromJsonAsync<List<ReservationServiceResponse>>() ?? new List<ReservationServiceResponse>();
-                            allServices.AddRange(services);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Błąd ładowania usług dla rezerwacji {reservation.Id}: {ex.Message}");
-                    }
-                }
-            }
-            
-            reservationServices = allServices;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas ładowania usług rezerwacji: {ex.Message}");
-            reservationServices = new List<ReservationServiceResponse>();
-        }
-    }
-
-    private async Task LoadReservationParkings()
-    {
-        try
-        {
-            var allParkings = new List<ReservationParkingResponse>();
-            
-            if (reservations?.Any() == true)
-            {
-                foreach (var reservation in reservations)
-                {
-                    try
-                    {
-                        // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
-                        var response = await Http.GetAsync($"api/reservation/{reservation.Id}/parkings");
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var parkings = await response.Content.ReadFromJsonAsync<List<ReservationParkingResponse>>() ?? new List<ReservationParkingResponse>();
-                            allParkings.AddRange(parkings);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Błąd ładowania parkingu dla rezerwacji {reservation.Id}: {ex.Message}");
-                    }
-                }
-            }
-            
-            reservationParkings = allParkings;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Błąd podczas ładowania parkingu rezerwacji: {ex.Message}");
-            reservationParkings = new List<ReservationParkingResponse>();
-        }
-    }
-
     private void ToggleEditMode()
     {
         isEditMode = !isEditMode;
@@ -953,7 +740,7 @@
     private void CancelEdit()
     {
         isEditMode = false;
-        InitializeEditModel();
+        InitializeEditModel(); 
     }
 
     private async Task UpdateOrder()
@@ -963,7 +750,6 @@
         isUpdating = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.PutAsJsonAsync("api/order", editModel);
 
             if (response.IsSuccessStatusCode)
@@ -1018,7 +804,6 @@
         confirmingOrder = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.PatchAsync($"api/order/confirm/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
@@ -1080,7 +865,6 @@
         cancellingOrder = true;
         try
         {
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var response = await Http.PatchAsync($"api/order/cancel/{OrderId}", null);
 
             if (response.IsSuccessStatusCode)
@@ -1091,7 +875,7 @@
                 Console.WriteLine($"Zamówienie {OrderId} zostało anulowane");
                 await JSRuntime.InvokeVoidAsync("alert", "Zamówienie zostało pomyślnie anulowane.");
                 
-                await LoadOrderData();
+                await LoadOrderData(); 
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
@@ -1123,22 +907,21 @@
         NavigationManager.NavigateTo("/hotels");
     }
 
-    // Modele danych
     public class OrderViewModel
     {
         public int Id { get; set; }
         public string UserId { get; set; } = "";
         public string Status { get; set; } = "";
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public string PhoneNumber { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string City { get; set; } = "";
-        public string Country { get; set; } = "";
+        public string? FirstName { get; set; } = "";
+        public string? LastName { get; set; } = "";
+        public string? PhoneNumber { get; set; } = "";
+        public string? Address { get; set; } = "";
+        public string? City { get; set; } = "";
+        public string? Country { get; set; } = "";
         public string Created { get; set; } = "";
-        public string Confirmed { get; set; } = "";
-        public string Completed { get; set; } = "";
-        public string Cancelled { get; set; } = "";
+        public string? Confirmed { get; set; } = "";
+        public string? Completed { get; set; } = "";
+        public string? Cancelled { get; set; } = "";
         public decimal TotalPrice { get; set; }
     }
 
@@ -1154,6 +937,7 @@
         public string LastName { get; set; } = "";
         
         [Required(ErrorMessage = "Telefon jest wymagany")]
+        [Phone(ErrorMessage = "Nieprawidłowy format numeru telefonu")]
         public string PhoneNumber { get; set; } = "";
         
         [Required(ErrorMessage = "Adres jest wymagany")]
@@ -1174,7 +958,6 @@
         public int HotelId { get; set; }
         public DateTime From { get; set; }
         public DateTime To { get; set; }
-        public decimal TotalPrice { get; set; }
         public string SpecialRequests { get; set; } = "";
     }
 
@@ -1183,27 +966,8 @@
         public int Id { get; set; }
         public string RoomName { get; set; } = "";
         public string RoomType { get; set; } = "";
-        public decimal Price { get; set; }
-        public decimal DiscountPercent { get; set; }
-        public decimal FinalPrice { get; set; }
         public int HotelId { get; set; }
         public string[] RoomImages { get; set; } = Array.Empty<string>();
-    }
-
-    public class ReservationServiceResponse
-    {
-        public int ServiceId { get; set; }
-        public string ServiceName { get; set; } = "";
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
-    }
-
-    public class ReservationParkingResponse
-    {
-        public int ParkingId { get; set; }
-        public string ParkingType { get; set; } = "";
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
     }
     
     public class SessionViewModel

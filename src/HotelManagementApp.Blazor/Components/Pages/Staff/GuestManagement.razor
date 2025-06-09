@@ -1,33 +1,39 @@
-@page "/guest-management"
+@page "/user-management"
 @using System.Text.Json
 @using System.Text
+@using System.ComponentModel.DataAnnotations
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Staff,Manager,Admin")]
 
-<PageTitle>Zarządzanie gośćmi</PageTitle>
+<PageTitle>Zarządzanie użytkownikami</PageTitle>
 
 <div class="container-fluid my-4">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h2">
-                    <i class="bi bi-people"></i> Zarządzanie gośćmi
+                    <i class="bi bi-people-fill"></i> Zarządzanie użytkownikami
                 </h1>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary @(activeTab == "guests" ? "active" : "")" 
-                            @onclick='() => SetActiveTab("guests")'>
-                        <i class="bi bi-people"></i> Wszyscy goście
+                <div>
+                    <button type="button" class="btn btn-success me-2" @onclick="OpenCreateUserModal">
+                        <i class="bi bi-person-plus-fill"></i> Dodaj użytkownika
                     </button>
-                    <button type="button" class="btn btn-outline-warning @(activeTab == "vip" ? "active" : "")" 
-                            @onclick='() => SetActiveTab("vip")'>
-                        <i class="bi bi-star"></i> VIP
-                    </button>
-                    <button type="button" class="btn btn-outline-danger @(activeTab == "blacklist" ? "active" : "")" 
-                            @onclick='() => SetActiveTab("blacklist")'>
-                        <i class="bi bi-person-x"></i> Czarna lista
-                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary @(activeTab == "users" ? "active" : "")" 
+                                @onclick='() => SetActiveTab("users")'>
+                            <i class="bi bi-people"></i> Wszyscy użytkownicy
+                        </button>
+                        <button type="button" class="btn btn-outline-warning @(activeTab == "vip" ? "active" : "")" 
+                                @onclick='() => SetActiveTab("vip")'>
+                            <i class="bi bi-star"></i> VIP
+                        </button>
+                        <button type="button" class="btn btn-outline-danger @(activeTab == "blacklist" ? "active" : "")" 
+                                @onclick='() => SetActiveTab("blacklist")'>
+                            <i class="bi bi-person-x"></i> Czarna lista
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -94,7 +100,7 @@
                     <div class="col-md-3">
                         <div class="card text-center bg-success text-white">
                             <div class="card-body">
-                                <h5 class="card-title">@(filteredUsers?.Count(u => u.Roles?.Contains("Guest") == true) ?? 0)</h5>
+                                <h5 class="card-title">@(allUsers?.Count(u => u.Roles?.Contains("Guest") == true) ?? 0)</h5>
                                 <p class="card-text">Goście</p>
                             </div>
                         </div>
@@ -117,12 +123,12 @@
                     </div>
                 </div>
 
-                @if (activeTab == "guests")
+                @if (activeTab == "users")
                 {
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="bi bi-people"></i> Lista gości
+                                <i class="bi bi-people"></i> Lista użytkowników
                                 @if (filteredUsers?.Any() == true)
                                 {
                                     <span class="badge bg-primary ms-2">@filteredUsers.Count</span>
@@ -205,24 +211,13 @@
                                                     </td>
                                                     <td>
                                                         <div class="btn-group btn-group-sm" role="group">
-                                                            @if (user.Roles?.Contains("Guest") == true)
-                                                            {
-                                                                <button class="btn btn-outline-danger" 
-                                                                        @onclick="() => RemoveGuestRole(user.Id, user.UserName)" 
-                                                                        title="Usuń rolę gościa">
-                                                                    <i class="bi bi-person-dash"></i>
-                                                                </button>
-                                                            }
-                                                            else
-                                                            {
-                                                                <button class="btn btn-outline-success" 
-                                                                        @onclick="() => AddGuestRole(user.Id, user.UserName)" 
-                                                                        title="Dodaj rolę gościa">
-                                                                    <i class="bi bi-person-plus"></i>
-                                                                </button>
-                                                            }
                                                             <button class="btn btn-outline-info" @onclick="() => ViewUserDetails(user)" title="Szczegóły">
                                                                 <i class="bi bi-eye"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-danger" 
+                                                                    @onclick="() => DeleteUserAccount(user.Id, user.UserName)" 
+                                                                    title="Usuń użytkownika">
+                                                                <i class="bi bi-trash"></i>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -520,6 +515,44 @@
             </div>
         </div>
     }
+
+    @if (showCreateUserModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <EditForm Model="newUserAccount" OnValidSubmit="HandleCreateUserAccountSubmit">
+                        <DataAnnotationsValidator />
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-person-plus-fill"></i> Dodaj nowego użytkownika</h5>
+                            <button type="button" class="btn-close" @onclick="CloseCreateUserModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="newUserName" class="form-label">Nazwa użytkownika:</label>
+                                <InputText id="newUserName" class="form-control" @bind-Value="newUserAccount.UserName" />
+                                <ValidationMessage For="@(() => newUserAccount.UserName)" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="newUserEmail" class="form-label">Email:</label>
+                                <InputText id="newUserEmail" type="email" class="form-control" @bind-Value="newUserAccount.Email" />
+                                <ValidationMessage For="@(() => newUserAccount.Email)" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="newUserPassword" class="form-label">Hasło:</label>
+                                <InputText id="newUserPassword" type="password" class="form-control" @bind-Value="newUserAccount.Password" />
+                                <ValidationMessage For="@(() => newUserAccount.Password)" />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateUserModal">Anuluj</button>
+                            <button type="submit" class="btn btn-primary">Utwórz konto</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -527,13 +560,17 @@
     private List<UserDto>? filteredUsers;
     private List<VipUserDto>? vipUsers;
     private List<BlacklistedUserDto>? blacklistedUsers;
-    private string activeTab = "guests";
+    private string activeTab = "users";
     private bool isLoading = true;
     private string searchTerm = string.Empty;
     private string selectedRoleFilter = string.Empty;
     private string selectedStatusFilter = string.Empty;
+    
     private bool showUserDetailsModal = false;
     private UserDto? selectedUser;
+
+    private bool showCreateUserModal = false;
+    private CreateAccountDto newUserAccount = new CreateAccountDto();
 
     protected override async Task OnInitializedAsync()
     {
@@ -546,7 +583,7 @@
         try
         {
             await Task.WhenAll(
-                LoadAllGuests(),
+                LoadAllUsers(),
                 LoadVipUsers(),
                 LoadBlacklistedUsers()
             );
@@ -558,11 +595,11 @@
         }
     }
 
-    private async Task LoadAllGuests()
+    private async Task LoadAllUsers()
     {
         try
         {
-            var response = await Http.GetAsync("api/guest/all");
+            var response = await Http.GetAsync("api/guest/all"); 
             
             if (response.IsSuccessStatusCode)
             {
@@ -577,14 +614,20 @@
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do przeglądania listy gości.");
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do przeglądania listy użytkowników.");
                 NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Błąd podczas pobierania listy użytkowników: {response.StatusCode} - {errorContent}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Wystąpił błąd podczas pobierania danych użytkowników: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Błąd podczas pobierania listy gości: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania danych.");
+            Console.WriteLine($"Błąd podczas pobierania listy użytkowników: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas pobierania danych użytkowników.");
         }
     }
 
@@ -603,6 +646,10 @@
                 });
                 
                 Console.WriteLine($"Loaded {vipUsers?.Count ?? 0} VIP users");
+            }
+            else
+            {
+                Console.WriteLine($"Błąd podczas pobierania listy VIP: {await response.Content.ReadAsStringAsync()}");
             }
         }
         catch (Exception ex)
@@ -626,6 +673,10 @@
                 });
                 
                 Console.WriteLine($"Loaded {blacklistedUsers?.Count ?? 0} blacklisted users");
+            }
+            else
+            {
+                 Console.WriteLine($"Błąd podczas pobierania czarnej listy: {await response.Content.ReadAsStringAsync()}");
             }
         }
         catch (Exception ex)
@@ -691,22 +742,66 @@
         ApplyFilters();
     }
 
-    private async Task AddGuestRole(string userId, string userName)
+    private void OpenCreateUserModal()
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz dodać rolę gościa dla użytkownika {userName}?"))
+        newUserAccount = new CreateAccountDto();
+        showCreateUserModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseCreateUserModal()
+    {
+        showCreateUserModal = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleCreateUserAccountSubmit()
+    {
+        try
+        {
+            var content = new StringContent(JsonSerializer.Serialize(newUserAccount), Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync("api/account/create", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Konto użytkownika zostało utworzone pomyślnie.");
+                CloseCreateUserModal();
+                await LoadAllUsers();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do tworzenia kont.");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas tworzenia konta: {response.StatusCode}. Szczegóły: {errorContent}");
+                Console.WriteLine($"Error creating account: {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Wyjątek podczas tworzenia konta: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Wystąpił nieoczekiwany błąd podczas tworzenia konta.");
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteUserAccount(string userId, string userName)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć użytkownika {userName} (ID: {userId})? Tej operacji nie można cofnąć."))
         {
             try
             {
-                var response = await Http.PatchAsync($"api/guest/add/{userId}", null);
-                
+                var response = await Http.DeleteAsync($"api/account/delete-without-password/{userId}");
                 if (response.IsSuccessStatusCode)
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", "Rola gościa została dodana pomyślnie!");
-                    await LoadAllGuests();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Użytkownik {userName} został usunięty pomyślnie.");
+                    await LoadAllUsers();
                 }
-                else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", "Użytkownik już ma rolę gościa.");
+                    await JSRuntime.InvokeVoidAsync("alert", "Nie masz uprawnień do usuwania tego konta.");
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
@@ -714,58 +809,27 @@
                 }
                 else
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas dodawania roli: {response.StatusCode}");
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania użytkownika: {response.StatusCode}. Szczegóły: {errorContent}");
+                    Console.WriteLine($"Error deleting account: {response.StatusCode} - {errorContent}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd podczas dodawania roli gościa: {ex.Message}");
-                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas dodawania roli.");
+                Console.WriteLine($"Wyjątek podczas usuwania konta: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił nieoczekiwany błąd podczas usuwania konta.");
             }
+            StateHasChanged();
         }
     }
 
-    private async Task RemoveGuestRole(string userId, string userName)
+    private void ViewUserDetails(object userObj)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Czy na pewno chcesz usunąć rolę gościa dla użytkownika {userName}?"))
-        {
-            try
-            {
-                var response = await Http.PatchAsync($"api/guest/remove/{userId}", null);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", "Rola gościa została usunięta pomyślnie!");
-                    await LoadAllGuests();
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", "Użytkownik nie ma roli gościa.");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", "Nie znaleziono użytkownika.");
-                }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania roli: {response.StatusCode}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd podczas usuwania roli gościa: {ex.Message}");
-                await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas usuwania roli.");
-            }
-        }
-    }
-
-    private void ViewUserDetails(object user)
-    {
-        if (user is UserDto userDto)
+        if (userObj is UserDto userDto)
         {
             selectedUser = userDto;
         }
-        else if (user is VipUserDto vipUser)
+        else if (userObj is VipUserDto vipUser)
         {
             selectedUser = new UserDto
             {
@@ -778,7 +842,7 @@
                 Status = "active"
             };
         }
-        else if (user is BlacklistedUserDto blacklistedUser)
+        else if (userObj is BlacklistedUserDto blacklistedUser)
         {
             selectedUser = new UserDto
             {
@@ -808,9 +872,9 @@
         return role switch
         {
             "Admin" => "bg-danger",
-            "Manager" => "bg-warning",
-            "Staff" => "bg-info",
-            "VIP" => "bg-warning",
+            "Manager" => "bg-warning text-dark",
+            "Staff" => "bg-info text-dark",
+            "VIP" => "bg-warning text-dark",
             "Guest" => "bg-success",
             _ => "bg-secondary"
         };
@@ -871,5 +935,21 @@
         public string? ProfilePicture { get; set; }
         public DateTime? BlacklistedAt { get; set; }
         public string? BlacklistReason { get; set; }
+    }
+
+    public class CreateAccountDto
+    {
+        [Required(ErrorMessage = "Nazwa użytkownika jest wymagana.")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Nazwa użytkownika musi mieć od 3 do 50 znaków.")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email jest wymagany.")]
+        [EmailAddress(ErrorMessage = "Niepoprawny format adresu email.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        [DataType(DataType.Password)]
+        [RegularExpression(@"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$", ErrorMessage = "Hasło musi spełniać wymagania.")] // Dodane
+        public string Password { get; set; } = string.Empty;
     }
 }

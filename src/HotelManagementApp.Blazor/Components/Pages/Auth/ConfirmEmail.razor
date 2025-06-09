@@ -99,7 +99,6 @@
         message = string.Empty;
         isSuccess = false;
 
-        // Walidacja parametrów
         if (string.IsNullOrWhiteSpace(UserId) || string.IsNullOrWhiteSpace(Token))
         {
             message = "Brak wymaganych parametrów do potwierdzenia emaila. Sprawdź link z wiadomości email.";
@@ -110,12 +109,10 @@
 
         try
         {
-            // Dekodowanie parametrów URL (na wypadek gdyby były zakodowane)
             var decodedUserId = Uri.UnescapeDataString(UserId);
             var decodedToken = Uri.UnescapeDataString(Token);
             Console.WriteLine($"Confirming email for userId: {decodedUserId}");
 
-            // Używamy bezpośrednio Http - tokeny są dodawane automatycznie
             var command = new { 
                 UserId = decodedUserId, 
                 Token = decodedToken 
@@ -127,21 +124,20 @@
 
             switch (response.StatusCode)
             {
-                case HttpStatusCode.Found: // 302 - sukces z przekierowaniem
-                case HttpStatusCode.OK:    // 200 - alternatywny sukces
-                case HttpStatusCode.NoContent: // 204 - sukces bez zawartości
+                case HttpStatusCode.Found:
+                case HttpStatusCode.OK:
+                case HttpStatusCode.NoContent:
                     isSuccess = true;
                     message = "Adres email został pomyślnie potwierdzony! Możesz się teraz zalogować.";
                     break;
 
-                case HttpStatusCode.BadRequest: // 400
+                case HttpStatusCode.BadRequest:
                     isSuccess = false;
                     try
                     {
                         var errorContent = await response.Content.ReadAsStringAsync();
                         Console.WriteLine($"Error content: {errorContent}");
                         
-                        // Sprawdź czy to JSON z details
                         if (errorContent.Contains("\"detail\"") || errorContent.Contains("\"title\""))
                         {
                             var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions
@@ -161,22 +157,22 @@
                     }
                     break;
 
-                case HttpStatusCode.Unauthorized: // 401
+                case HttpStatusCode.Unauthorized:
                     isSuccess = false;
                     message = "Brak autoryzacji. Zaloguj się ponownie i spróbuj potwierdzić email.";
                     break;
 
-                case HttpStatusCode.Forbidden: // 403
+                case HttpStatusCode.Forbidden:
                     isSuccess = false;
                     message = "Brak uprawnień do potwierdzenia tego emaila.";
                     break;
 
-                case HttpStatusCode.NotFound: // 404
+                case HttpStatusCode.NotFound:
                     isSuccess = false;
                     message = "Użytkownik nie został znaleziony. Sprawdź poprawność linku.";
                     break;
 
-                case HttpStatusCode.Conflict: // 409
+                case HttpStatusCode.Conflict:
                     isSuccess = false;
                     message = "Email został już wcześniej potwierdzony.";
                     break;
@@ -226,8 +222,6 @@
 
     private void ContactSupport()
     {
-        // Tutaj możesz dodać logikę kontaktu z pomocą techniczną
-        // Na przykład przekierowanie na stronę kontaktową lub otwarcie maila
         NavigationManager.NavigateTo("/contact");
     }
 
