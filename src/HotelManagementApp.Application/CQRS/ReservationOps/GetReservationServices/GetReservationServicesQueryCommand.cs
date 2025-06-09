@@ -21,6 +21,7 @@ public class GetReservationServicesQueryCommand(
             {
                 ReservationId = reservationService.Reservation.Id,
                 ServiceId = reservationService.HotelService.Id,
+                Quantity = reservationService.Quantity,
             });
         }
         return response;

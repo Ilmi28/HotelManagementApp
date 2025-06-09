@@ -4,4 +4,5 @@ public class ReservationParkingResponse
 {
     public required int ReservationId { get; set; }
     public required int ParkingId { get; set; }
+    public int Quantity { get; set; }
 }

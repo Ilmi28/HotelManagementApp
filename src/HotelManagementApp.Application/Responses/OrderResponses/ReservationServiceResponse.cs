@@ -4,4 +4,5 @@ public class ReservationServiceResponse
 {
     public required int ReservationId { get; set; }
     public required int ServiceId { get; set; }
+    public int Quantity { get; set; } = 1;
 }

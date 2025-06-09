@@ -21,6 +21,7 @@ public class GetReservationParkingsQueryHandler(
             {
                 ReservationId = reservationParking.Reservation.Id,
                 ParkingId = reservationParking.HotelParking.Id,
+                Quantity = reservationParking.Quantity,
             });
         }
         return response;
