@@ -1,0 +1,904 @@
+@page "/user-account-management"
+@using System.Text.Json
+@using System.Text
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin,Manager")]
+
+<PageTitle>Zarządzanie kontami użytkowników</PageTitle>
+
+<div class="container-fluid my-4">
+    <!-- Nagłówek -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-1">
+                        <i class="bi bi-person-gear text-primary"></i> Zarządzanie kontami użytkowników
+                    </h1>
+                    <p class="text-muted mb-0">Twórz, edytuj i zarządzaj kontami w systemie</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" @onclick="ShowCreateAccountModal">
+                        <i class="bi bi-person-plus"></i> Utwórz konto
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="LoadAccountsWithoutRoles" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-clockwise"></i>
+                        }
+                        Odśwież
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Komunikaty -->
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Statystyki -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-warning h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 text-warning mb-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h3 class="fw-bold text-warning">@(accountsWithoutRoles?.Count ?? 0)</h3>
+                    <p class="text-muted mb-0">Konta bez przypisanych ról</p>
+                    <small class="text-muted">Wymagają natychmiastowej uwagi</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista kont bez ról -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i> Konta bez przypisanych ról
+                        @if (accountsWithoutRoles?.Any() == true)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">@accountsWithoutRoles.Count</span>
+                        }
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" class="form-control" 
+                                   placeholder="Szukaj użytkownika..." 
+                                   value="@searchText"
+                                   @oninput="OnSearchChanged" />
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-3 mb-0 text-muted">Ładowanie kont użytkowników...</p>
+                        </div>
+                    }
+                    else if (filteredAccounts?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Użytkownik</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Role</th>
+                                        <th>Utworzony</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var account in filteredAccounts)
+                                    {
+                                        <tr class="@(account.Roles?.Any() != true ? "table-warning" : "")">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(account.ProfilePicture))
+                                                    {
+                                                        <img src="@account.ProfilePicture" class="rounded-circle me-3" 
+                                                             style="width: 40px; height: 40px; object-fit: cover;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="@(account.Roles?.Any() == true ? "bg-primary" : "bg-secondary") rounded-circle d-flex align-items-center justify-content-center text-white me-3" 
+                                                             style="width: 40px; height: 40px;">
+                                                            <i class="bi bi-person"></i>
+                                                        </div>
+                                                    }
+                                                    <div>
+                                                        <div class="fw-bold">@account.UserName</div>
+                                                        <small class="text-muted">ID: @account.Id[..8]...</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    @account.Email
+                                                    @if (account.IsEmailConfirmed == true)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success ms-1" title="Email potwierdzony"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-exclamation-circle-fill text-warning ms-1" title="Email niepotwierdzony"></i>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if (account.IsEmailConfirmed == true)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle me-1"></i><text>Aktywny</text>
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="bi bi-clock me-1"></i><text>Nieaktywny</text>
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (account.Roles?.Any() == true)
+                                                {
+                                                    @foreach (var role in account.Roles)
+                                                    {
+                                                        <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-exclamation-triangle me-1"></i><text>Brak ról</text>
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (account.CreatedAt.HasValue)
+                                                {
+                                                    <div>
+                                                        <div>@account.CreatedAt.Value.ToString("dd.MM.yyyy")</div>
+                                                        <small class="text-muted">@account.CreatedAt.Value.ToString("HH:mm")</small>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-info btn-sm" 
+                                                            @onclick="() => ViewAccountDetails(account.Id)"
+                                                            title="Pokaż szczegóły">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-primary btn-sm" 
+                                                            @onclick="() => ShowEditAccountModal(account)"
+                                                            title="Edytuj konto">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" 
+                                                            @onclick="() => ShowDeleteAccountModal(account)"
+                                                            title="Usuń konto"
+                                                            disabled="@(deletingAccountIds.Contains(account.Id))">
+                                                        @if (deletingAccountIds.Contains(account.Id))
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-trash"></i>
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(searchText))
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-search text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Brak wyników dla "<strong>@searchText</strong>"</p>
+                            <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => searchText = string.Empty">
+                                Wyczyść wyszukiwanie
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle text-success display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Wszystkie konta mają przypisane role</p>
+                            <p class="text-muted">System jest prawidłowo skonfigurowany</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal tworzenia konta -->
+@if (showCreateModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus"></i> Utwórz nowe konto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@createAccountModel" OnValidSubmit="CreateAccount">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nazwa użytkownika *</label>
+                            <InputText @bind-Value="createAccountModel.UserName" class="form-control" 
+                                       placeholder="Wprowadź nazwę użytkownika" />
+                            <ValidationMessage For="@(() => createAccountModel.UserName)" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <InputText @bind-Value="createAccountModel.Email" class="form-control" 
+                                       placeholder="Wprowadź adres email" type="email" />
+                            <ValidationMessage For="@(() => createAccountModel.Email)" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Hasło *</label>
+                            <InputText @bind-Value="createAccountModel.Password" class="form-control" 
+                                       placeholder="Wprowadź hasło" type="password" />
+                            <ValidationMessage For="@(() => createAccountModel.Password)" class="text-danger" />
+                            <div class="form-text">Hasło musi zawierać co najmniej 8 znaków</div>
+                        </div>
+
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Anuluj</button>
+                            <button type="submit" class="btn btn-success" disabled="@isCreatingAccount">
+                                @if (isCreatingAccount)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-person-plus"></i> Utwórz konto
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal edycji konta -->
+@if (showEditModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil"></i> Edytuj konto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@editAccountModel" OnValidSubmit="UpdateAccount">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label class="form-label">ID użytkownika</label>
+                            <input type="text" class="form-control" value="@editAccountModel.UserId" readonly />
+                            <div class="form-text">To pole nie może być edytowane</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nazwa użytkownika *</label>
+                            <InputText @bind-Value="editAccountModel.UserName" class="form-control" 
+                                       placeholder="Wprowadź nazwę użytkownika" />
+                            <ValidationMessage For="@(() => editAccountModel.UserName)" class="text-danger" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <InputText @bind-Value="editAccountModel.Email" class="form-control" 
+                                       placeholder="Wprowadź adres email" type="email" />
+                            <ValidationMessage For="@(() => editAccountModel.Email)" class="text-danger" />
+                        </div>
+
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Anuluj</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isUpdatingAccount">
+                                @if (isUpdatingAccount)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-check"></i> Zapisz zmiany
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal szczegółów konta -->
+@if (showDetailsModal && selectedAccount != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-circle"></i> Szczegóły konta użytkownika
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDetailsModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isLoadingDetails)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-info" role="status"></div>
+                            <p class="mt-2 mb-0 text-muted">Ładowanie szczegółów konta...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                @if (!string.IsNullOrEmpty(selectedAccount.ProfilePicture))
+                                {
+                                    <img src="@selectedAccount.ProfilePicture" class="rounded-circle mb-3" 
+                                         style="width: 120px; height: 120px; object-fit: cover;" />
+                                }
+                                else
+                                {
+                                    <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center text-white mb-3" 
+                                         style="width: 120px; height: 120px; font-size: 3rem;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                }
+                                <h5 class="fw-bold">@selectedAccount.UserName</h5>
+                                <p class="text-muted mb-0">@selectedAccount.Email</p>
+                            </div>
+                            <div class="col-md-8">
+                                <h6 class="fw-bold">Informacje podstawowe</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td class="fw-bold">ID:</td>
+                                        <td>@selectedAccount.Id</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Nazwa użytkownika:</td>
+                                        <td>@selectedAccount.UserName</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Email:</td>
+                                        <td>
+                                            @selectedAccount.Email
+                                            @if (selectedAccount.IsEmailConfirmed == true)
+                                            {
+                                                <span class="badge bg-success ms-2">Potwierdzony</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark ms-2">Niepotwierdzony</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Role:</td>
+                                        <td>
+                                            @if (selectedAccount.Roles?.Any() == true)
+                                            {
+                                                @foreach (var role in selectedAccount.Roles)
+                                                {
+                                                    <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Brak ról</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">Zamknij</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => ShowEditAccountModal(selectedAccount)">
+                        <i class="bi bi-pencil"></i> Edytuj konto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal potwierdzenia usunięcia -->
+@if (showDeleteModal && accountToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia konta
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Ostrzeżenie!</strong> Ta operacja jest nieodwracalna.
+                    </div>
+                    
+                    <p>Czy na pewno chcesz usunąć konto użytkownika:</p>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(accountToDelete.ProfilePicture))
+                            {
+                                <img src="@accountToDelete.ProfilePicture" class="rounded-circle me-3" 
+                                     style="width: 40px; height: 40px; object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white me-3" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                            }
+                            <div>
+                                <div class="fw-bold">@accountToDelete.UserName</div>
+                                <small class="text-muted">@accountToDelete.Email</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Wprowadź swoje hasło do potwierdzenia:</label>
+                        <input type="password" class="form-control" @bind="deletePassword" 
+                               placeholder="Twoje hasło..." />
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" @bind="confirmDelete" id="confirmDelete">
+                        <label class="form-check-label" for="confirmDelete">
+                            Potwierdzam, że chcę usunąć to konto
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Anuluj</button>
+                    <button type="button" class="btn btn-danger" 
+                            @onclick="DeleteAccount"
+                            disabled="@(!confirmDelete || string.IsNullOrEmpty(deletePassword) || isDeletingAccount)">
+                        @if (isDeletingAccount)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="bi bi-trash"></i> Usuń konto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserAccount>? accountsWithoutRoles;
+    private List<UserAccount>? filteredAccounts;
+    private UserAccount? selectedAccount;
+    private UserAccount? accountToDelete;
+    
+    private bool isLoading = true;
+    private bool isLoadingDetails = false;
+    private bool isCreatingAccount = false;
+    private bool isUpdatingAccount = false;
+    private bool isDeletingAccount = false;
+    
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private bool showDetailsModal = false;
+    private bool showDeleteModal = false;
+    
+    private HashSet<string> deletingAccountIds = new();
+    
+    private string searchText = "";
+    private string deletePassword = "";
+    private bool confirmDelete = false;
+    private string successMessage = "";
+    private string errorMessage = "";
+
+    private CreateAccountModel createAccountModel = new();
+    private EditAccountModel editAccountModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountsWithoutRoles();
+    }
+
+    // Event handlers
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        FilterAccounts();
+        await Task.CompletedTask;
+    }
+
+    // Data loading
+    private async Task LoadAccountsWithoutRoles()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.GetAsync("api/account/without-role");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                accountsWithoutRoles = JsonSerializer.Deserialize<List<UserAccount>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                FilterAccounts();
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania kont bez ról");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania kont: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania kont użytkowników.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterAccounts()
+    {
+        if (accountsWithoutRoles == null)
+        {
+            filteredAccounts = new List<UserAccount>();
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredAccounts = accountsWithoutRoles.ToList();
+        }
+        else
+        {
+            var searchLower = searchText.ToLower().Trim();
+            filteredAccounts = accountsWithoutRoles.Where(a => 
+                (!string.IsNullOrEmpty(a.UserName) && a.UserName.ToLower().Contains(searchLower)) ||
+                (!string.IsNullOrEmpty(a.Email) && a.Email.ToLower().Contains(searchLower))
+            ).ToList();
+        }
+        
+        StateHasChanged();
+    }
+
+    // Account operations
+    private async Task CreateAccount()
+    {
+        isCreatingAccount = true;
+        try
+        {
+            var json = JsonSerializer.Serialize(createAccountModel);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync("api/account/create", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Konto '{createAccountModel.UserName}' zostało utworzone pomyślnie.";
+                await LoadAccountsWithoutRoles();
+                CloseCreateModal();
+                ResetCreateForm();
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas tworzenia konta");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas tworzenia konta: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas tworzenia konta.";
+        }
+        finally
+        {
+            isCreatingAccount = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateAccount()
+    {
+        isUpdatingAccount = true;
+        try
+        {
+            var json = JsonSerializer.Serialize(editAccountModel);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await Http.PutAsync("api/account/update", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Konto '{editAccountModel.UserName}' zostało zaktualizowane pomyślnie.";
+                await LoadAccountsWithoutRoles();
+                CloseEditModal();
+                CloseDetailsModal();
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas aktualizacji konta");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas aktualizacji konta: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas aktualizacji konta.";
+        }
+        finally
+        {
+            isUpdatingAccount = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (accountToDelete == null) return;
+
+        isDeletingAccount = true;
+        deletingAccountIds.Add(accountToDelete.Id);
+        
+        try
+        {
+            var deleteModel = new { userId = accountToDelete.Id, password = deletePassword };
+            var json = JsonSerializer.Serialize(deleteModel);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync("api/account/delete", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Konto '{accountToDelete.UserName}' zostało usunięte pomyślnie.";
+                await LoadAccountsWithoutRoles();
+                CloseDeleteModal();
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas usuwania konta");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas usuwania konta: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas usuwania konta.";
+        }
+        finally
+        {
+            isDeletingAccount = false;
+            deletingAccountIds.Remove(accountToDelete?.Id ?? "");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ViewAccountDetails(string accountId)
+    {
+        isLoadingDetails = true;
+        showDetailsModal = true;
+        
+        try
+        {
+            var response = await Http.GetAsync($"api/account/{accountId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                selectedAccount = JsonSerializer.Deserialize<UserAccount>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania szczegółów konta");
+                CloseDetailsModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania szczegółów: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania szczegółów konta.";
+            CloseDetailsModal();
+        }
+        finally
+        {
+            isLoadingDetails = false;
+            StateHasChanged();
+        }
+    }
+
+    // Modal operations
+    private void ShowCreateAccountModal()
+    {
+        ResetCreateForm();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+        ResetCreateForm();
+    }
+
+    private void ShowEditAccountModal(UserAccount account)
+    {
+        editAccountModel = new EditAccountModel
+        {
+            UserId = account.Id,
+            UserName = account.UserName,
+            Email = account.Email
+        };
+        
+        CloseDetailsModal();
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editAccountModel = new EditAccountModel();
+    }
+
+    private void CloseDetailsModal()
+    {
+        showDetailsModal = false;
+        selectedAccount = null;
+    }
+
+    private void ShowDeleteAccountModal(UserAccount account)
+    {
+        accountToDelete = account;
+        deletePassword = "";
+        confirmDelete = false;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        accountToDelete = null;
+        deletePassword = "";
+        confirmDelete = false;
+    }
+
+    private void ResetCreateForm()
+    {
+        createAccountModel = new CreateAccountModel();
+    }
+
+    // Utility methods
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-primary",
+            "Staff" => "bg-success",
+            "Guest" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task HandleApiError(HttpResponseMessage response, string defaultMessage)
+    {
+        string specificMessage = response.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Brak autoryzacji. Zaloguj się ponownie.",
+            System.Net.HttpStatusCode.Forbidden => "Nie masz uprawnień do wykonania tej operacji.",
+            System.Net.HttpStatusCode.NotFound => "Nie znaleziono konta.",
+            System.Net.HttpStatusCode.Conflict => "Konto z podanymi danymi już istnieje.",
+            System.Net.HttpStatusCode.BadRequest => "Nieprawidłowe dane. Sprawdź wprowadzone informacje.",
+            _ => $"{defaultMessage} (kod: {(int)response.StatusCode})"
+        };
+        
+        errorMessage = specificMessage;
+        
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"API Error ({response.StatusCode}): {errorContent}");
+    }
+
+    // Models
+    public class UserAccount
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+        public string? ProfilePicture { get; set; }
+        public bool? IsEmailConfirmed { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+
+    public class CreateAccountModel
+    {
+        [Required(ErrorMessage = "Nazwa użytkownika jest wymagana")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Nazwa użytkownika musi mieć od 3 do 50 znaków")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email jest wymagany")]
+        [EmailAddress(ErrorMessage = "Nieprawidłowy format adresu email")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Hasło jest wymagane")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "Hasło musi mieć co najmniej 8 znaków")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class EditAccountModel
+    {
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Nazwa użytkownika jest wymagana")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Nazwa użytkownika musi mieć od 3 do 50 znaków")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email jest wymagany")]
+        [EmailAddress(ErrorMessage = "Nieprawidłowy format adresu email")]
+        public string Email { get; set; } = string.Empty;
+    }
+}

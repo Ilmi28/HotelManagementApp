@@ -14,7 +14,7 @@ public class UpdateRoomImagesCommandHandler(
     public async Task Handle(UpdateRoomImagesCommand request, CancellationToken cancellationToken)
     {
         var room = await roomRepository.GetRoomById(request.RoomId, cancellationToken)
-            ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
+                   ?? throw new RoomNotFoundException($"Room with id {request.RoomId} not found");
         var roomImages = await imageRepository.GetRoomImagesByRoomId(request.RoomId, cancellationToken);
         foreach (var roomImage in roomImages)
             fileService.DeleteFile("images", roomImage.FileName);

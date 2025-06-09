@@ -391,6 +391,26 @@
                             <div class="form-text">Wybierz maksymalnie 10 zdjęć (JPG, PNG, GIF, max 5MB każde)</div>
                         </div>
                         
+                        @if (selectedImages?.Any() == true)
+                        {
+                            <div class="mb-3">
+                                <h6>Wybrane pliki do przesłania:</h6>
+                                <div class="list-group">
+                                    @foreach (var file in selectedImages)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="bi bi-file-earmark-image text-primary me-2"></i>
+                                                <span>@file.Name</span>
+                                                <small class="text-muted ms-2">(@((file.Size / 1024.0 / 1024.0).ToString("0.##")) MB)</small>
+                                            </div>
+                                            <span class="badge bg-success">Gotowy</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
                         @if (selectedHotel.Images?.Any() == true)
                         {
                             <h6>Obecne zdjęcia:</h6>
@@ -420,12 +440,13 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" @onclick="CloseImageModal">Zamknij</button>
-                        <button type="button" class="btn btn-primary" @onclick="SaveImages" disabled="@isSubmitting">
+                        <button type="button" class="btn btn-primary" @onclick="SaveImages" 
+                                disabled="@(isSubmitting || selectedImages?.Any() != true)">
                             @if (isSubmitting)
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
                             }
-                            <i class="bi bi-upload"></i> Zapisz zdjęcia
+                            <i class="bi bi-upload"></i> Prześlij zdjęcia
                         </button>
                     </div>
                 </div>
@@ -768,26 +789,32 @@
         selectedImages = null;
     }
 
-    private void OnImagesSelected(InputFileChangeEventArgs e)
+    private async Task OnImagesSelected(InputFileChangeEventArgs e)
     {
-        selectedImages = e.GetMultipleFiles(10).ToList();
+        var files = e.GetMultipleFiles(10).ToList();
         
-        foreach (var file in selectedImages)
+        // Walidacja plików
+        var validFiles = new List<IBrowserFile>();
+        
+        foreach (var file in files)
         {
             if (!file.ContentType.StartsWith("image/"))
             {
-                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
-                selectedImages = null;
-                return;
+                await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem.");
+                continue;
             }
             
-            if (file.Size > 5 * 1024 * 1024)
+            if (file.Size > 5 * 1024 * 1024) // 5MB
             {
-                JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży (max 5MB).");
-                selectedImages = null;
-                return;
+                await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży (max 5MB).");
+                continue;
             }
+            
+            validFiles.Add(file);
         }
+        
+        selectedImages = validFiles.Count > 0 ? validFiles : null;
+        StateHasChanged();
     }
 
     private async Task SaveImages()
@@ -801,27 +828,51 @@
         isSubmitting = true;
         try
         {
-            using var content = new MultipartFormDataContent();
-            content.Add(new StringContent(selectedHotel.Id.ToString()), "HotelId");
+            using var form = new MultipartFormDataContent();
             
+            // Dodanie HotelId
+            form.Add(new StringContent(selectedHotel.Id.ToString()), "HotelId");
+            
+            // Dodanie wszystkich obrazów
             foreach (var file in selectedImages)
             {
-                var fileStream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-                var streamContent = new StreamContent(fileStream);
-                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-                content.Add(streamContent, "HotelImages", file.Name);
+                var maxFileSize = 5 * 1024 * 1024; // 5MB
+                
+                // POPRAWKA: Używamy MemoryStream zamiast bezpośredniego ReadAsync
+                using var fileStream = file.OpenReadStream(maxFileSize);
+                using var memoryStream = new MemoryStream();
+                
+                // Kopiujemy cały stream do MemoryStream
+                await fileStream.CopyToAsync(memoryStream);
+                var imageBytes = memoryStream.ToArray();
+                
+                var imageContent = new ByteArrayContent(imageBytes);
+                imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                
+                form.Add(imageContent, "HotelImages", file.Name);
             }
             
-            var response = await Http.PutAsync("api/hotel/images", content);
+            var response = await Http.PutAsync("api/hotel/images", form);
             
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Zdjęcia zostały zaktualizowane pomyślnie!");
                 CloseImageModal();
-                await LoadHotels();
+                await LoadHotels(); // Odświeżenie listy hoteli
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak autoryzacji. Zaloguj się ponownie.");
+                NavigationManager.NavigateTo("/login");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Brak uprawnień do aktualizacji zdjęć.");
             }
             else
             {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Błąd API: {response.StatusCode} - {errorContent}");
                 await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas aktualizacji zdjęć: {response.StatusCode}");
             }
         }

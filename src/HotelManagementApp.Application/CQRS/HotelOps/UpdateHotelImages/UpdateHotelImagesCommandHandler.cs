@@ -15,7 +15,7 @@ public class UpdateHotelImagesCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
         var hotel = await hotelRepository.GetHotelById(request.HotelId, cancellationToken)
-            ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
+                    ?? throw new HotelNotFoundException($"Hotel with id {request.HotelId} not found");
         var hotelImages = await imageRepository.GetHotelImagesByHotelId(request.HotelId, cancellationToken);
         foreach (var hotelImage in hotelImages)
             fileService.DeleteFile("images", hotelImage.FileName);

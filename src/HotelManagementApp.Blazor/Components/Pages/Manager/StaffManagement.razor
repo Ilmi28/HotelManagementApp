@@ -1,0 +1,919 @@
+@page "/staff-management"
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Manager,Admin")]
+
+<PageTitle>Zarządzanie personelem</PageTitle>
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">
+                    <i class="bi bi-people-fill"></i> Zarządzanie personelem
+                </h1>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" @onclick="ShowAddStaffModal">
+                        <i class="bi bi-person-plus-fill"></i> Dodaj do personelu
+                    </button>
+                    <AuthorizeView Roles="Admin">
+                        <NavLink class="btn btn-primary" href="/manager-management">
+                            <i class="bi bi-briefcase"></i> Zarządzanie menedżerami
+                        </NavLink>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Karty statystyk -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Goście</h6>
+                            <h3 class="mb-0">@(guests?.Count ?? 0)</h3>
+                        </div>
+                        <div class="text-info-emphasis">
+                            <i class="bi bi-people display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Personel</h6>
+                            <h3 class="mb-0">@(staff?.Count ?? 0)</h3>
+                        </div>
+                        <div class="text-success-emphasis">
+                            <i class="bi bi-person-badge display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <AuthorizeView Roles="Admin">
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">Menedżerowie</h6>
+                                <h3 class="mb-0">@(managers?.Count ?? 0)</h3>
+                            </div>
+                            <div class="text-primary-emphasis">
+                                <i class="bi bi-briefcase display-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </AuthorizeView>
+    </div>
+
+    <!-- Komunikaty -->
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Lista Personelu -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-badge"></i> Personel
+                    </h5>
+                    <button class="btn btn-outline-light btn-sm" @onclick="LoadStaff" disabled="@isLoadingStaff">
+                        @if (isLoadingStaff)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-clockwise"></i>
+                        }
+                        Odśwież
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (isLoadingStaff)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-success" role="status"></div>
+                            <p class="mt-2 mb-0 text-muted">Ładowanie personelu...</p>
+                        </div>
+                    }
+                    else if (staff?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Użytkownik</th>
+                                        <th>Email</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in staff)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                    {
+                                                        <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                             style="width: 32px; height: 32px; object-fit: cover;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                             style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                            <i class="bi bi-person-badge"></i>
+                                                        </div>
+                                                    }
+                                                    <div>
+                                                        <div class="fw-bold">@user.UserName</div>
+                                                        <small class="text-muted">ID: @user.Id[..8]...</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @user.Email
+                                                @if (user.IsEmailConfirmed == true)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success ms-1" title="Email potwierdzony"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        @onclick="() => ConfirmRemoveFromStaff(user.Id, user.UserName)"
+                                                        disabled="@(removingStaffIds.Contains(user.Id))">
+                                                    @if (removingStaffIds.Contains(user.Id))
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-person-dash"></i>
+                                                    }
+                                                    <text>Usuń z personelu</text>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-person-badge text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Brak personelu</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista Gości -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i> Goście
+                    </h5>
+                    <button class="btn btn-outline-light btn-sm" @onclick="LoadGuests" disabled="@isLoadingGuests">
+                        @if (isLoadingGuests)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-clockwise"></i>
+                        }
+                        Odśwież
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (isLoadingGuests)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-info" role="status"></div>
+                            <p class="mt-2 mb-0 text-muted">Ładowanie gości...</p>
+                        </div>
+                    }
+                    else if (filteredGuests?.Any() == true)
+                    {
+                        <div class="mb-3">
+                            <input type="text" class="form-control" 
+                                   placeholder="Szukaj gości..." 
+                                   value="@guestSearchText"
+                                   @oninput="OnGuestSearchChanged" />
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Użytkownik</th>
+                                        <th>Email</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in filteredGuests.Take(20))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                    {
+                                                        <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                             style="width: 32px; height: 32px; object-fit: cover;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="bg-info rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                             style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                            <i class="bi bi-person"></i>
+                                                        </div>
+                                                    }
+                                                    <div>
+                                                        <div class="fw-bold">@user.UserName</div>
+                                                        <small class="text-muted">ID: @user.Id[..8]...</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @user.Email
+                                                @if (user.IsEmailConfirmed == true)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success ms-1" title="Email potwierdzony"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-outline-success btn-sm" 
+                                                        @onclick="() => AddToStaff(user.Id, user.UserName)"
+                                                        disabled="@(addingStaffIds.Contains(user.Id))">
+                                                    @if (addingStaffIds.Contains(user.Id))
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-person-plus"></i>
+                                                    }
+                                                    <text>Dodaj do personelu</text>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        @if ((filteredGuests?.Count ?? 0) > 20)
+                        {
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Wyświetlono 20 z @filteredGuests.Count gości
+                                </small>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-people text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Brak gości</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista Menedżerów (tylko Admin) -->
+    <AuthorizeView Roles="Admin">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-briefcase"></i> Menedżerowie
+                        </h5>
+                        <button class="btn btn-outline-light btn-sm" @onclick="LoadManagers" disabled="@isLoadingManagers">
+                            @if (isLoadingManagers)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-clockwise"></i>
+                            }
+                            Odśwież
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (isLoadingManagers)
+                        {
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-2 mb-0 text-muted">Ładowanie menedżerów...</p>
+                            </div>
+                        }
+                        else if (managers?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Użytkownik</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var user in managers)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                        {
+                                                            <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                                 style="width: 32px; height: 32px; object-fit: cover;" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                                 style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                                <i class="bi bi-briefcase"></i>
+                                                            </div>
+                                                        }
+                                                        <div>
+                                                            <div class="fw-bold">@user.UserName</div>
+                                                            <small class="text-muted">ID: @user.Id[..8]...</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    @user.Email
+                                                    @if (user.IsEmailConfirmed == true)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success ms-1" title="Email potwierdzony"></i>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (user.Roles?.Any() == true)
+                                                    {
+                                                        @foreach (var role in user.Roles)
+                                                        {
+                                                            <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                        }
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (user.IsEmailConfirmed == true)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle me-1"></i><text>Aktywny</text>
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-clock me-1"></i><text>Oczekuje na weryfikację</text>
+                                                        </span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-briefcase text-muted display-4"></i>
+                                <p class="mt-3 mb-0 text-muted">Brak menedżerów</p>
+                                <p class="text-muted">Użyj dedykowanej strony zarządzania menedżerami do dodawania nowych.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthorizeView>
+</div>
+
+<!-- Modal dodawania do personelu -->
+@if (showAddStaffModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus-fill"></i> Dodaj do personelu
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddStaffModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Szukaj użytkownika (tylko goście):</label>
+                        <input type="text" class="form-control" 
+                               placeholder="Wprowadź nazwę użytkownika lub email..." 
+                               value="@modalSearchText"
+                               @oninput="OnModalSearchChanged" />
+                    </div>
+                    
+                    @if (modalFilteredGuests?.Any() == true)
+                    {
+                        <div class="list-group" style="max-height: 400px; overflow-y: auto;">
+                            @foreach (var user in modalFilteredGuests.Take(10))
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                        {
+                                            <img src="@user.ProfilePicture" class="rounded-circle me-3" 
+                                                 style="width: 40px; height: 40px; object-fit: cover;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-info rounded-circle d-flex align-items-center justify-content-center text-white me-3" 
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <h6 class="mb-1">@user.UserName</h6>
+                                            <p class="mb-1 text-muted">@user.Email</p>
+                                            <small class="text-muted">
+                                                @if (user.IsEmailConfirmed == true)
+                                                {
+                                                    <i class="bi bi-check-circle text-success"></i><text> Email potwierdzony</text>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-exclamation-circle text-warning"></i><text> Email niepotwierdzony</text>
+                                                }
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success" @onclick="() => AddToStaffFromModal(user.Id, user.UserName)"
+                                            disabled="@(addingStaffIds.Contains(user.Id))">
+                                        @if (addingStaffIds.Contains(user.Id))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                        }
+                                        <i class="bi bi-person-plus"></i><text> Dodaj do personelu</text>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(modalSearchText))
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-search text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Nie znaleziono gości</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-person-plus text-muted display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Wprowadź nazwę użytkownika lub email</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddStaffModal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal potwierdzenia usunięcia z personelu -->
+@if (showRemoveStaffModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Potwierdzenie usunięcia z personelu
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseRemoveStaffModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Czy na pewno chcesz usunąć z personelu:</p>
+                    <div class="bg-light p-3 rounded">
+                        <strong>@userToRemoveName</strong>
+                    </div>
+                    <p class="mt-3 text-muted">Użytkownik straci uprawnienia personelu i zostanie zwykłym gościem.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRemoveStaffModal">Anuluj</button>
+                    <button type="button" class="btn btn-warning" @onclick="RemoveFromStaff" disabled="@isRemovingUser">
+                        @if (isRemovingUser)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="bi bi-person-dash"></i><text> Usuń z personelu</text>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<User>? guests;
+    private List<User>? staff;
+    private List<User>? managers;
+    private List<User>? filteredGuests;
+    private List<User>? modalFilteredGuests;
+    
+    private bool isLoadingGuests = true;
+    private bool isLoadingStaff = true;
+    private bool isLoadingManagers = true;
+    private bool isRemovingUser = false;
+    private bool showAddStaffModal = false;
+    private bool showRemoveStaffModal = false;
+    
+    private HashSet<string> addingStaffIds = new();
+    private HashSet<string> removingStaffIds = new();
+    
+    private string guestSearchText = "";
+    private string modalSearchText = "";
+    private string userToRemoveId = "";
+    private string userToRemoveName = "";
+    private string successMessage = "";
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        await Task.Delay(100);
+        var tasks = new List<Task> { LoadGuests(), LoadStaff() };
+        
+        // Admin może też ładować menedżerów
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.IsInRole("Admin"))
+        {
+            tasks.Add(LoadManagers());
+        }
+        
+        await Task.WhenAll(tasks);
+        FilterGuests();
+    }
+
+    // Event handlers dla wyszukiwania
+    private async Task OnGuestSearchChanged(ChangeEventArgs e)
+    {
+        guestSearchText = e.Value?.ToString() ?? "";
+        FilterGuests();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnModalSearchChanged(ChangeEventArgs e)
+    {
+        modalSearchText = e.Value?.ToString() ?? "";
+        FilterModalGuests();
+        await Task.CompletedTask;
+    }
+
+    // Ładowanie danych
+    private async Task LoadGuests()
+    {
+        isLoadingGuests = true;
+        try
+        {
+            var response = await Http.GetAsync("api/guest/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                guests = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                FilterGuests();
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania gości");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania gości: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy gości.";
+        }
+        finally
+        {
+            isLoadingGuests = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadStaff()
+    {
+        isLoadingStaff = true;
+        try
+        {
+            var response = await Http.GetAsync("api/staff/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                staff = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania personelu");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania personelu: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy personelu.";
+        }
+        finally
+        {
+            isLoadingStaff = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadManagers()
+    {
+        isLoadingManagers = true;
+        try
+        {
+            var response = await Http.GetAsync("api/manager/all");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                managers = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania menedżerów");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania menedżerów: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy menedżerów.";
+        }
+        finally
+        {
+            isLoadingManagers = false;
+            StateHasChanged();
+        }
+    }
+
+    // Filtrowanie
+    private void FilterGuests()
+    {
+        if (guests == null)
+        {
+            filteredGuests = new List<User>();
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(guestSearchText))
+        {
+            filteredGuests = guests.ToList();
+        }
+        else
+        {
+            var searchLower = guestSearchText.ToLower().Trim();
+            filteredGuests = guests.Where(u => 
+                (!string.IsNullOrEmpty(u.UserName) && u.UserName.ToLower().Contains(searchLower)) ||
+                (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(searchLower))
+            ).ToList();
+        }
+        
+        StateHasChanged();
+    }
+
+    private void FilterModalGuests()
+    {
+        if (guests == null)
+        {
+            modalFilteredGuests = new List<User>();
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(modalSearchText))
+        {
+            modalFilteredGuests = new List<User>();
+        }
+        else
+        {
+            var searchLower = modalSearchText.ToLower().Trim();
+            modalFilteredGuests = guests.Where(u => 
+                (!string.IsNullOrEmpty(u.UserName) && u.UserName.ToLower().Contains(searchLower)) ||
+                (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(searchLower))
+            ).ToList();
+        }
+        
+        StateHasChanged();
+    }
+
+    // Zarządzanie personelem
+    private async Task AddToStaff(string userId, string userName)
+    {
+        if (addingStaffIds.Contains(userId)) return;
+        
+        addingStaffIds.Add(userId);
+        try
+        {
+            var response = await Http.PatchAsync($"api/staff/add/{userId}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Użytkownik {userName} został dodany do personelu.";
+                await RefreshData();
+            }
+            else
+            {
+                await HandleApiError(response, $"Błąd podczas dodawania {userName} do personelu");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas dodawania do personelu: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas dodawania {userName} do personelu.";
+        }
+        finally
+        {
+            addingStaffIds.Remove(userId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddToStaffFromModal(string userId, string userName)
+    {
+        await AddToStaff(userId, userName);
+        CloseAddStaffModal();
+    }
+
+    private void ConfirmRemoveFromStaff(string userId, string userName)
+    {
+        userToRemoveId = userId;
+        userToRemoveName = userName;
+        showRemoveStaffModal = true;
+    }
+
+    private async Task RemoveFromStaff()
+    {
+        if (string.IsNullOrEmpty(userToRemoveId)) return;
+
+        isRemovingUser = true;
+        removingStaffIds.Add(userToRemoveId);
+        
+        try
+        {
+            var response = await Http.PatchAsync($"api/staff/remove/{userToRemoveId}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Użytkownik {userToRemoveName} został usunięty z personelu.";
+                await RefreshData();
+                CloseRemoveStaffModal();
+            }
+            else
+            {
+                await HandleApiError(response, $"Błąd podczas usuwania {userToRemoveName} z personelu");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas usuwania z personelu: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas usuwania {userToRemoveName} z personelu.";
+        }
+        finally
+        {
+            isRemovingUser = false;
+            removingStaffIds.Remove(userToRemoveId);
+            StateHasChanged();
+        }
+    }
+
+    // Modals
+    private void ShowAddStaffModal()
+    {
+        modalSearchText = "";
+        modalFilteredGuests = new List<User>();
+        showAddStaffModal = true;
+    }
+
+    private void CloseAddStaffModal()
+    {
+        showAddStaffModal = false;
+        modalSearchText = "";
+        modalFilteredGuests = new List<User>();
+    }
+
+    private void CloseRemoveStaffModal()
+    {
+        showRemoveStaffModal = false;
+        userToRemoveId = "";
+        userToRemoveName = "";
+    }
+
+    // Utility
+    private async Task RefreshData()
+    {
+        addingStaffIds.Clear();
+        removingStaffIds.Clear();
+        await Task.WhenAll(LoadGuests(), LoadStaff());
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-primary",
+            "Staff" => "bg-success",
+            "Guest" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task HandleApiError(HttpResponseMessage response, string defaultMessage)
+    {
+        string specificMessage = response.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Brak autoryzacji. Zaloguj się ponownie.",
+            System.Net.HttpStatusCode.Forbidden => "Nie masz uprawnień do wykonania tej operacji.",
+            System.Net.HttpStatusCode.NotFound => "Nie znaleziono użytkownika.",
+            System.Net.HttpStatusCode.Conflict => "Użytkownik już ma odpowiednią rolę lub nie można zmienić roli.",
+            _ => $"{defaultMessage} (kod: {(int)response.StatusCode})"
+        };
+        
+        errorMessage = specificMessage;
+        
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"API Error ({response.StatusCode}): {errorContent}");
+    }
+
+    public class User
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+        public string? ProfilePicture { get; set; }
+        public bool? IsEmailConfirmed { get; set; }
+    }
+}

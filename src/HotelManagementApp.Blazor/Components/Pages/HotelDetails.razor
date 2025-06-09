@@ -181,30 +181,64 @@
                                     {
                                         <div class="col-lg-6 col-xl-4">
                                             <div class="card h-100 border border-light shadow-sm room-card">
+                                                <!-- Zdjęcie pokoju -->
+                                                <div class="position-relative">
+                                                    <img src="@GetRoomImage(room)" class="card-img-top" 
+                                                         style="height: 200px; object-fit: cover;" 
+                                                         alt="@GetRoomDisplayName(room)" />
+                                                    @if (room.DiscountPercent > 0)
+                                                    {
+                                                        <div class="position-absolute top-0 end-0 m-2">
+                                                            <span class="badge bg-danger">-@room.DiscountPercent%</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                
                                                 <div class="card-body">
                                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                                         <div>
-                                                            <h6 class="card-title mb-1">@(room.Type ?? "Pokój")</h6>
+                                                            <h6 class="card-title mb-1">@GetRoomDisplayName(room)</h6>
                                                             <small class="text-muted">
-                                                                <i class="bi bi-people"></i> @room.Capacity osób
+                                                                <i class="bi bi-tag"></i> @(room.RoomType ?? "Standardowy")
                                                             </small>
                                                         </div>
                                                         @if (room.Price.HasValue)
                                                         {
                                                             <div class="text-end">
-                                                                <div class="h6 text-primary mb-0">
-                                                                    @room.Price.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
-                                                                </div>
+                                                                @if (room.DiscountPercent > 0 && room.FinalPrice.HasValue)
+                                                                {
+                                                                    <div class="text-muted text-decoration-line-through small">
+                                                                        @room.Price.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                    </div>
+                                                                    <div class="h6 text-success mb-0">
+                                                                        @room.FinalPrice.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                    </div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="h6 text-primary mb-0">
+                                                                        @room.Price.Value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pl-PL"))
+                                                                    </div>
+                                                                }
                                                                 <small class="text-muted">za noc</small>
                                                             </div>
                                                         }
                                                     </div>
                                                     
-                                                    <div class="d-grid">
-                                                        <button class="btn btn-primary btn-sm" @onclick="() => GoToReservation(room.Id)">
-                                                            <i class="bi bi-calendar-plus"></i> Zarezerwuj teraz
-                                                        </button>
-                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(room.Description))
+                                                    {
+                                                        <p class="card-text small text-muted mb-3">
+                                                            @(room.Description.Length > 100 ? room.Description.Substring(0, 100) + "..." : room.Description)
+                                                        </p>
+                                                    }
+                                                    
+                                                    <AuthorizeView Roles="Guest">
+                                                        <div class="d-grid">
+                                                            <button class="btn btn-primary btn-sm" @onclick="() => GoToReservation(room.Id)">
+                                                                <i class="bi bi-calendar-plus"></i> Zarezerwuj teraz
+                                                            </button>
+                                                        </div>
+                                                    </AuthorizeView>
                                                 </div>
                                             </div>
                                         </div>
@@ -494,6 +528,21 @@
     private IEnumerable<RoomViewModel> GetSafeRooms() => rooms?.Take(6) ?? Enumerable.Empty<RoomViewModel>();
     private IEnumerable<ReviewViewModel> GetSafeReviews() => reviews ?? Enumerable.Empty<ReviewViewModel>();
 
+    // Nowe metody dla pokoi
+    private string GetRoomImage(RoomViewModel room)
+    {
+        if (room.RoomImages?.Any() == true)
+        {
+            return room.RoomImages.First();
+        }
+        return "/images/room-placeholder.jpg";
+    }
+
+    private string GetRoomDisplayName(RoomViewModel room)
+    {
+        return !string.IsNullOrEmpty(room.RoomName) ? room.RoomName : $"Pokój {room.Id}";
+    }
+
     private async Task LoadAllData()
     {
         try
@@ -729,9 +778,13 @@
     {
         public int Id { get; set; }
         public int HotelId { get; set; }
-        public string Type { get; set; } = "";
-        public int Capacity { get; set; }
+        public string RoomName { get; set; } = ""; // Dodane
+        public string RoomType { get; set; } = ""; // Zmienione z Type
         public decimal? Price { get; set; }
+        public decimal DiscountPercent { get; set; } // Dodane
+        public decimal? FinalPrice { get; set; } // Dodane
+        public List<string> RoomImages { get; set; } = new(); // Dodane
+        public string Description { get; set; } = ""; // Dodane
     }
 
     public class ReviewViewModel

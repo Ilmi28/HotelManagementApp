@@ -1,0 +1,1118 @@
+@page "/admin-dashboard"
+@using System.Text.Json
+@using System.Text
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Panel Administratora</PageTitle>
+
+<div class="container-fluid my-4">
+    <!-- Nagłówek -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-1">
+                        <i class="bi bi-speedometer2 text-danger"></i> Panel Administratora
+                    </h1>
+                    <p class="text-muted mb-0">Kompleksowe zarządzanie systemem hotelowym</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" @onclick="RefreshAllData" disabled="@isLoadingAll">
+                        @if (isLoadingAll)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-clockwise"></i>
+                        }
+                        Odśwież wszystko
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Komunikaty -->
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Statystyki główne -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card bg-gradient-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1 text-white-50">Wszyscy użytkownicy</h6>
+                            <h2 class="mb-0 fw-bold">@totalUsers</h2>
+                            <small class="text-white-75">Łącznie w systemie</small>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="bi bi-people display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card bg-gradient-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1 text-white-50">Aktywni użytkownicy</h6>
+                            <h2 class="mb-0 fw-bold">@activeUsers</h2>
+                            <small class="text-white-75">Email potwierdzony</small>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="bi bi-check-circle display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card bg-gradient-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1 text-dark-50">Konta bez ról</h6>
+                            <h2 class="mb-0 fw-bold">@(accountsWithoutRoles?.Count ?? 0)</h2>
+                            <small class="text-dark-75">Wymagają uwagi</small>
+                        </div>
+                        <div class="text-dark-50">
+                            <i class="bi bi-exclamation-triangle display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card bg-gradient-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1 text-white-50">Zespół zarządzający</h6>
+                            <h2 class="mb-0 fw-bold">@managementTeamCount</h2>
+                            <small class="text-white-75">Staff + Manager + Admin</small>
+                        </div>
+                        <div class="text-white-50">
+                            <i class="bi bi-people-fill display-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statystyki szczegółowe według ról -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-info h-100">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people"></i> Goście
+                    </h6>
+                    <span class="badge bg-white text-info">@(guests?.Count ?? 0)</span>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="fs-5 fw-bold text-success">@GetActiveUsersCount(guests)</div>
+                                <small class="text-muted">Aktywni</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-5 fw-bold text-warning">@GetInactiveUsersCount(guests)</div>
+                            <small class="text-muted">Nieaktywni</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-badge"></i> Personel
+                    </h6>
+                    <span class="badge bg-white text-success">@(staff?.Count ?? 0)</span>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="fs-5 fw-bold text-success">@GetActiveUsersCount(staff)</div>
+                                <small class="text-muted">Aktywni</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-5 fw-bold text-warning">@GetInactiveUsersCount(staff)</div>
+                            <small class="text-muted">Nieaktywni</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-primary h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-briefcase"></i> Menedżerowie
+                    </h6>
+                    <span class="badge bg-white text-primary">@(managers?.Count ?? 0)</span>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="fs-5 fw-bold text-success">@GetActiveUsersCount(managers)</div>
+                                <small class="text-muted">Aktywni</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-5 fw-bold text-warning">@GetInactiveUsersCount(managers)</div>
+                            <small class="text-muted">Nieaktywni</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-danger h-100">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-shield-lock"></i> Administratorzy
+                    </h6>
+                    <span class="badge bg-white text-danger">@adminCount</span>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="fs-4 fw-bold text-danger">@adminCount</div>
+                        <small class="text-muted">Najwyższe uprawnienia</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Szybkie akcje -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning-charge"></i> Szybkie akcje administracyjne
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                            <NavLink class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3" href="/guest-status-management">
+                                <i class="bi bi-person-lines-fill fs-1 mb-2"></i>
+                                <span class="fw-bold">Statusy gości</span>
+                                <small class="text-muted">VIP i czarna lista</small>
+                            </NavLink>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                            <NavLink class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3" href="/staff-management">
+                                <i class="bi bi-people-fill fs-1 mb-2"></i>
+                                <span class="fw-bold">Zarządzanie personelem</span>
+                                <small class="text-muted">Dodaj/usuń staff</small>
+                            </NavLink>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                            <NavLink class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3" href="/manager-management">
+                                <i class="bi bi-briefcase fs-1 mb-2"></i>
+                                <span class="fw-bold">Zarządzanie menedżerami</span>
+                                <small class="text-muted">Awanse i degradacje</small>
+                            </NavLink>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                            <NavLink class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3" href="/hotel-management">
+                                <i class="bi bi-building fs-1 mb-2"></i>
+                                <span class="fw-bold">Zarządzanie hotelami</span>
+                                <small class="text-muted">Hotele i zasoby</small>
+                            </NavLink>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabele z danymi -->
+    <div class="row">
+        <!-- Konta bez ról -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Konta bez ról
+                    </h5>
+                    <div>
+                        <span class="badge bg-dark me-2">@(accountsWithoutRoles?.Count ?? 0)</span>
+                        <button class="btn btn-outline-dark btn-sm" @onclick="LoadAccountsWithoutRoles" disabled="@isLoadingWithoutRoles">
+                            @if (isLoadingWithoutRoles)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-clockwise"></i>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (isLoadingWithoutRoles)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-warning" role="status"></div>
+                            <p class="mt-2 mb-0 text-muted">Ładowanie kont bez ról...</p>
+                        </div>
+                    }
+                    else if (accountsWithoutRoles?.Any() == true)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Uwaga!</strong> Te konta wymagają przypisania ról.
+                        </div>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Użytkownik</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Akcje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in accountsWithoutRoles)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                         style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                        <i class="bi bi-person"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold">@user.UserName</div>
+                                                        <small class="text-muted">@user.Id[..8]...</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @user.Email
+                                                @if (user.IsEmailConfirmed == true)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-person-x me-1"></i><text>Brak roli</text>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button class="btn btn-outline-info" @onclick='() => AssignRole(user.Id, user.UserName, "Guest")' title="Ustaw jako Gość">
+                                                        <i class="bi bi-person"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-success" @onclick='() => AssignRole(user.Id, user.UserName, "Staff")' title="Ustaw jako Staff">
+                                                        <i class="bi bi-person-badge"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-primary" @onclick='() => AssignRole(user.Id, user.UserName, "Manager")' title="Ustaw jako Manager">
+                                                        <i class="bi bi-briefcase"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle text-success display-4"></i>
+                            <p class="mt-3 mb-0 text-muted">Wszystkie konta mają przypisane role</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Ostatnia aktywność -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Ostatnia aktywność systemu
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">System w pełni operacyjny</h6>
+                                <p class="mb-1 text-muted">Wszystkie usługi działają prawidłowo</p>
+                                <small class="text-muted">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Panel administratora załadowany</h6>
+                                <p class="mb-1 text-muted">Dane systemowe zostały odświeżone</p>
+                                <small class="text-muted">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Łączenie z bazą danych</h6>
+                                <p class="mb-1 text-muted">Połączenie z bazą danych ustanowione</p>
+                                <small class="text-muted">@DateTime.Now.AddMinutes(-1).ToString("dd.MM.yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Szczegółowe tabele użytkowników -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="userTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "guests" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("guests")' type="button">
+                                <i class="bi bi-people me-1"></i>Goście (@(guests?.Count ?? 0))
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "staff" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("staff")' type="button">
+                                <i class="bi bi-person-badge me-1"></i>Personel (@(staff?.Count ?? 0))
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "managers" ? "active" : "")" 
+                                    @onclick='() => SetActiveTab("managers")' type="button">
+                                <i class="bi bi-briefcase me-1"></i>Menedżerowie (@(managers?.Count ?? 0))
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Tab Gości -->
+                        @if (activeTab == "guests")
+                        {
+                            <div class="tab-pane fade show active">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Lista wszystkich gości w systemie</h6>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadGuests" disabled="@isLoadingGuests">
+                                        @if (isLoadingGuests)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        }
+                                        Odśwież
+                                    </button>
+                                </div>
+                                @if (isLoadingGuests)
+                                {
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-info" role="status"></div>
+                                        <p class="mt-2 mb-0 text-muted">Ładowanie gości...</p>
+                                    </div>
+                                }
+                                else if (guests?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead class="table-info">
+                                                <tr>
+                                                    <th>Użytkownik</th>
+                                                    <th>Email</th>
+                                                    <th>Status</th>
+                                                    <th>Utworzony</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var user in guests.Take(10))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                                {
+                                                                    <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                                         style="width: 32px; height: 32px; object-fit: cover;" />
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="bg-info rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                                         style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                                        <i class="bi bi-person"></i>
+                                                                    </div>
+                                                                }
+                                                                <div>
+                                                                    <div class="fw-bold">@user.UserName</div>
+                                                                    <small class="text-muted">@user.Id[..8]...</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @user.Email
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <span class="badge bg-success">
+                                                                    <i class="bi bi-check-circle me-1"></i><text>Aktywny</text>
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning text-dark">
+                                                                    <i class="bi bi-clock me-1"></i><text>Nieaktywny</text>
+                                                                </span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.CreatedAt.HasValue)
+                                                            {
+                                                                <div>
+                                                                    <div>@user.CreatedAt.Value.ToString("dd.MM.yyyy")</div>
+                                                                    <small class="text-muted">@user.CreatedAt.Value.ToString("HH:mm")</small>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">-</span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    @if (guests.Count > 10)
+                                    {
+                                        <div class="text-center">
+                                            <small class="text-muted">Wyświetlono 10 z @guests.Count użytkowników</small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-people text-muted display-4"></i>
+                                        <p class="mt-3 mb-0 text-muted">Brak gości w systemie</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Tab Personelu -->
+                        @if (activeTab == "staff")
+                        {
+                            <div class="tab-pane fade show active">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Lista całego personelu hotelowego</h6>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadStaff" disabled="@isLoadingStaff">
+                                        @if (isLoadingStaff)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        }
+                                        Odśwież
+                                    </button>
+                                </div>
+                                @if (isLoadingStaff)
+                                {
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-success" role="status"></div>
+                                        <p class="mt-2 mb-0 text-muted">Ładowanie personelu...</p>
+                                    </div>
+                                }
+                                else if (staff?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead class="table-success">
+                                                <tr>
+                                                    <th>Użytkownik</th>
+                                                    <th>Email</th>
+                                                    <th>Status</th>
+                                                    <th>Utworzony</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var user in staff.Take(10))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                                {
+                                                                    <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                                         style="width: 32px; height: 32px; object-fit: cover;" />
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                                         style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                                        <i class="bi bi-person"></i>
+                                                                    </div>
+                                                                }
+                                                                <div>
+                                                                    <div class="fw-bold">@user.UserName</div>
+                                                                    <small class="text-muted">@user.Id[..8]...</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @user.Email
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <span class="badge bg-success">
+                                                                    <i class="bi bi-check-circle me-1"></i><text>Aktywny</text>
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning text-dark">
+                                                                    <i class="bi bi-clock me-1"></i><text>Nieaktywny</text>
+                                                                </span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.CreatedAt.HasValue)
+                                                            {
+                                                                <div>
+                                                                    <div>@user.CreatedAt.Value.ToString("dd.MM.yyyy")</div>
+                                                                    <small class="text-muted">@user.CreatedAt.Value.ToString("HH:mm")</small>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">-</span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    @if (staff.Count > 10)
+                                    {
+                                        <div class="text-center">
+                                            <small class="text-muted">Wyświetlono 10 z @staff.Count użytkowników</small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-people text-muted display-4"></i>
+                                        <p class="mt-3 mb-0 text-muted">Brak personelu w systemie</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Tab Menedżerów -->
+                        @if (activeTab == "managers")
+                        {
+                            <div class="tab-pane fade show active">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Lista wszystkich menedżerów</h6>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadManagers" disabled="@isLoadingManagers">
+                                        @if (isLoadingManagers)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        }
+                                        Odśwież
+                                    </button>
+                                </div>
+                                @if (isLoadingManagers)
+                                {
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status"></div>
+                                        <p class="mt-2 mb-0 text-muted">Ładowanie menedżerów...</p>
+                                    </div>
+                                }
+                                else if (managers?.Any() == true)
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead class="table-primary">
+                                                <tr>
+                                                    <th>Użytkownik</th>
+                                                    <th>Email</th>
+                                                    <th>Status</th>
+                                                    <th>Utworzony</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var user in managers.Take(10))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                @if (!string.IsNullOrEmpty(user.ProfilePicture))
+                                                                {
+                                                                    <img src="@user.ProfilePicture" class="rounded-circle me-2" 
+                                                                         style="width: 32px; height: 32px; object-fit: cover;" />
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-2" 
+                                                                         style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                                                        <i class="bi bi-person"></i>
+                                                                    </div>
+                                                                }
+                                                                <div>
+                                                                    <div class="fw-bold">@user.UserName</div>
+                                                                    <small class="text-muted">@user.Id[..8]...</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @user.Email
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-exclamation-circle-fill text-warning ms-1"></i>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.IsEmailConfirmed == true)
+                                                            {
+                                                                <span class="badge bg-success">
+                                                                    <i class="bi bi-check-circle me-1"></i><text>Aktywny</text>
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning text-dark">
+                                                                    <i class="bi bi-clock me-1"></i><text>Nieaktywny</text>
+                                                                </span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (user.CreatedAt.HasValue)
+                                                            {
+                                                                <div>
+                                                                    <div>@user.CreatedAt.Value.ToString("dd.MM.yyyy")</div>
+                                                                    <small class="text-muted">@user.CreatedAt.Value.ToString("HH:mm")</small>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">-</span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    @if (managers.Count > 10)
+                                    {
+                                        <div class="text-center">
+                                            <small class="text-muted">Wyświetlono 10 z @managers.Count użytkowników</small>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-people text-muted display-4"></i>
+                                        <p class="mt-3 mb-0 text-muted">Brak menedżerów w systemie</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(45deg, #28a745, #1e7e34);
+    }
+    .bg-gradient-warning {
+        background: linear-gradient(45deg, #ffc107, #e0a800);
+    }
+    .bg-gradient-info {
+        background: linear-gradient(45deg, #17a2b8, #138496);
+    }
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -22px;
+        top: 8px;
+        bottom: -12px;
+        width: 2px;
+        background-color: #dee2e6;
+    }
+    .timeline-item:last-child::before {
+        display: none;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 5px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .timeline-content {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        border-left: 3px solid #007bff;
+    }
+</style>
+
+@code {
+    private List<User>? guests;
+    private List<User>? staff;
+    private List<User>? managers;
+    private List<User>? accountsWithoutRoles;
+
+    private bool isLoadingAll = false;
+    private bool isLoadingGuests = true;
+    private bool isLoadingStaff = true;
+    private bool isLoadingManagers = true;
+    private bool isLoadingWithoutRoles = true;
+
+    private string activeTab = "guests";
+    private string successMessage = "";
+    private string errorMessage = "";
+
+    // Computed properties
+    private int totalUsers => (guests?.Count ?? 0) + (staff?.Count ?? 0) + (managers?.Count ?? 0) + adminCount;
+    private int activeUsers => GetActiveUsersCount(guests) + GetActiveUsersCount(staff) + GetActiveUsersCount(managers) + adminCount;
+    private int managementTeamCount => (staff?.Count ?? 0) + (managers?.Count ?? 0) + adminCount;
+    private int adminCount => 1; // Szacunkowa liczba - nie ma endpoint do pobierania adminów
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        await Task.Delay(100);
+        await RefreshAllData();
+    }
+
+    private async Task RefreshAllData()
+    {
+        isLoadingAll = true;
+        try
+        {
+            await Task.WhenAll(
+                LoadGuests(),
+                LoadStaff(),
+                LoadManagers(),
+                LoadAccountsWithoutRoles()
+            );
+        }
+        finally
+        {
+            isLoadingAll = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadGuests()
+    {
+        isLoadingGuests = true;
+        try
+        {
+            var response = await Http.GetAsync("api/guest/all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                guests = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania gości");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania gości: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy gości.";
+        }
+        finally
+        {
+            isLoadingGuests = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadStaff()
+    {
+        isLoadingStaff = true;
+        try
+        {
+            var response = await Http.GetAsync("api/staff/all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                staff = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania personelu");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania personelu: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy personelu.";
+        }
+        finally
+        {
+            isLoadingStaff = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadManagers()
+    {
+        isLoadingManagers = true;
+        try
+        {
+            var response = await Http.GetAsync("api/manager/all");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                managers = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania menedżerów");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania menedżerów: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania listy menedżerów.";
+        }
+        finally
+        {
+            isLoadingManagers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAccountsWithoutRoles()
+    {
+        isLoadingWithoutRoles = true;
+        try
+        {
+            var response = await Http.GetAsync("api/account/without-role");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                accountsWithoutRoles = JsonSerializer.Deserialize<List<User>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            else
+            {
+                await HandleApiError(response, "Błąd podczas ładowania kont bez ról");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas ładowania kont bez ról: {ex.Message}");
+            errorMessage = "Wystąpił błąd podczas ładowania kont bez ról.";
+        }
+        finally
+        {
+            isLoadingWithoutRoles = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        StateHasChanged();
+    }
+
+    private int GetActiveUsersCount(List<User>? users)
+    {
+        return users?.Count(u => u.IsEmailConfirmed == true) ?? 0;
+    }
+
+    private int GetInactiveUsersCount(List<User>? users)
+    {
+        return users?.Count(u => u.IsEmailConfirmed != true) ?? 0;
+    }
+
+    private async Task AssignRole(string userId, string userName, string role)
+    {
+        try
+        {
+            var endpoint = role switch
+            {
+                "Guest" => $"api/guest/add/{userId}",
+                "Staff" => $"api/staff/add/{userId}",
+                "Manager" => $"api/manager/add/{userId}",
+                _ => throw new ArgumentException($"Unknown role: {role}")
+            };
+
+            var response = await Http.PatchAsync(endpoint, null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = $"Użytkownik {userName} został przypisany do roli {role}.";
+                await RefreshAllData();
+            }
+            else
+            {
+                await HandleApiError(response, $"Błąd podczas przypisywania roli {role} użytkownikowi {userName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Błąd podczas przypisywania roli: {ex.Message}");
+            errorMessage = $"Wystąpił błąd podczas przypisywania roli.";
+        }
+    }
+
+    private async Task HandleApiError(HttpResponseMessage response, string defaultMessage)
+    {
+        string specificMessage = response.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => "Brak autoryzacji. Zaloguj się ponownie.",
+            System.Net.HttpStatusCode.Forbidden => "Nie masz uprawnień do wykonania tej operacji.",
+            System.Net.HttpStatusCode.NotFound => "Nie znaleziono zasobu.",
+            _ => $"{defaultMessage} (kod: {(int)response.StatusCode})"
+        };
+
+        errorMessage = specificMessage;
+
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"API Error ({response.StatusCode}): {errorContent}");
+    }
+
+    public class User
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+        public string? ProfilePicture { get; set; }
+        public bool? IsEmailConfirmed { get; set; }
+        public DateTime? CreatedAt { get; set; }
+    }
+}

@@ -14,7 +14,7 @@ public class UpdateReviewImagesCommandHandler(
     public async Task Handle(UpdateReviewImagesCommand request, CancellationToken cancellationToken)
     {
         var review = await reviewRepository.GetReviewById(request.ReviewId, cancellationToken)
-            ?? throw new ReviewNotFoundException($"Review with id {request.ReviewId} not found");
+                     ?? throw new ReviewNotFoundException($"Review with id {request.ReviewId} not found");
         var reviewImages = await imageRepository.GetReviewImagesByReviewId(request.ReviewId, cancellationToken);
         foreach (var reviewImage in reviewImages)
             fileService.DeleteFile("images", reviewImage.FileName);
