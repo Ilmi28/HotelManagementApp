@@ -54,7 +54,6 @@ public class LoyaltyPointsController(IMediator mediator) : ControllerBase
     /// </summary>
     /// <response code="200">Returns list of acquired rewards</response>
     [HttpGet("guests/{guestId}/acquired-rewards")]
-    [Authorize(Roles = "Admin, Manager, Staff")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAcquiredRewardsByGuest(string guestId, IAuthorizationService authService,CancellationToken cancellationToken)
     {
