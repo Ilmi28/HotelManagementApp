@@ -26,8 +26,7 @@ public class RoomImageRepository(AppDbContext context) : IRoomImageRepository
     public async Task RemoveRoomImagesByRoomId(int roomId, CancellationToken ct)
     {
         var roomImages = await context.HotelRoomImages
-                            .Include(x => x.Room)
-                            .Where(x => x.Room.Id == roomId).ToListAsync();
+                            .Where(x => x.RoomId == roomId).ToListAsync();
         foreach (var roomImage in roomImages)
         {
             context.HotelRoomImages.Remove(roomImage);

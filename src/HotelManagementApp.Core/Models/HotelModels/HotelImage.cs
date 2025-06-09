@@ -5,4 +5,5 @@ public class HotelImage
     public int Id { get; set; }
     public required string FileName { get; set; }
     public required Hotel Hotel { get; set; }
+    public int HotelId { get; set; }
 }
