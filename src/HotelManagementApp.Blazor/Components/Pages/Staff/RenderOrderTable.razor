@@ -1,0 +1,98 @@
+@using System.Globalization
+
+@if (IsLoading)
+{
+    <div class="text-center py-4">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <p class="mt-2 mb-0 text-muted small">Ładowanie...</p>
+    </div>
+}
+else if (Orders?.Any() == true)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi @StatusIcon me-2"></i> @TableTitle
+                </h5>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="async () => await OnRefresh.InvokeAsync()" disabled="@IsLoading">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID Zam.</th>
+                        <th>Klient</th>
+                        <th>Telefon</th>
+                        <th>Kwota</th>
+                        <th>Data</th>
+                        @if(ShowActions) { <th>Akcje</th> }
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var order in Orders)
+                    {
+                        <tr>
+                            <td><strong>#@order.Id</strong></td>
+                            <td>@($"{order.FirstName} {order.LastName}".Trim())</td>
+                            <td>@(order.PhoneNumber ?? "Brak")</td>
+                            <td class="text-primary fw-bold">@(order.TotalPrice?.ToString("C", polishCulture) ?? "N/A")</td>
+                            <td>@GetRelevantDate(order)</td>
+                            @if(ShowActions)
+                            {
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-success btn-sm" @onclick="async () => await OnConfirm.InvokeAsync(order.Id)">
+                                            <i class="bi bi-check-circle"></i> Potwierdź
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" @onclick="async () => await OnCancel.InvokeAsync(order.Id)">
+                                            <i class="bi bi-x-circle"></i> Anuluj
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="bi @StatusIcon display-4 text-muted"></i>
+        <p class="mt-3 mb-0 text-muted">Brak zamówień w tej kategorii.</p>
+    </div>
+}
+
+@code {
+    [Parameter] public List<OrderManagement.OrderViewModel>? Orders { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string TableTitle { get; set; } = "Zamówienia";
+    [Parameter] public string StatusIcon { get; set; } = "bi-list-ul";
+    [Parameter] public bool ShowActions { get; set; } = false;
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<int> OnConfirm { get; set; }
+    [Parameter] public EventCallback<int> OnCancel { get; set; }
+    
+    private readonly CultureInfo polishCulture = new("pl-PL");
+
+    private string GetRelevantDate(OrderManagement.OrderViewModel order)
+    {
+        DateTime? date = order.Status?.ToLower() switch
+        {
+            "pending" => order.Created,
+            "confirmed" => order.Confirmed,
+            "completed" => order.Completed,
+            "cancelled" => order.Cancelled,
+            _ => order.Created
+        };
+        return date?.ToString("dd.MM.yyyy HH:mm", polishCulture) ?? "N/A";
+    }
+}

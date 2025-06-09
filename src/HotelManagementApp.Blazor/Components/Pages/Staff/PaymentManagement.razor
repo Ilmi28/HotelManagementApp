@@ -2,10 +2,10 @@
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Globalization
 @using System.Net
+@using System.Text.Json.Serialization
 
 <PageTitle>Zarządzanie płatnościami - Hotel Management System</PageTitle>
 
@@ -20,14 +20,14 @@
                                 <i class="bi bi-credit-card"></i> Zarządzanie płatnościami
                             </h1>
                             <p class="text-muted mb-0">
-                                Obsługa płatności gotówkowych i kartą kredytową w systemie hotelowym
+                                Przegląd wszystkich zarejestrowanych płatności w systemie.
                             </p>
                         </div>
                         <div class="col-md-4 text-end">
                             <div class="small text-muted">
                                 Ostatnia aktualizacja: @lastUpdateTime.ToString("HH:mm:ss")
                             </div>
-                            <button class="btn btn-outline-primary btn-sm mt-2" @onclick="RefreshAllPayments" disabled="@isRefreshing">
+                            <button class="btn btn-outline-primary btn-sm mt-2" @onclick="LoadAllPayments" disabled="@isRefreshing">
                                 @if (isRefreshing)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -46,574 +46,163 @@
         </div>
     </div>
 
-    @if (hasRenderError)
+    @if (isInitialLoading)
     {
-        <div class="alert alert-danger">
-            <h5>Błąd renderowania strony</h5>
-            <p>@renderErrorMessage</p>
-            <button class="btn btn-primary" @onclick="ClearErrorAndRefresh">
-                Odśwież stronę
-            </button>
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Ładowanie...</span>
+            </div>
+            <p class="mt-3 text-muted">Wczytywanie danych płatności...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <div>
+                @errorMessage
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-secondary" @onclick="LoadAllPayments">
+                        Spróbuj ponownie
+                    </button>
+                </div>
+            </div>
         </div>
     }
     else
     {
-        @if (isInitialLoading)
-        {
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Ładowanie...</span>
-                </div>
-                <p class="mt-3 text-muted">Wczytywanie danych płatności...</p>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <div>
-                    @errorMessage
-                    @if (errorMessage.Contains("Unauthorized") || errorMessage.Contains("autoryzacji") || errorMessage.Contains("403"))
-                    {
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-primary" @onclick="GoToLogin">
-                                Przejdź do logowania
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-secondary" @onclick="RefreshAllPayments">
-                                Spróbuj ponownie
-                            </button>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="row mb-4">
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card bg-primary text-white border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="card-title mb-1">Wszystkie płatności</h6>
-                                    <h3 class="mb-0">@(allPayments?.Count ?? 0)</h3>
-                                    <small>@GetTotalAmount(allPayments)</small>
-                                </div>
-                                <div class="text-primary-emphasis">
-                                    <i class="bi bi-wallet display-4"></i>
-                                </div>
+        <!-- Statystyki -->
+        <div class="row mb-4">
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="card bg-primary text-white border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">Wszystkie płatności</h6>
+                                <h3 class="mb-0">@(allPayments?.Count ?? 0)</h3>
+                                <small>@GetTotalAmount(allPayments)</small>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card bg-success text-white border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="card-title mb-1">Płatności gotówkowe</h6>
-                                    <h3 class="mb-0">@(cashPayments?.Count ?? 0)</h3>
-                                    <small>@GetTotalAmount(cashPayments)</small>
-                                </div>
-                                <div class="text-success-emphasis">
-                                    <i class="bi bi-cash-stack display-4"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card bg-info text-white border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="card-title mb-1">Płatności kartą</h6>
-                                    <h3 class="mb-0">@(creditCardPayments?.Count ?? 0)</h3>
-                                    <small>@GetTotalAmount(creditCardPayments)</small>
-                                </div>
-                                <div class="text-info-emphasis">
-                                    <i class="bi bi-credit-card display-4"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-3">
-                    <div class="card bg-warning text-dark border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="card-title mb-1">Akcje</h6>
-                                    <button class="btn btn-dark btn-sm w-100" @onclick="ShowRegisterCashPaymentModal">
-                                        <i class="bi bi-plus-circle"></i> Nowa płatność gotówkowa
-                                    </button>
-                                </div>
-                                <div class="text-warning-emphasis">
-                                    <i class="bi bi-plus-square display-4"></i>
-                                </div>
+                            <div class="text-primary-emphasis">
+                                <i class="bi bi-wallet display-4"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="card bg-success text-white border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">Płatności gotówkowe</h6>
+                                <h3 class="mb-0">@(cashPayments?.Count ?? 0)</h3>
+                                <small>@GetTotalAmount(cashPayments)</small>
+                            </div>
+                            <div class="text-success-emphasis">
+                                <i class="bi bi-cash-stack display-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="card bg-info text-white border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">Płatności kartą</h6>
+                                <h3 class="mb-0">@(creditCardPayments?.Count ?? 0)</h3>
+                                <small>@GetTotalAmount(creditCardPayments)</small>
+                            </div>
+                            <div class="text-info-emphasis">
+                                <i class="bi bi-credit-card display-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <div class="row mb-4">
-                <div class="col-12">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "all" ? "active" : "")" 
-                                    @onclick='() => SetActiveTab("all")' 
-                                    type="button">
-                                <i class="bi bi-wallet me-2 text-primary"></i>
-                                Wszystkie płatności
-                                @if (allPayments?.Any() == true)
-                                {
-                                    <span class="badge bg-primary ms-2">@allPayments.Count</span>
-                                }
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "cash" ? "active" : "")" 
-                                    @onclick='() => SetActiveTab("cash")' 
-                                    type="button">
-                                <i class="bi bi-cash-stack me-2 text-success"></i>
-                                Płatności gotówkowe
-                                @if (cashPayments?.Any() == true)
-                                {
-                                    <span class="badge bg-success ms-2">@cashPayments.Count</span>
-                                }
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "card" ? "active" : "")" 
-                                    @onclick='() => SetActiveTab("card")' 
-                                    type="button">
-                                <i class="bi bi-credit-card me-2 text-info"></i>
-                                Płatności kartą
-                                @if (creditCardPayments?.Any() == true)
-                                {
-                                    <span class="badge bg-info ms-2">@creditCardPayments.Count</span>
-                                }
-                            </button>
-                        </li>
-                    </ul>
+        <!-- Tabela z płatnościami -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-ul text-primary"></i> Rejestr płatności
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (isRefreshing)
+                        {
+                            <div class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <p class="mt-2 mb-0 text-muted small">Ładowanie płatności...</p>
+                            </div>
+                        }
+                        else if (allPayments?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>ID Płatności</th>
+                                        <th>ID Zamówienia</th>
+                                        <th>Metoda płatności</th>
+                                        <th>Kwota</th>
+                                        <th>Data płatności</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach (var payment in allPayments)
+                                    {
+                                        <tr>
+                                            <td><strong>#@payment.Id</strong></td>
+                                            <td><span class="badge bg-secondary">#@payment.OrderId</span></td>
+                                            <td>
+                                                @if (payment.PaymentMethod?.ToLower().Contains("cash") == true)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-cash-stack"></i> @(payment.PaymentMethod)
+                                                    </span>
+                                                }
+                                                else if (payment.PaymentMethod?.ToLower().Contains("card") == true)
+                                                {
+                                                    <span class="badge bg-info">
+                                                        <i class="bi bi-credit-card"></i> @(payment.PaymentMethod)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">@(payment.PaymentMethod ?? "Nieznana")</span>
+                                                }
+                                            </td>
+                                            <td class="text-primary fw-bold">@GetFormattedPrice(payment.Amount)</td>
+                                            <td>@GetFormattedDateTime(payment.Date)</td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox text-muted display-4"></i>
+                                <p class="mt-3 mb-0 text-muted">Brak płatności w systemie</p>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
-
-            <div class="tab-content">
-                @if (activeTab == "all")
-                {
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-wallet text-primary"></i> Wszystkie płatności
-                                </h5>
-                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadAllPayments" disabled="@loadingAllPayments">
-                                    @if (loadingAllPayments)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-arrow-clockwise"></i>
-                                    }
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            @if (loadingAllPayments)
-                            {
-                                <div class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                    <p class="mt-2 mb-0 text-muted small">Ładowanie wszystkich płatności...</p>
-                                </div>
-                            }
-                            else if (allPayments?.Any() == true)
-                            {
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>ID Płatności</th>
-                                                <th>ID Zamówienia</th>
-                                                <th>Typ płatności</th>
-                                                <th>Kwota</th>
-                                                <th>Status</th>
-                                                <th>Data płatności</th>
-                                                <th>Klient</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var payment in allPayments)
-                                            {
-                                                <tr>
-                                                    <td><strong>#@payment.Id</strong></td>
-                                                    <td>
-                                                        @if (payment.OrderId.HasValue)
-                                                        {
-                                                            <span class="badge bg-secondary">#@payment.OrderId</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">Brak</span>
-                                                        }
-                                                    </td>
-                                                    <td>
-                                                        @if (payment.PaymentMethod?.ToLower() == "cash")
-                                                        {
-                                                            <span class="badge bg-success">
-                                                                <i class="bi bi-cash-stack"></i> Gotówka
-                                                            </span>
-                                                        }
-                                                        else if (payment.PaymentMethod?.ToLower() == "creditcard")
-                                                        {
-                                                            <span class="badge bg-info">
-                                                                <i class="bi bi-credit-card"></i> Karta
-                                                            </span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary">@(payment.PaymentMethod ?? "Nieznany")</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-primary fw-bold">@GetFormattedPrice(payment.Amount)</td>
-                                                    <td>
-                                                        @if (payment.Status?.ToLower() == "completed")
-                                                        {
-                                                            <span class="badge bg-success">
-                                                                <i class="bi bi-check-circle"></i> Zakończona
-                                                            </span>
-                                                        }
-                                                        else if (payment.Status?.ToLower() == "pending")
-                                                        {
-                                                            <span class="badge bg-warning text-dark">
-                                                                <i class="bi bi-clock"></i> Oczekuje
-                                                            </span>
-                                                        }
-                                                        else if (payment.Status?.ToLower() == "failed")
-                                                        {
-                                                            <span class="badge bg-danger">
-                                                                <i class="bi bi-x-circle"></i> Nieudana
-                                                            </span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary">@(payment.Status ?? "Nieznany")</span>
-                                                        }
-                                                    </td>
-                                                    <td>@GetFormattedDateTime(payment.PaymentDate)</td>
-                                                    <td>@(payment.CustomerName ?? "Nieznany klient")</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center py-5">
-                                    <i class="bi bi-inbox text-muted display-4"></i>
-                                    <p class="mt-3 mb-0 text-muted">Brak płatności w systemie</p>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-
-                @if (activeTab == "cash")
-                {
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-cash-stack text-success"></i> Płatności gotówkowe
-                                </h5>
-                                <div>
-                                    <button class="btn btn-success btn-sm me-2" @onclick="ShowRegisterCashPaymentModal">
-                                        <i class="bi bi-plus-circle"></i> Nowa płatność
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCashPayments" disabled="@loadingCashPayments">
-                                        @if (loadingCashPayments)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        }
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            @if (loadingCashPayments)
-                            {
-                                <div class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                                    <p class="mt-2 mb-0 text-muted small">Ładowanie płatności gotówkowych...</p>
-                                </div>
-                            }
-                            else if (cashPayments?.Any() == true)
-                            {
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>ID Płatności</th>
-                                                <th>ID Zamówienia</th>
-                                                <th>Kwota</th>
-                                                <th>Status</th>
-                                                <th>Data płatności</th>
-                                                <th>Klient</th>
-                                                <th>Obsługa</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var payment in cashPayments)
-                                            {
-                                                <tr>
-                                                    <td><strong>#@payment.Id</strong></td>
-                                                    <td>
-                                                        @if (payment.OrderId.HasValue)
-                                                        {
-                                                            <span class="badge bg-secondary">#@payment.OrderId</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">Brak</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-success fw-bold">@GetFormattedPrice(payment.Amount)</td>
-                                                    <td>
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-cash-stack"></i> Gotówka
-                                                        </span>
-                                                    </td>
-                                                    <td>@GetFormattedDateTime(payment.PaymentDate)</td>
-                                                    <td>@(payment.CustomerName ?? "Nieznany klient")</td>
-                                                    <td>@(payment.ProcessedBy ?? "System")</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center py-5">
-                                    <i class="bi bi-cash-stack text-success display-4"></i>
-                                    <p class="mt-3 mb-0 text-muted">Brak płatności gotówkowych</p>
-                                    <button class="btn btn-success mt-3" @onclick="ShowRegisterCashPaymentModal">
-                                        <i class="bi bi-plus-circle"></i> Zarejestruj pierwszą płatność gotówkową
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-
-                @if (activeTab == "card")
-                {
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="bi bi-credit-card text-info"></i> Płatności kartą kredytową
-                                </h5>
-                                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCreditCardPayments" disabled="@loadingCreditCardPayments">
-                                    @if (loadingCreditCardPayments)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-arrow-clockwise"></i>
-                                    }
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            @if (loadingCreditCardPayments)
-                            {
-                                <div class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-                                    <p class="mt-2 mb-0 text-muted small">Ładowanie płatności kartą...</p>
-                                </div>
-                            }
-                            else if (creditCardPayments?.Any() == true)
-                            {
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>ID Płatności</th>
-                                                <th>ID Zamówienia</th>
-                                                <th>Kwota</th>
-                                                <th>Status</th>
-                                                <th>Data płatności</th>
-                                                <th>Klient</th>
-                                                <th>Nr karty</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var payment in creditCardPayments)
-                                            {
-                                                <tr>
-                                                    <td><strong>#@payment.Id</strong></td>
-                                                    <td>
-                                                        @if (payment.OrderId.HasValue)
-                                                        {
-                                                            <span class="badge bg-secondary">#@payment.OrderId</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">Brak</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-info fw-bold">@GetFormattedPrice(payment.Amount)</td>
-                                                    <td>
-                                                        <span class="badge bg-info">
-                                                            <i class="bi bi-credit-card"></i> Karta
-                                                        </span>
-                                                    </td>
-                                                    <td>@GetFormattedDateTime(payment.PaymentDate)</td>
-                                                    <td>@(payment.CustomerName ?? "Nieznany klient")</td>
-                                                    <td>
-                                                        @if (!string.IsNullOrEmpty(payment.CardNumber))
-                                                        {
-                                                            <span class="font-monospace">****@payment.CardNumber.Substring(Math.Max(0, payment.CardNumber.Length - 4))</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">Brak danych</span>
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-center py-5">
-                                    <i class="bi bi-credit-card text-info display-4"></i>
-                                    <p class="mt-3 mb-0 text-muted">Brak płatności kartą kredytową</p>
-                                    <p class="text-muted small">Płatności kartą są przetwarzane automatycznie przez system płatności online</p>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-        }
+        </div>
     }
-</div>
-
-<div class="modal fade" id="registerCashPaymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-cash-stack text-success"></i> Rejestracja płatności gotówkowej
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="orderIdInput" class="form-label">ID Zamówienia <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="orderIdInput" @bind="newCashPaymentOrderId" 
-                           placeholder="Wprowadź ID zamówienia" min="1">
-                    <div class="form-text">Wprowadź ID zamówienia, za które klient płaci gotówką</div>
-                </div>
-                
-                @if (!string.IsNullOrEmpty(cashPaymentValidationMessage))
-                {
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> @cashPaymentValidationMessage
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                <button type="button" class="btn btn-success" @onclick="RegisterCashPayment" 
-                        disabled="@(processingCashPayment || newCashPaymentOrderId <= 0)">
-                    @if (processingCashPayment)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        <span>Przetwarzanie...</span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-check-circle"></i>
-                        <span>Zarejestruj płatność</span>
-                    }
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    @if (operationSuccess)
-                    {
-                        <i class="bi bi-check-circle text-success"></i>
-                        <span>Operacja zakończona pomyślnie</span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-exclamation-triangle text-danger"></i>
-                        <span>Błąd operacji</span>
-                    }
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="@(operationSuccess ? "alert alert-success" : "alert alert-danger")">
-                    <p class="mb-0">@operationMessage</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <style>
-    .card {
-        transition: transform 0.2s ease-in-out;
-    }
-    
-    .card:hover {
-        transform: translateY(-2px);
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: rgba(0, 123, 255, 0.05);
-    }
-    
-    .nav-link {
-        transition: all 0.3s ease;
-    }
-    
-    .nav-link:hover {
-        background-color: rgba(0, 123, 255, 0.1);
-    }
-    
-    .font-monospace {
-        font-family: 'Courier New', monospace;
-    }
+    .card { transition: transform 0.2s ease-in-out; }
+    .card:hover { transform: translateY(-2px); }
+    .table-hover tbody tr:hover { background-color: rgba(0, 123, 255, 0.05); }
 </style>
 
 @code {
@@ -621,25 +210,11 @@
     private List<PaymentViewModel>? cashPayments;
     private List<PaymentViewModel>? creditCardPayments;
 
-    private string activeTab = "all";
     private bool isInitialLoading = true;
     private bool isRefreshing = false;
-    private bool loadingAllPayments = false;
-    private bool loadingCashPayments = false;
-    private bool loadingCreditCardPayments = false;
     private string errorMessage = "";
     private DateTime lastUpdateTime = DateTime.Now;
-
-    private int newCashPaymentOrderId = 0;
-    private bool processingCashPayment = false;
-    private string cashPaymentValidationMessage = "";
-
-    private bool operationSuccess = false;
-    private string operationMessage = "";
-
-    private bool hasRenderError = false;
-    private string renderErrorMessage = "";
-
+    
     private readonly CultureInfo polishCulture = new("pl-PL");
 
     protected override async Task OnInitializedAsync()
@@ -653,279 +228,86 @@
                 return;
             }
 
-            await LoadAllPaymentsData();
+            // Sprawdzenie ról użytkownika
+            if (!authState.User.IsInRole("Admin") && !authState.User.IsInRole("Staff") && !authState.User.IsInRole("Manager"))
+            {
+                errorMessage = "Nie masz uprawnień do przeglądania tej strony.";
+                isInitialLoading = false;
+                return;
+            }
+
+            await LoadAllPayments();
         }
         catch (Exception ex)
         {
-            SetRenderError($"Błąd inicjalizacji: {ex.Message}");
-        }
-    }
-
-    private void SetRenderError(string message)
-    {
-        hasRenderError = true;
-        renderErrorMessage = message;
-    }
-
-    private async Task ClearErrorAndRefresh()
-    {
-        hasRenderError = false;
-        renderErrorMessage = "";
-        errorMessage = "";
-        await SafeExecute(LoadAllPaymentsData);
-    }
-
-    private async Task SafeExecute(Func<Task> action)
-    {
-        try
-        {
-            await action();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Błąd: {ex.Message}";
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadAllPaymentsData()
-    {
-        isInitialLoading = true;
-        errorMessage = "";
-
-        try
-        {
-            await Task.WhenAll(
-                LoadAllPayments(),
-                LoadCashPayments(),
-                LoadCreditCardPayments()
-            );
-            
-            lastUpdateTime = DateTime.Now;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Błąd podczas ładowania danych: {ex.Message}";
-        }
-        finally
-        {
+            errorMessage = $"Błąd inicjalizacji: {ex.Message}";
             isInitialLoading = false;
-            StateHasChanged();
         }
-    }
-
-    private async Task RefreshAllPayments()
-    {
-        isRefreshing = true;
-        errorMessage = "";
-
-        await SafeExecute(async () =>
-        {
-            await LoadAllPaymentsData();
-            isRefreshing = false;
-        });
     }
 
     private async Task LoadAllPayments()
     {
-        loadingAllPayments = true;
+        if (isInitialLoading)
+        {
+            isRefreshing = true;
+        }
+        else
+        {
+            isRefreshing = true;
+            isInitialLoading = true;
+        }
         
+        errorMessage = "";
+        StateHasChanged();
+
         try
         {
             var response = await Http.GetAsync("api/payment/get-all");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 allPayments = await response.Content.ReadFromJsonAsync<List<PaymentViewModel>>() ?? new List<PaymentViewModel>();
+                FilterPayments();
             }
-            else if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
-            }
-            else if (response.StatusCode == HttpStatusCode.Forbidden)
+            else if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
             {
                 errorMessage = "Nie masz uprawnień do przeglądania płatności.";
+                allPayments = new List<PaymentViewModel>();
+                FilterPayments();
             }
             else
             {
-                errorMessage = $"Błąd ładowania wszystkich płatności: {response.StatusCode}";
+                errorMessage = $"Błąd ładowania płatności: {response.StatusCode}";
+                allPayments = new List<PaymentViewModel>();
+                FilterPayments();
             }
-        }
-        catch (HttpRequestException)
-        {
-            errorMessage = "Błąd połączenia z serwerem przy ładowaniu płatności.";
         }
         catch (Exception ex)
         {
-            errorMessage = $"Błąd podczas ładowania wszystkich płatności: {ex.Message}";
+            errorMessage = $"Wystąpił błąd: {ex.Message}";
+            allPayments = new List<PaymentViewModel>();
+            FilterPayments();
         }
         finally
         {
-            loadingAllPayments = false;
+            isInitialLoading = false;
+            isRefreshing = false;
+            lastUpdateTime = DateTime.Now;
             StateHasChanged();
         }
     }
 
-    private async Task LoadCashPayments()
+    private void FilterPayments()
     {
-        loadingCashPayments = true;
-        
-        try
+        if (allPayments == null)
         {
-            var response = await Http.GetAsync("api/payment/get-cash-payments");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                cashPayments = await response.Content.ReadFromJsonAsync<List<PaymentViewModel>>() ?? new List<PaymentViewModel>();
-            }
-            else if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
-            }
-            else if (response.StatusCode == HttpStatusCode.Forbidden)
-            {
-                errorMessage = "Nie masz uprawnień do przeglądania płatności gotówkowych.";
-            }
-            else
-            {
-                errorMessage = $"Błąd ładowania płatności gotówkowych: {response.StatusCode}";
-            }
-        }
-        catch (HttpRequestException)
-        {
-            errorMessage = "Błąd połączenia z serwerem przy ładowaniu płatności gotówkowych.";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Błąd podczas ładowania płatności gotówkowych: {ex.Message}";
-        }
-        finally
-        {
-            loadingCashPayments = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadCreditCardPayments()
-    {
-        loadingCreditCardPayments = true;
-        
-        try
-        {
-            var response = await Http.GetAsync("api/payment/get-credit-card-payments");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                creditCardPayments = await response.Content.ReadFromJsonAsync<List<PaymentViewModel>>() ?? new List<PaymentViewModel>();
-            }
-            else if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                errorMessage = "Brak autoryzacji. Zaloguj się ponownie.";
-            }
-            else if (response.StatusCode == HttpStatusCode.Forbidden)
-            {
-                errorMessage = "Nie masz uprawnień do przeglądania płatności kartą.";
-            }
-            else
-            {
-                errorMessage = $"Błąd ładowania płatności kartą: {response.StatusCode}";
-            }
-        }
-        catch (HttpRequestException)
-        {
-            errorMessage = "Błąd połączenia z serwerem przy ładowaniu płatności kartą.";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Błąd podczas ładowania płatności kartą: {ex.Message}";
-        }
-        finally
-        {
-            loadingCreditCardPayments = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ShowRegisterCashPaymentModal()
-    {
-        newCashPaymentOrderId = 0;
-        cashPaymentValidationMessage = "";
-        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('registerCashPaymentModal')).show()");
-    }
-
-    private async Task RegisterCashPayment()
-    {
-        if (newCashPaymentOrderId <= 0)
-        {
-            cashPaymentValidationMessage = "Wprowadź prawidłowy numer zamówienia (większy od 0).";
+            cashPayments = new List<PaymentViewModel>();
+            creditCardPayments = new List<PaymentViewModel>();
             return;
         }
 
-        await SafeExecute(async () =>
-        {
-            processingCashPayment = true;
-            cashPaymentValidationMessage = "";
-            StateHasChanged();
-
-            try
-            {
-                var requestData = new { orderId = newCashPaymentOrderId };
-                var response = await Http.PostAsJsonAsync("api/payment/pay-with-cash", requestData);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    operationSuccess = true;
-                    operationMessage = $"Płatność gotówkowa dla zamówienia #{newCashPaymentOrderId} została pomyślnie zarejestrowana.";
-                    
-                    await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('registerCashPaymentModal')).hide()");
-                    await Task.WhenAll(LoadAllPayments(), LoadCashPayments());
-                    
-                    newCashPaymentOrderId = 0;
-                }
-                else if (response.StatusCode == HttpStatusCode.Forbidden)
-                {
-                    operationSuccess = false;
-                    operationMessage = "Nie masz uprawnień do rejestracji płatności dla tego zamówienia.";
-                }
-                else if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    operationSuccess = false;
-                    operationMessage = $"Zamówienie #{newCashPaymentOrderId} nie zostało znalezione.";
-                }
-                else if (response.StatusCode == HttpStatusCode.BadRequest)
-                {
-                    operationSuccess = false;
-                    operationMessage = "Nieprawidłowe dane zamówienia lub płatność już została zarejestrowana.";
-                }
-                else
-                {
-                    operationSuccess = false;
-                    operationMessage = $"Błąd podczas rejestracji płatności: {response.StatusCode}";
-                }
-            }
-            finally
-            {
-                processingCashPayment = false;
-                await ShowOperationResultModal();
-                StateHasChanged();
-            }
-        });
-    }
-
-    private async Task ShowOperationResultModal()
-    {
-        await Task.Delay(500);
-        await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('operationResultModal')).show()");
-    }
-
-    private void SetActiveTab(string tab)
-    {
-        activeTab = tab;
-    }
-
-    private void GoToLogin()
-    {
-        NavigationManager.NavigateTo("/login");
+        cashPayments = allPayments.Where(p => p.PaymentMethod?.ToLower().Contains("cash") == true).ToList();
+        creditCardPayments = allPayments.Where(p => p.PaymentMethod?.ToLower().Contains("card") == true).ToList();
     }
 
     private string GetFormattedPrice(decimal? price)
@@ -944,18 +326,25 @@
         var total = payments.Sum(p => p.Amount ?? 0);
         return GetFormattedPrice(total);
     }
-
+    
+    // ===========================================
+    // ZMIENIONY MODEL PŁATNOŚCI
+    // ===========================================
     public class PaymentViewModel
     {
+        [JsonPropertyName("id")]
         public int Id { get; set; }
-        public int? OrderId { get; set; }
-        public decimal? Amount { get; set; }
+
+        [JsonPropertyName("orderId")]
+        public int OrderId { get; set; }
+
+        [JsonPropertyName("paymentMethod")]
         public string? PaymentMethod { get; set; }
-        public string? Status { get; set; }
-        public DateTime? PaymentDate { get; set; }
-        public string? CustomerName { get; set; }
-        public string? ProcessedBy { get; set; }
-        public string? CardNumber { get; set; }
-        public string? TransactionId { get; set; }
+
+        [JsonPropertyName("amount")]
+        public decimal? Amount { get; set; }
+
+        [JsonPropertyName("date")]
+        public DateTime? Date { get; set; }
     }
 }

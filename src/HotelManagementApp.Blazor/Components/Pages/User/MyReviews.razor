@@ -1,7 +1,7 @@
 @page "/my-reviews"
 @using System.Text.Json
 @using System.Text
-@using System.Text.Json.Serialization 
+@using System.Text.Json.Serialization
 @using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
 @inject HttpClient Http
@@ -106,35 +106,6 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="reviewImages" class="form-label">Zdjęcia (opcjonalne, max 5):</label>
-                                <InputFile class="form-control" id="reviewImages" multiple accept="image/*" OnChange="OnImageFilesSelected" />
-                                <div class="form-text">
-                                    Możesz dodać maksymalnie 5 zdjęć (JPG, PNG, GIF). Maksymalny rozmiar pliku: 5MB.
-                                </div>
-                                
-                                @if (selectedImages?.Any() == true)
-                                {
-                                    <div class="mt-3">
-                                        <h6>Wybrane zdjęcia (@selectedImages.Count):</h6>
-                                        <div class="row g-2">
-                                            @for (int i = 0; i < selectedImages.Count; i++)
-                                            {
-                                                var index = i;
-                                                <div class="col-6 col-md-3">
-                                                    <div class="position-relative">
-                                                        <img src="@selectedImages[index].DataUrl" class="img-thumbnail" style="max-height: 100px; width: 100%; object-fit: cover;" />
-                                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0" style="width:20px; height:20px; line-height:1;" @onclick="() => RemoveSelectedImage(index)">
-                                                            <i class="bi bi-x"></i>
-                                                        </button>
-                                                    </div>
-                                                    <small class="text-muted d-block text-truncate" title="@selectedImages[index].Name">@selectedImages[index].Name</small>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                            </div>
                              <div class="modal-footer mt-4">
                                 <button type="button" class="btn btn-secondary" @onclick="CloseReviewForm">Anuluj</button>
                                 <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
@@ -143,21 +114,6 @@
                                 </button>
                             </div>
                         </EditForm>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-    @if (showImageModal) 
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.8);" @onclick="CloseImageModal">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content bg-transparent border-0">
-                    <div class="modal-body p-0 text-center">
-                        <img src="@selectedImageUrl" class="img-fluid rounded" style="max-height: 80vh;" />
-                        <button type="button" class="btn btn-light position-absolute top-0 end-0 m-3" @onclick="CloseImageModal">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -173,12 +129,9 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private bool showReviewForm = false;
-    private bool showImageModal = false;
-    private string selectedImageUrl = string.Empty;
     private ReviewRequest newReview = new();
     private string? currentUserId;
     private string? currentUserName;
-    private List<ImageFile> selectedImages = new();
     private JsonSerializerOptions jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     protected override async Task OnInitializedAsync()
@@ -197,7 +150,7 @@
                 InitializeEmptyData();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             InitializeEmptyData();
         }
@@ -229,7 +182,7 @@
                 }
             }
         }
-        catch (Exception) { /* Silently fail or log */ }
+        catch (Exception) { }
     }
 
     private async Task LoadAllRequiredDataConcurrently()
@@ -261,7 +214,7 @@
             allHotels = await allHotelsTask;
             userOrders = await userOrdersTask;
         }
-        catch(Exception) { /* Silently fail or log */ }
+        catch(Exception) { }
         
         await ProcessLoadedData(allHotelRooms, allHotels, userOrders);
     }
@@ -305,7 +258,7 @@
                             }
                         }
                     }
-                } catch (Exception) { /* Silently fail or log for individual order/reservation processing */ }
+                } catch (Exception) { }
             }
 
             foreach (var hotelId in uniqueHotelIdsForReview)
@@ -315,7 +268,7 @@
                 tempReservedHotels.Add(new ReservedHotel { HotelId = hotelId, HotelName = hotelName });
             }
         }
-        catch (Exception) { /* Silently fail or log general processing error */ }
+        catch (Exception) { }
         finally { reservedHotels = tempReservedHotels.OrderBy(h => h.HotelName).ToList(); }
     }
 
@@ -327,103 +280,34 @@
             return;
         }
         newReview = new ReviewRequest { Rating = 0 }; 
-        selectedImages.Clear(); 
         showReviewForm = true;
     }
 
-    private void CloseReviewForm() { showReviewForm = false; newReview = new ReviewRequest(); selectedImages.Clear(); }
-    private void ShowImageModal(string imageUrl) { selectedImageUrl = imageUrl; showImageModal = true; }
-    private void CloseImageModal() { showImageModal = false; selectedImageUrl = string.Empty; }
-
-    private async Task OnImageFilesSelected(InputFileChangeEventArgs e) 
-    {
-        var maxTotalImages = 5;
-        var currentNewSelectedCount = selectedImages.Count;
-        var allowedNewImagesCanBeAdded = maxTotalImages - currentNewSelectedCount;
-
-        if (e.FileCount > allowedNewImagesCanBeAdded && allowedNewImagesCanBeAdded > 0)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Możesz wybrać jeszcze maksymalnie {allowedNewImagesCanBeAdded} zdjęć (łącznie {maxTotalImages}). Wybrano za dużo plików.");
-        }
-         else if (allowedNewImagesCanBeAdded <= 0 && e.FileCount > 0)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Osiągnięto maksymalną liczbę {maxTotalImages} zdjęć.");
-            return;
-        }
-        
-        var filesToProcess = e.GetMultipleFiles(allowedNewImagesCanBeAdded > 0 ? allowedNewImagesCanBeAdded : 0);
-
-        foreach (var file in filesToProcess)
-        {
-            if (selectedImages.Count >= maxTotalImages) break; 
-            if (!file.ContentType.StartsWith("image/")) { await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} nie jest obrazem."); continue; }
-            if (file.Size > 5 * 1024 * 1024) { await JSRuntime.InvokeVoidAsync("alert", $"Plik {file.Name} jest za duży (max 5MB)."); continue; }
-            try
-            {
-                using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); var buffer = new byte[file.Size];
-                await stream.ReadAsync(buffer); var base64String = Convert.ToBase64String(buffer);
-                var dataUrl = $"data:{file.ContentType};base64,{base64String}";
-                selectedImages.Add(new ImageFile { Name = file.Name, Size = file.Size, Type = file.ContentType, DataUrl = dataUrl, ByteArray = buffer });
-            }
-            catch (Exception) { await JSRuntime.InvokeVoidAsync("alert", $"Błąd przetwarzania pliku {file.Name}."); }
-        }
-        StateHasChanged();
-    }
-
-    private void RemoveSelectedImage(int index) { if (index >= 0 && index < selectedImages.Count) { selectedImages.RemoveAt(index); StateHasChanged(); } }
+    private void CloseReviewForm() { showReviewForm = false; newReview = new ReviewRequest(); }
 
     private async Task SubmitReview() 
     {
         isSubmitting = true; StateHasChanged();
         try
         {
-            HttpResponseMessage response; int? reviewIdForImages = null;
+            HttpResponseMessage response;
             
             var addRequest = new { userName = currentUserName, userId = currentUserId, rating = newReview.Rating, review = newReview.Review, hotelId = newReview.HotelId };
             response = await Http.PostAsJsonAsync("api/review", addRequest, jsonOptions);
+            
             if (response.IsSuccessStatusCode)
             {
-                var reviewResponse = await response.Content.ReadFromJsonAsync<ReviewResponse>(jsonOptions);
-                if(reviewResponse?.ReviewId > 0) reviewIdForImages = reviewResponse.ReviewId;
-            }
-
-            if (response.IsSuccessStatusCode && reviewIdForImages.HasValue)
-            {
-                if (selectedImages.Any()) { await UpdateReviewImages(reviewIdForImages.Value); }
                 await JSRuntime.InvokeVoidAsync("alert", "Opinia została dodana!");
                 await LoadAllRequiredDataConcurrently(); 
                 CloseReviewForm();
             }
-            else if(!response.IsSuccessStatusCode)
+            else
             {
                 await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas zapisywania opinii: {response.StatusCode}");
-            }
-             else if (!reviewIdForImages.HasValue && response.IsSuccessStatusCode) 
-            {
-                 await JSRuntime.InvokeVoidAsync("alert", "Opinia została dodana (problem z ID dla zdjęć)!");
-                await LoadAllRequiredDataConcurrently(); CloseReviewForm();
             }
         }
         catch (Exception) { await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas zapisywania opinii."); }
         finally { isSubmitting = false; StateHasChanged(); }
-    }
-
-    private async Task UpdateReviewImages(int reviewId) 
-    {
-        try
-        {
-            var finalImageUrls = selectedImages.Select(img => img.DataUrl).Distinct().ToList();
-            if (!finalImageUrls.Any()) return;
-
-            var imageUpdateRequest = new { reviewId = reviewId, reviewImages = finalImageUrls };
-            var response = await Http.PutAsJsonAsync("api/review/images", imageUpdateRequest, jsonOptions); 
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Nie udało się zaktualizować zdjęć opinii: {response.StatusCode}");
-            }
-        }
-        catch (Exception) { await JSRuntime.InvokeVoidAsync("alert", "Wystąpił błąd podczas aktualizacji zdjęć."); }
     }
 
     public class UserSession { [JsonPropertyName("id")] public string Id { get; set; } = ""; [JsonPropertyName("userName")] public string UserName { get; set; } = ""; public string Email { get; set; } = ""; public string[] Roles { get; set; } = []; public string ProfilePicture { get; set; } = ""; public bool IsEmailConfirmed { get; set; } }
@@ -434,5 +318,4 @@
     public class HotelRoom { public int Id { get; set; } public string? RoomName { get; set; } public string? RoomType { get; set; } public decimal Price { get; set; } public int DiscountPercent { get; set; } public decimal FinalPrice { get; set; } public int HotelId { get; set; } public List<string>? RoomImages { get; set; } }
     public class Hotel { public int Id { get; set; } public string Name { get; set; } = ""; public string Address { get; set; } = ""; public string City { get; set; } = ""; public string Country { get; set; } = ""; public string PhoneNumber { get; set; } = ""; public string Email { get; set; } = ""; public string Description { get; set; } = ""; public List<string> Images { get; set; } = new(); }
     public class ReservedHotel { public int HotelId { get; set; } public string HotelName { get; set; } = ""; }
-    public class ImageFile { public string Name { get; set; } = ""; public long Size { get; set; } public string Type { get; set; } = ""; public string DataUrl { get; set; } = ""; public byte[] ByteArray { get; set; } = []; }
 }

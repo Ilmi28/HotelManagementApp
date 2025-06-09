@@ -122,7 +122,7 @@ public class ReviewController(IMediator mediator) : ControllerBase
     [Authorize(Roles = "Guest")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateReviewImages([FromBody] UpdateReviewImagesCommand cmd, IAuthorizationService authService, CancellationToken ct)
+    public async Task<IActionResult> UpdateReviewImages([FromForm] UpdateReviewImagesCommand cmd, IAuthorizationService authService, CancellationToken ct)
     {
         var reviewAccess = await authService.AuthorizeAsync(User, cmd.ReviewId, "ReviewAccess");
         if (!reviewAccess.Succeeded) return Forbid();

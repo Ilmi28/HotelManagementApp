@@ -11,7 +11,6 @@
 <div class="container mt-4">
     @try
     {
-        <!-- Loading state -->
         @if (isLoading)
         {
             <div class="text-center py-5">
@@ -40,7 +39,6 @@
         }
         else if (hotel != null)
         {
-            <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
@@ -54,7 +52,6 @@
                 </ol>
             </nav>
 
-            <!-- Hotel header -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -91,7 +88,6 @@
                 </div>
             </div>
 
-            <!-- Contact info -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -138,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- Hotel images -->
             @if (HasImages())
             {
                 <div class="row mb-4">
@@ -165,7 +160,6 @@
                 </div>
             }
 
-            <!-- Available Rooms Section -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -261,7 +255,6 @@
                 </div>
             </div>
 
-            <!-- Services and tabs section -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -289,7 +282,6 @@
                         </div>
                         <div class="card-body">
                             <div class="tab-content" id="hotelTabsContent">
-                                <!-- Services tab -->
                                 <div class="tab-pane fade show active" id="services" role="tabpanel">
                                     @if (HasServices())
                                     {
@@ -314,7 +306,6 @@
                                         <p class="text-muted">Brak dostępnych usług.</p>
                                     }
                                 </div>
-                                <!-- Parking tab -->
                                 <div class="tab-pane fade" id="parking" role="tabpanel">
                                     @if (HasParkings())
                                     {
@@ -322,9 +313,15 @@
                                             @foreach (var parking in GetSafeParkings())
                                             {
                                                 <div class="col-md-6 col-lg-4">
-                                                    <div class="d-flex align-items-center p-2 bg-light rounded">
-                                                        <i class="bi bi-car-front-fill text-primary me-2"></i>
-                                                        <span>@parking</span>
+                                                    <div class="d-flex align-items-start p-2 bg-light rounded">
+                                                        <i class="bi bi-p-square-fill text-primary me-2"></i>
+                                                        <div>
+                                                            <strong>@parking.CarSpaces miejsc</strong>
+                                                            @if (!string.IsNullOrEmpty(parking.Description))
+                                                            {
+                                                                <small class="d-block text-muted">@parking.Description</small>
+                                                            }
+                                                        </div>
                                                     </div>
                                                 </div>
                                             }
@@ -336,10 +333,9 @@
                                     }
                                     else
                                     {
-                                        <p class="text-muted">Brak dostępnego parkingu.</p>
+                                        <p class="text-muted">Brak informacji o parkingu dla tego hotelu.</p>
                                     }
                                 </div>
-                                <!-- Reviews tab -->
                                 <div class="tab-pane fade" id="reviews" role="tabpanel">
                                     @if (HasReviews())
                                     {
@@ -394,7 +390,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Action buttons -->
             <div class="row">
                 <div class="col-12 text-center">
                     <button class="btn btn-outline-secondary me-2" @onclick="GoToHotels"><i class="bi bi-arrow-left"></i> Powrót</button>
@@ -432,7 +427,7 @@
     private HotelDetailsViewModel? hotel;
     private WeatherViewModel? weather;
     private List<string>? services;
-    private List<string>? parkings;
+    private List<ParkingViewModel>? parkings;
     private List<RoomViewModel>? rooms;
     private List<ReviewViewModel>? reviews;
 
@@ -449,7 +444,7 @@
         try
         {
             services = new List<string>();
-            parkings = new List<string>();
+            parkings = new List<ParkingViewModel>();
             rooms = new List<RoomViewModel>();
             reviews = new List<ReviewViewModel>();
 
@@ -485,7 +480,7 @@
     private bool HasReviews() => reviews?.Any() == true;
     private IEnumerable<string> GetSafeImages() => hotel?.Images?.Take(6) ?? Enumerable.Empty<string>();
     private IEnumerable<string> GetSafeServices() => services ?? Enumerable.Empty<string>();
-    private IEnumerable<string> GetSafeParkings() => parkings ?? Enumerable.Empty<string>();
+    private IEnumerable<ParkingViewModel> GetSafeParkings() => parkings ?? Enumerable.Empty<ParkingViewModel>();
     private IEnumerable<ReviewViewModel> GetSafeReviews() => reviews ?? Enumerable.Empty<ReviewViewModel>();
     private string GetRoomImage(RoomViewModel room) => room.RoomImages?.FirstOrDefault() ?? "/images/room-placeholder.jpg";
     private string GetRoomDisplayName(RoomViewModel room) => !string.IsNullOrEmpty(room.RoomName) ? room.RoomName : $"Pokój {room.Id}";
@@ -534,7 +529,7 @@
             var response = await Http.GetAsync($"api/hotel/weather/{HotelId}");
             if (response.IsSuccessStatusCode) weather = await response.Content.ReadFromJsonAsync<WeatherViewModel>();
         }
-        catch { /* Ignoruj błędy */ }
+        catch { }
     }
 
     private async Task LoadServices()
@@ -561,40 +556,31 @@
             var response = await Http.GetAsync($"api/hotel-parkings/get-by-hotel/{HotelId}");
             if (response.IsSuccessStatusCode)
             {
-                var parkingObjects = await response.Content.ReadFromJsonAsync<List<ParkingViewModel>>();
-                parkings = parkingObjects?.Select(p => $"{p.Type} - {p.Capacity} miejsc").ToList() ?? new List<string>();
+                parkings = await response.Content.ReadFromJsonAsync<List<ParkingViewModel>>() ?? new List<ParkingViewModel>();
             }
         }
-        catch { /* Ignoruj błędy */ }
+        catch { }
         finally { parkingsLoading = false; }
     }
     
-    // =====================================
-    // POPRAWIONA METODA ŁADOWANIA POKOI
-    // =====================================
     private async Task LoadRooms()
     {
         roomsLoading = true;
         try
         {
-            // Pobierz wszystkie pokoje z systemu
             var response = await Http.GetAsync("api/hotel-room/get-all");
-
             if (response.IsSuccessStatusCode)
             {
                 var allRooms = await response.Content.ReadFromJsonAsync<List<RoomViewModel>>();
-                // Filtruj po stronie klienta, aby wyświetlić tylko pokoje dla bieżącego hotelu
                 rooms = allRooms?.Where(r => r.HotelId == HotelId).ToList() ?? new List<RoomViewModel>();
             }
             else
             {
-                Console.WriteLine($"Error loading rooms from API: {response.StatusCode}");
                 rooms = new List<RoomViewModel>();
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Exception while loading rooms: {ex.Message}");
             rooms = new List<RoomViewModel>();
         }
         finally
@@ -624,7 +610,15 @@
     public class HotelDetailsViewModel { public int Id { get; set; } public string Name { get; set; } = ""; public string Address { get; set; } = ""; public string City { get; set; } = ""; public string Country { get; set; } = ""; public string PhoneNumber { get; set; } = ""; public string Email { get; set; } = ""; public string Description { get; set; } = ""; public List<string> Images { get; set; } = new(); }
     public class WeatherViewModel { public double Temperature { get; set; } }
     public class ServiceViewModel { public string Name { get; set; } = ""; }
-    public class ParkingViewModel { public string Type { get; set; } = ""; public int Capacity { get; set; } }
+    
+    public class ParkingViewModel 
+    { 
+        [JsonPropertyName("carSpaces")]
+        public int CarSpaces { get; set; } 
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+    }
 
     public class RoomViewModel { public int Id { get; set; } public int HotelId { get; set; } public string RoomName { get; set; } = ""; public string RoomType { get; set; } = ""; public decimal Price { get; set; } public int DiscountPercent { get; set; } public decimal FinalPrice { get; set; } public List<string>? RoomImages { get; set; } = new(); }
 
