@@ -21,7 +21,7 @@ public class ReservationParkingPriceHandler(
                                ?? throw new HotelParkingNotFoundException($"Hotel parking with id {parking.Id} not found");
             var parkingDiscount = await parkingDiscountService.CalculateDiscount(parkingModel, ct);
             var parkingPrice = parkingModel.Price - (parkingModel.Price * parkingDiscount / 100m);
-            price += parkingPrice;
+            price += parkingPrice *  parking.Quantity;
         }
         return price;
     }

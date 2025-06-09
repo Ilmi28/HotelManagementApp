@@ -21,7 +21,7 @@ public class ReservationServicePriceHandler(
                                ?? throw new HotelServiceNotFoundException($"Hotel service with id {service.Id} not found");
             var serviceDiscount = await serviceDiscountService.CalculateDiscount(serviceModel, ct);
             var servicePrice = serviceModel.Price - (serviceModel.Price * serviceDiscount / 100m);
-            price += servicePrice;
+            price += servicePrice * service.Quantity;
         }
         return price;
     }
